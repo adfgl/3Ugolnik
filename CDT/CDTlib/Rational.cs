@@ -1,4 +1,6 @@
-﻿namespace CDTlib.Utils
+﻿using System.Runtime.CompilerServices;
+
+namespace CDTlib
 {
     public readonly struct Rational : IEquatable<Rational>, IComparable<Rational>
     {
@@ -94,10 +96,7 @@
             return new Rational(a.num * b.den, a.den * b.num);
         }
 
-        public static Rational operator -(Rational r)
-        {
-            return new Rational(-r.num, r.den);
-        }
+        public static Rational operator -(Rational r) => new Rational(-r.num, r.den);
 
         public int CompareTo(Rational other)
         {
@@ -118,13 +117,41 @@
 
         static long GreatestCommonDivisor(long a, long b)
         {
+            if (a == 0) return Math.Abs(b);
+            if (b == 0) return Math.Abs(a);
+
+            a = Math.Abs(a);
+            b = Math.Abs(b);
+
+            int shift = 0;
+
+            // Remove common factors of 2
+            while (((a | b) & 1) == 0)
+            {
+                a >>= 1;
+                b >>= 1;
+                shift++;
+            }
+
+            // Make sure 'a' is odd
+            while ((a & 1) == 0)
+                a >>= 1;
+
             while (b != 0)
             {
-                long t = b;
-                b = a % b;
-                a = t;
+                while ((b & 1) == 0)
+                    b >>= 1;
+
+                if (a > b)
+                {
+                    long temp = a;
+                    a = b;
+                    b = temp;
+                }
+
+                b -= a;
             }
-            return a;
+            return a << shift;
         }
 
         static long LeastCommonMultiple(long a, long b)
@@ -136,5 +163,8 @@
         {
             return num / (double)den;
         }
+
+
+  
     }
 }

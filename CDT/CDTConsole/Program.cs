@@ -1,4 +1,5 @@
-﻿using CDTlib.Utils;
+﻿
+using CDTlib;
 
 namespace CDTConsole
 {
@@ -6,7 +7,7 @@ namespace CDTConsole
     {
         static void Main(string[] args)
         {
-            var a = new Rational(1d / 34d);
+            var a = new Rational(33 / 11);
             Console.WriteLine(a);
         }
     }
