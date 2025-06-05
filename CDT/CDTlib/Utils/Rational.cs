@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace CDTlib
+﻿namespace CDTlib.Utils
 {
     public readonly struct Rational : IEquatable<Rational>, IComparable<Rational>
     {
@@ -163,8 +161,5 @@ namespace CDTlib
         {
             return num / (double)den;
         }
-
-
-  
     }
 }
