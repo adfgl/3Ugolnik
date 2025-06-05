@@ -8,6 +8,9 @@ namespace CDTlib
 {
     public class CDT
     {
+        readonly static int[] NEXT3 = [1, 2, 0], PREV3 = [2, 0, 1];
+        readonly static int[] NEXT4 = [1, 2, 3, 0], PREV4 = [3, 0, 1, 2];
+
         public CDT Triangulate(IList<Vec2> points)
         {
             (Rect bounds, List<Vec2> uniquePoints) = Preporcess(points);
@@ -45,87 +48,120 @@ namespace CDTlib
             return this;
         }
 
-        public static void SplitEdge(List<Triangle> triangles, Edge edge, Node node)
+        public static Triangle[] SplitEdge(List<Triangle> triangles, Edge edge, Node node)
         {
+            /*
+                        v2                          v2            
+                        /\                          /|\             
+                       /  \                        / | \           
+                      /    \                      /  |  \          
+                 e20 /      \ e12            e20 /   |   \ e12     
+                    /   t0   \                  /    |    \        
+                   /          \                / t0  |  t1 \       
+                  /    e01     \              /      |      \      
+              v0 +--------------+ v1      v0 +-------v4------+ v1  
+                  \     e10    /              \      |      /      
+                   \          /                \ t3  |  t2 /       
+                    \   t1   /                  \    |    /        
+                 e03 \      / e31            e03 \   |   / e31     
+                      \    /                      \  |  /          
+                       \  /                        \ | /           
+                        \/                          \|/            
+                        v3                          v3            
+            */
 
+            Edge e01 = edge;
+            Edge e12 = e01.Next;
+            Edge e20 = e12.Next;
+
+            Edge e10 = e01.Twin!;
+            Edge e03 = e10.Next;
+            Edge e31 = e03.Next;
+
+            Triangle t0 = edge.Triangle;
+            Triangle t1 = e10.Triangle;
+
+            int baseIndex = triangles.Count;
+            Edge[] edges = [e12, e20, e03, e31];
+
+            Triangle[] newTris = new Triangle[4];
+            for (int i = 0; i < 4; i++)
+            {
+                int triIndex;
+                if (i == 0)
+                {
+                    triIndex = t0.Index;
+                }
+                else if (i == 2)
+                {
+                    triIndex = t1.Index;
+                }
+                else
+                {
+                    triIndex = baseIndex + i;
+                }
+
+                newTris[i] = BuildTriangle(edges[i], node, triIndex);
+            }
+            SetTwins(newTris);
+            return newTris;
         }
 
-        public static void SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node)
+        public static Triangle[] SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node)
         {
-            Edge? prevEdge = null;
-            Edge firstEdge = null!;
-
-            double remainingArea = triangle.Area;
             int baseIndex = triangles.Count;
             Edge[] edges = [triangle.Edge, triangle.Edge.Next, triangle.Edge.Next.Next];
+
+            Triangle[] newTris = new Triangle[3];
             for (int i = 0; i < 3; i++)
             {
                 int triIndex = i == 0 ? triangle.Index : baseIndex + i;
-
-                Edge e = edges[i];
-
-                Node a = e.Origin;
-                Node b = e.Next.Origin;
-                Node c = node;
-
-                Edge ab = new Edge(a); a.Edge = ab;
-                Edge bc = new Edge(b); b.Edge = bc;
-                Edge ca = new Edge(c); c.Edge = ca;
-
-                double area;
-                if (i < 2)
-                {
-                    area = GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y);
-                    remainingArea -= area;
-                }
-                else
-                {
-                    area = remainingArea;
-                }
-
-                Triangle tri = new Triangle(triIndex, ab)
-                {
-                    Area = area
-                };
-
-                ab.Next = bc;
-                bc.Next = ca;
-                ca.Next = ab;
-
-                ab.Triangle = tri;
-                bc.Triangle = tri;
-                ca.Triangle = tri;
-
-                Edge? twin = e.Twin;
-                if (twin != null)
-                {
-                    ab.Twin = twin;
-                    twin.Twin = ab;
-                }
-
-                if (prevEdge == null)
-                {
-                    firstEdge = bc;
-                }
-                else
-                {
-                    prevEdge.Twin = ca;
-                    ca.Twin = prevEdge;
-                }
-                prevEdge = bc;
-
-                if (triIndex < triangles.Count)
-                {
-                    triangles[triIndex] = tri;
-                }
-                else
-                {
-                    triangles.Add(tri);
-                }
+                newTris[i] = BuildTriangle(edges[i], node, triIndex);
             }
+            SetTwins(newTris);
+            return newTris;
+        }
 
-            prevEdge!.Twin = firstEdge;
-            firstEdge!.Twin = prevEdge;
+        static void SetTwins(Triangle[] tris)
+        {
+            int n = tris.Length;
+            for (int i = 0; i < n; i++)
+            {
+                Triangle curr = tris[i];
+                Triangle next = tris[(i + 1) % n];
+
+                Edge ca = curr.Edge.Next.Next;
+                Edge bc = next.Edge.Next;
+
+                ca.Twin = bc;
+                bc.Twin = ca;
+            }
+        }
+
+        static Triangle BuildTriangle(Edge edge, Node node, int index)
+        {
+            Node a = edge.Origin;
+            Node b = edge.Next.Origin;
+            Node c = node;
+
+            Edge ab = new Edge(a) { Constrained = edge.Constrained }; a.Edge = ab;
+            Edge bc = new Edge(b); b.Edge = bc;
+            Edge ca = new Edge(c); c.Edge = ca;
+
+            Triangle tri = new Triangle(index, ab)
+            {
+                Area = GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y)
+            };
+
+            ab.Next = bc;
+            bc.Next = ca;
+            ca.Next = ab;
+
+            ab.Triangle = tri;
+            bc.Triangle = tri;
+            ca.Triangle = tri;
+
+            return tri;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

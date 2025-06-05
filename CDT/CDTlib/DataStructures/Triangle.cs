@@ -11,7 +11,7 @@
             Edge = edge;
         }
 
-        public int Index { get; }
+        public int Index { get; set; }
         public Edge Edge { get; set; }
         public double Area { get; set; }    
 
