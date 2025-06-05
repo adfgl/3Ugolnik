@@ -11,7 +11,7 @@ namespace CDTlib.DataStructures
             Y = y;
         }
 
-        public int Index { get; set; }
+        public int Index { get; }
         public double X { get; set; }
         public double Y { get; set; }
         public Edge Edge { get; set; } = null!;
@@ -19,7 +19,7 @@ namespace CDTlib.DataStructures
         public override string ToString()
         {
             CultureInfo culture = CultureInfo.InvariantCulture;
-            return $"[{Index}] {X.ToString(culture)}, {Y.ToString(culture)}";
+            return $"({Index}) {X.ToString(culture)}, {Y.ToString(culture)}";
         }
     }
 }

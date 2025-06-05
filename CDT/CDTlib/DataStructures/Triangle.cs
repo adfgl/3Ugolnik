@@ -5,11 +5,13 @@
 
     public class Triangle : IEnumerable<Edge>
     {
-        public Triangle(Edge edge)
+        public Triangle(int index, Edge edge)
         {
+            Index = index;
             Edge = edge;
         }
 
+        public int Index { get; }
         public Edge Edge { get; set; }
         public double Area { get; set; }    
 
@@ -18,7 +20,7 @@
             int a = Edge.Origin.Index;
             int b = Edge.Next.Origin.Index;
             int c = Edge.Next.Next.Origin.Index;
-            return $"{a} {b} {c} ({Area})";
+            return $"({Index}) {a} {b} {c} [{Area}]";
         }
 
         public IEnumerator<Edge> GetEnumerator()

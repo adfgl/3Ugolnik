@@ -1,5 +1,7 @@
 ﻿using CDTlib.DataStructures;
 using CDTlib.Utils;
+using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace CDTlib
@@ -11,29 +13,185 @@ namespace CDTlib
             (Rect bounds, List<Vec2> uniquePoints) = Preporcess(points);
 
             (List<Triangle> triangles, List<Node> nodes) = AddSuperStructure(bounds, uniquePoints, ESuperStructure.Circle);
+            int superIndex = nodes.Count;
+
             foreach (Vec2 point in uniquePoints)
             {
+                var (x, y) = point;
 
+                (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y);
+                if (node != null)
+                {
+                    continue;
+                }
+
+                if (triangle == null)
+                {
+                    throw new Exception($"Point [{point}] is outside of topology.");
+                }
+
+                Node newNode = new Node(nodes.Count, x, y);
+                nodes.Add(newNode);
+
+                if (edge == null)
+                {
+
+                }
+                else
+                {
+                    SplitTriangle(triangles, triangle, newNode);
+                }
             }
             return this;
         }
 
-        Triangle? FindContaining(List<Triangle> triangles, double x, double y)
+        public static void SplitEdge(List<Triangle> triangles, Edge edge, Node node)
         {
-            int current = triangles.Count - 1;
-            while (true)
+
+        }
+
+        public static void SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node)
+        {
+            Edge? prevEdge = null;
+            Edge firstEdge = null!;
+
+            double remainingArea = triangle.Area;
+            int baseIndex = triangles.Count;
+            Edge[] edges = [triangle.Edge, triangle.Edge.Next, triangle.Edge.Next.Next];
+            for (int i = 0; i < 3; i++)
             {
-                bool inside = true;
-                foreach (Edge edge in triangles[current])
+                int triIndex = i == 0 ? triangle.Index : baseIndex + i;
+
+                Edge e = edges[i];
+
+                Node a = e.Origin;
+                Node b = e.Next.Origin;
+                Node c = node;
+
+                Edge ab = new Edge(a); a.Edge = ab;
+                Edge bc = new Edge(b); b.Edge = bc;
+                Edge ca = new Edge(c); c.Edge = ca;
+
+                double area;
+                if (i < 2)
                 {
-                    Node a = edge.Origin;
-                    Node b = edge.Next.Origin;
+                    area = GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+                    remainingArea -= area;
+                }
+                else
+                {
+                    area = remainingArea;
+                }
 
+                Triangle tri = new Triangle(triIndex, ab)
+                {
+                    Area = area
+                };
 
+                ab.Next = bc;
+                bc.Next = ca;
+                ca.Next = ab;
+
+                ab.Triangle = tri;
+                bc.Triangle = tri;
+                ca.Triangle = tri;
+
+                Edge? twin = e.Twin;
+                if (twin != null)
+                {
+                    ab.Twin = twin;
+                    twin.Twin = ab;
+                }
+
+                if (prevEdge == null)
+                {
+                    firstEdge = bc;
+                }
+                else
+                {
+                    prevEdge.Twin = ca;
+                    ca.Twin = prevEdge;
+                }
+                prevEdge = bc;
+
+                if (triIndex < triangles.Count)
+                {
+                    triangles[triIndex] = tri;
+                }
+                else
+                {
+                    triangles.Add(tri);
                 }
             }
 
-            return null;
+            prevEdge!.Twin = firstEdge;
+            firstEdge!.Twin = prevEdge;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool CloseEnoughTo(Node node, double x, double y, double eps)
+        {
+            double dx = node.X - x;
+            double dy = node.Y - y;
+            return dx * dx + dy * dy <= eps;
+        }
+
+        (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
+        {
+            int max = triangles.Count * 3;
+            int steps = 0;
+
+            Triangle current = triangles[^1];
+            while (true)
+            {
+                if (steps++ > max)
+                {
+                    throw new Exception("Could not find containing triangle. Most likely mesh topology is invalid.");
+                }
+
+                bool inside = true;
+                foreach (Edge edge in current)
+                {
+                    Node a = edge.Origin;
+                    if (CloseEnoughTo(a, x, y, eps))
+                    {
+                        return (current, edge, a);
+                    }
+
+                    Node b = edge.Next.Origin;
+                    if (CloseEnoughTo(b, x, y, eps))
+                    {
+                        return (current, edge.Next, b);
+                    }
+
+                    double dx = b.X - a.X;
+                    double dy = b.Y - a.Y;
+                    double dot = (x - a.X) * dx + (y - a.Y) * dy;
+                    if (dot >= -eps && dot <= dx * dx + dy * dy + eps)
+                    {
+                        return (current, edge, null);
+                    }
+
+                    EOrientation orientation = GeometryHelper.Orientation(x, y, a.X, a.Y, b.X, b.Y, eps);
+                    if (orientation != EOrientation.Left)
+                    {
+                        Edge? twin = edge.Twin;
+                        if (twin is null)
+                        {
+                            return (null, null, null);
+                        }
+
+                        inside = false;
+                        current = twin.Triangle;
+                        break;
+                    }
+                }
+
+                if (inside)
+                {
+                    return (current, null, null);
+                }
+            }
         }
 
         (Rect bounds, List<Vec2> uniquePoints) Preporcess(IList<Vec2> points)
@@ -101,12 +259,10 @@ namespace CDTlib
             }
 
             List<Triangle> triangles = new List<Triangle>();
-            List<Node> nodes = new List<Node>(points.Count);
-
-            int startIndex = -1;
+            List<Node> nodes = new List<Node>();
 
             Vec2 a = points[0];
-            Node nodeA = new Node(startIndex, a.x, a.y);
+            Node nodeA = new Node(nodes.Count, a.x, a.y);
             nodes.Add(nodeA);
 
             Edge? prevShared = null;
@@ -116,8 +272,11 @@ namespace CDTlib
                 Vec2 c = points[i + 1];
                 double area = GeometryHelper.Area(a.x, a.y, b.x, b.y, c.x, c.y);    
 
-                Node nodeB = new Node(startIndex--, b.x, b.y);
-                Node nodeC = new Node(startIndex--, c.x, c.y);
+                Node nodeB = new Node(nodes.Count, b.x, b.y);
+                nodes.Add(nodeB);
+
+                Node nodeC = new Node(nodes.Count, c.x, c.y);
+                nodes.Add(nodeC);
 
                 Edge ab = new Edge(nodeA);
                 Edge bc = new Edge(nodeB);
@@ -127,7 +286,7 @@ namespace CDTlib
                 bc.Next = ca;
                 ca.Next = ab;
 
-                Triangle tri = new Triangle(ab) { Area = area };
+                Triangle tri = new Triangle(triangles.Count, ab) { Area = area };
                 ab.Triangle = tri;
                 bc.Triangle = tri;
                 ca.Triangle = tri;
@@ -145,8 +304,6 @@ namespace CDTlib
                 prevShared = bc;
 
                 triangles.Add(tri);
-                nodes.Add(nodeB);
-                nodes.Add(nodeC);
             }
             return (triangles, nodes);
         }
@@ -158,9 +315,5 @@ namespace CDTlib
             Square,
             Circle
         }
-
-  
-
-   
     }
 }
