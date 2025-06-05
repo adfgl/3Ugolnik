@@ -55,6 +55,16 @@
             );
         }
 
+        public bool IntersectsCircle(double cx, double cy, double radius)
+        {
+            double closestX = Math.Max(minX, Math.Min(cx, maxX));
+            double closestY = Math.Max(minY, Math.Min(cy, maxY));
+
+            double dx = cx - closestX;
+            double dy = cy - closestY;
+            return dx * dx + dy * dy <= radius * radius;
+        }
+
         public Rect Union(double x, double y)
         {
             return new Rect(
