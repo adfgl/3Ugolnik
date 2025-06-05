@@ -16,10 +16,14 @@ namespace CDTlib.DataStructures
         }
 
         public Rect Bounds { get; }
-        public List<Node> Items => _items;
+        public IReadOnlyList<Node> Items => _items;
 
         public void Insert(Node node)
         {
+            if (!Bounds.Contains(node.X, node.Y))
+            {
+                throw new Exception();
+            }
             root.Insert(node);
             _items.Add(node);
         }
