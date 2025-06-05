@@ -14,6 +14,7 @@ namespace CDTlib.DataStructures
         public int Index { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
+        public Edge Edge { get; set; } = null!;
 
         public override string ToString()
         {

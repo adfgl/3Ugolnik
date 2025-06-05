@@ -1,21 +1,27 @@
 ﻿using CDTlib.Utils;
-using System.Drawing;
 
 namespace CDTlib.DataStructures
 {
     public class QuadTree
     {
         readonly QuadNode root;
+        readonly List<Node> _items;
 
         public QuadTree(Rect bounds, int maxDepth = 10, int maxItems = 8)
         {
             bounds = ExpandedBounds(bounds);
             root = new QuadNode(bounds, 0, maxDepth, maxItems);
+            Bounds = bounds;
+            _items = new List<Node>();
         }
+
+        public Rect Bounds { get; }
+        public List<Node> Items => _items;
 
         public void Insert(Node node)
         {
             root.Insert(node);
+            _items.Add(node);
         }
 
         public List<Node> Query(Rect area)
@@ -60,10 +66,6 @@ namespace CDTlib.DataStructures
                 _cx = (bounds.minX + bounds.maxX) * 0.5;
                 _cy = (bounds.minY + bounds.maxY) * 0.5;
             }
-
-            public Rect Bounds => _bounds;
-            public int Depth => _depth;
-            public List<Node> Items => _items;
 
             public void Insert(Node node)
             {
