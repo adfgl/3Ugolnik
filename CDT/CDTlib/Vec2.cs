@@ -8,7 +8,8 @@ namespace CDTlib
 
         public Vec2(double x, double y)
         {
-            this.x = x; this.y = y;
+            this.x = x; 
+            this.y = y;
         }
 
         public override string ToString()
