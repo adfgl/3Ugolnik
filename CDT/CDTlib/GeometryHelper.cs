@@ -13,7 +13,6 @@ namespace CDTlib
         Left, Right, Colinear
     }
 
-
     public static class GeometryHelper
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -41,27 +40,27 @@ namespace CDTlib
         public static EOrientation Orientation(double x0, double y0, double x1, double y1, double x2, double y2, double eps = 1e-6)
         {
             double cross = Cross(x0, y0, x1, y1, x2, y2);
-            if (Math.Abs(cross) > eps)
+
+            int sign;
+            if (Math.Abs(cross) > eps || cross == 0)
             {
-                if (cross == 0)
-                {
-                    return EOrientation.Colinear;
-                }
-                return cross > 0 ? EOrientation.Left : EOrientation.Right;
+                sign = double.Sign(cross);
+            }
+            else
+            {
+                Rational rx0 = new Rational(x0), ry0 = new Rational(y0);
+                Rational rx1 = new Rational(x1), ry1 = new Rational(y1);
+                Rational rx2 = new Rational(x2), ry2 = new Rational(y2);
+
+                Rational exactCross = Cross(rx0, ry0, rx1, ry1, rx2, ry2);
+                sign = exactCross.Sign();
             }
 
-            Rational rx0 = new Rational(x0), ry0 = new Rational(y0);
-            Rational rx1 = new Rational(x1), ry1 = new Rational(y1);
-            Rational rx2 = new Rational(x2), ry2 = new Rational(y2);
-
-
-            Rational exactCross = Cross(rx0, ry0, rx1, ry1, rx2, ry2);
-            if (exactCross.num == 0)
+            if (sign == 0)
             {
                 return EOrientation.Colinear;
             }
-
-            return exactCross.num > 0 ? EOrientation.Left : EOrientation.Right;
+            return sign > 0 ? EOrientation.Left : EOrientation.Right;
         }
     }
 }

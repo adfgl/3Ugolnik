@@ -28,6 +28,8 @@
             this.den = den / gcd;
         }
 
+        public int Sign() => num == 0 ? 0 : (num > 0 ? 1 : -1);
+
         public Rational(double value, long maxDenominator = 1_000_000)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
