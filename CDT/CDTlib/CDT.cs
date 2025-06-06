@@ -3,13 +3,15 @@ using CDTlib.Utils;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 
 namespace CDTlib
 {
     public class CDT
     {
-        readonly static int[] NEXT3 = [1, 2, 0], PREV3 = [2, 0, 1];
-        readonly static int[] NEXT4 = [1, 2, 3, 0], PREV4 = [3, 0, 1, 2];
+        public const double EPS = 1e-6;
+
+        readonly Stack<Edge> _toLegalize = new Stack<Edge>();
 
         public CDT Triangulate(IList<Vec2> points)
         {
@@ -36,17 +38,76 @@ namespace CDTlib
                 Node newNode = new Node(nodes.Count, x, y);
                 nodes.Add(newNode);
 
+
+                Triangle[] tris;
                 if (edge == null)
                 {
-
+                    tris = SplitTriangle(triangles, triangle, newNode);
                 }
                 else
                 {
-                    SplitTriangle(triangles, triangle, newNode);
+                    tris = SplitEdge(triangles, edge, newNode);
                 }
+                AddNewTriangles(triangles, tris);
             }
             return this;
         }
+
+        public static Triangle[] FlipEdge(List<Triangle> triangles, Edge edge)
+        {
+            /*
+              v1 - is inserted point, we want to propagate flip away from it, otherwise we 
+              are risking ending up in flipping degeneracy
+                           v2                        v2
+                           /\                        /|\
+                          /  \                      / | \
+                         /    \                    /  |  \
+                        /      \                  /   |   \ 
+                       /   t0   \                /    |    \
+                      /          \              /     |     \ 
+                     /            \            /      |      \
+                 v0 +--------------+ v1    v0 +   t1  |  t0   + v1
+                     \            /            \      |      /
+                      \          /              \     |     /
+                       \   t1   /                \    |    /
+                        \      /                  \   |   / 
+                         \    /                    \  |  /
+                          \  /                      \ | /
+                           \/                        \|/
+                           v3                        v3
+             */
+
+            Edge? twin = edge.Twin;
+            if (twin is null)
+            {
+                throw new Exception();
+            }
+
+            Node v0 = edge.Origin;
+            Node v1 = edge.Next.Origin;
+            Node v2 = edge.Prev.Origin;
+            Node v3 = twin.Next.Origin;
+
+            Triangle t0 = edge.Triangle;
+            Triangle t1 = twin.Triangle;
+
+            Triangle new0 = BuildTriangle(v2, v3, v1, t0.Index);
+            new0.Area = Area(new0);
+
+            Triangle new1 = BuildTriangle(v3, v2, v0, t1.Index);
+            new1.Area = t0.Area + t1.Area - new0.Area;
+
+            SetTwins(new0.Edge, new1.Edge);
+
+            SetTwins(new0.Edge.Next, t1.Edge.Next.Twin);
+            SetTwins(new0.Edge.Prev, t0.Edge.Next.Twin);
+
+            SetTwins(new1.Edge.Next, t1.Edge.Prev.Twin);
+            SetTwins(new1.Edge.Prev, t0.Edge.Prev.Twin);
+
+            return Array.Empty<Triangle>();
+        }
+
 
         public static Triangle[] SplitEdge(List<Triangle> triangles, Edge edge, Node node)
         {
@@ -55,73 +116,91 @@ namespace CDTlib
                         /\                          /|\             
                        /  \                        / | \           
                       /    \                      /  |  \          
-                 e20 /      \ e12            e20 /   |   \ e12     
+                     /      \                    /   |   \      
                     /   t0   \                  /    |    \        
                    /          \                / t0  |  t1 \       
-                  /    e01     \              /      |      \      
+                  /            \              /      |      \      
               v0 +--------------+ v1      v0 +-------v4------+ v1  
-                  \     e10    /              \      |      /      
+                  \            /              \      |      /      
                    \          /                \ t3  |  t2 /       
                     \   t1   /                  \    |    /        
-                 e03 \      / e31            e03 \   |   / e31     
+                     \      /                    \   |   /      
                       \    /                      \  |  /          
                        \  /                        \ | /           
                         \/                          \|/            
                         v3                          v3            
             */
 
-            Edge e01 = edge;
-            Edge e12 = e01.Next;
-            Edge e20 = e12.Next;
+            int baseIndex = triangles.Count;
 
-            Edge e10 = e01.Twin!;
-            Edge e03 = e10.Next;
-            Edge e31 = e03.Next;
+            Edge? twin = edge.Twin;
+            if (twin == null)
+            {
+                throw new Exception();
+            }
 
             Triangle t0 = edge.Triangle;
-            Triangle t1 = e10.Triangle;
+            Triangle t1 = twin.Triangle;
 
-            int baseIndex = triangles.Count;
-            Edge[] edges = [e12, e20, e03, e31];
+            Triangle new0 = BuildTriangle(edge.Prev, node, t0.Index);
+            Triangle new1 = BuildTriangle(edge.Next, node, baseIndex);
+            Triangle new2 = BuildTriangle(twin.Prev, node, baseIndex + 1);
+            Triangle new3 = BuildTriangle(twin.Next, node, t1.Index);
 
-            Triangle[] newTris = new Triangle[4];
-            for (int i = 0; i < 4; i++)
-            {
-                int triIndex;
-                if (i == 0)
-                {
-                    triIndex = t0.Index;
-                }
-                else if (i == 2)
-                {
-                    triIndex = t1.Index;
-                }
-                else
-                {
-                    triIndex = baseIndex + i;
-                }
+            new0.Area = Area(new0);
+            new1.Area = t0.Area - new0.Area;
+            new2.Area = Area(new0);
+            new3.Area = t0.Area - new2.Area;
 
-                newTris[i] = BuildTriangle(edges[i], node, triIndex);
-            }
-            SetTwins(newTris);
-            return newTris;
+            bool constrained = edge.Constrained || twin.Constrained;
+            new0.Edge.Next.Constrained = constrained;
+            new1.Edge.Prev.Constrained = constrained;
+            new2.Edge.Next.Constrained = constrained;
+            new3.Edge.Prev.Constrained = constrained;
+
+            Triangle[] tris = [new0, new1, new2, new3];
+            SetTwins(tris);
+            return tris;
         }
 
-        public static Triangle[] SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node)
+        public Triangle[] SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node)
         {
             int baseIndex = triangles.Count;
-            Edge[] edges = [triangle.Edge, triangle.Edge.Next, triangle.Edge.Next.Next];
 
-            Triangle[] newTris = new Triangle[3];
-            for (int i = 0; i < 3; i++)
-            {
-                int triIndex = i == 0 ? triangle.Index : baseIndex + i;
-                newTris[i] = BuildTriangle(edges[i], node, triIndex);
-            }
-            SetTwins(newTris);
-            return newTris;
+            Triangle new0 = BuildTriangle(triangle.Edge, node, triangle.Index);
+            Triangle new1 = BuildTriangle(triangle.Edge.Next, node, baseIndex);
+            Triangle new2 = BuildTriangle(triangle.Edge.Prev, node, baseIndex + 1);
+            
+            new0.Area = Area(new0);
+            new1.Area = Area(new1);
+            new2.Area = triangle.Area - new0.Area - new1.Area;
+
+            Triangle[] tris = [new0, new1, new2];
+            SetTwins(tris);
+            return tris;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double Area(Triangle t)
+        {
+            Node a = t.Edge.Origin;
+            Node b = t.Edge.Next.Origin;
+            Node c = t.Edge.Prev.Origin;
+            return GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetTwins(Edge? a, Edge? b)
+        {
+            if (a == null || b == null)
+                return;
+
+            a.Twin = b;
+            b.Twin = a;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void SetTwins(Triangle[] tris)
         {
             int n = tris.Length;
@@ -129,33 +208,59 @@ namespace CDTlib
             {
                 Triangle curr = tris[i];
                 Triangle next = tris[(i + 1) % n];
-
-                Edge ca = curr.Edge.Next.Next;
-                Edge bc = next.Edge.Next;
-
-                ca.Twin = bc;
-                bc.Twin = ca;
+                SetTwins(curr.Edge.Prev, next.Edge.Next);
             }
         }
 
-        static Triangle BuildTriangle(Edge edge, Node node, int index)
+        static void AddNewTriangles(List<Triangle> triangles, Triangle[] tris)
         {
-            Node a = edge.Origin;
-            Node b = edge.Next.Origin;
-            Node c = node;
-
-            Edge ab = new Edge(a) { Constrained = edge.Constrained }; a.Edge = ab;
-            Edge bc = new Edge(b); b.Edge = bc;
-            Edge ca = new Edge(c); c.Edge = ca;
-
-            Triangle tri = new Triangle(index, ab)
+            for (int i = 0; i < tris.Length; i++)
             {
-                Area = GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y)
-            };
+                Triangle t = tris[i];
+
+                Edge? twin = t.Edge.Twin;
+                if (twin is not null)
+                {
+                    twin.Twin = t.Edge;
+                }
+
+                int index = t.Index;
+                if (index < triangles.Count)
+                {
+                    triangles[index] = t;
+                }
+                else
+                {
+                    triangles.Add(t);
+                }
+            }
+        }
+
+        public static void Legalize(Stack<Edge> toLegalize)
+        {
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static Triangle BuildTriangle(Node a, Node b, Node c, int index)
+        {
+            Edge ab = new Edge(a);
+            Edge bc = new Edge(b);
+            Edge ca = new Edge(c);
+
+            Triangle tri = new Triangle(index, ab);
+
+            a.Edge = ab;
+            b.Edge = bc;
+            c.Edge = ca;
 
             ab.Next = bc;
             bc.Next = ca;
             ca.Next = ab;
+
+            ab.Prev = ca;
+            bc.Prev = ab;
+            ca.Prev = bc;
 
             ab.Triangle = tri;
             bc.Triangle = tri;
@@ -165,11 +270,29 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static Triangle BuildTriangle(Edge edge, Node node, int index)
+        {
+            Triangle tri = BuildTriangle(edge.Origin, edge.Next.Origin, node, index);
+            tri.Edge.Constrained = edge.Constrained;
+            tri.Edge.Twin = edge.Twin;
+            return tri;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static bool CloseEnoughTo(Node node, double x, double y, double eps)
         {
             double dx = node.X - x;
             double dy = node.Y - y;
             return dx * dx + dy * dy <= eps;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool OnEdge(Node a, Node b, double x, double y, double eps)
+        {
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            double dot = (x - a.X) * dx + (y - a.Y) * dy;
+            return dot >= -eps && dot <= dx * dx + dy * dy + eps;
         }
 
         (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
@@ -200,10 +323,7 @@ namespace CDTlib
                         return (current, edge.Next, b);
                     }
 
-                    double dx = b.X - a.X;
-                    double dy = b.Y - a.Y;
-                    double dot = (x - a.X) * dx + (y - a.Y) * dy;
-                    if (dot >= -eps && dot <= dx * dx + dy * dy + eps)
+                    if (OnEdge(a, b, x, y, eps))
                     {
                         return (current, edge, null);
                     }
@@ -294,25 +414,20 @@ namespace CDTlib
                     throw new NotImplementedException($"Super-structure '{superStructure}' is not implemented.");
             }
 
-            List<Triangle> triangles = new List<Triangle>();
-            List<Node> nodes = new List<Node>();
-
-            Vec2 a = points[0];
-            Node nodeA = new Node(nodes.Count, a.x, a.y);
-            nodes.Add(nodeA);
+            List<Triangle> triangles = new List<Triangle>(points.Count);
+            List<Node> nodes = new List<Node>(points.Count);
+            for (int i = 0; i < points.Count; i++)
+            {
+                var (x, y) = points[i];
+                nodes.Add(new Node(i, x, y));
+            }
 
             Edge? prevShared = null;
             for (int i = 1; i < points.Count - 1; i++)
             {
-                Vec2 b = points[i];
-                Vec2 c = points[i + 1];
-                double area = GeometryHelper.Area(a.x, a.y, b.x, b.y, c.x, c.y);    
-
-                Node nodeB = new Node(nodes.Count, b.x, b.y);
-                nodes.Add(nodeB);
-
-                Node nodeC = new Node(nodes.Count, c.x, c.y);
-                nodes.Add(nodeC);
+                Node nodeA = nodes[0];
+                Node nodeB = nodes[i];
+                Node nodeC = nodes[i + 1];
 
                 Edge ab = new Edge(nodeA);
                 Edge bc = new Edge(nodeB);
@@ -322,7 +437,13 @@ namespace CDTlib
                 bc.Next = ca;
                 ca.Next = ab;
 
-                Triangle tri = new Triangle(triangles.Count, ab) { Area = area };
+                ab.Prev = ca;
+                bc.Prev = ab;
+                ca.Prev = bc;
+
+                Triangle tri = new Triangle(triangles.Count, ab);
+                tri.Area = Area(tri);
+
                 ab.Triangle = tri;
                 bc.Triangle = tri;
                 ca.Triangle = tri;
@@ -350,6 +471,60 @@ namespace CDTlib
             Triangle,
             Square,
             Circle
+        }
+
+        static IList<Triangle> RemoveAndBuild(List<Triangle> triangles, Triangle triangle, Node node)
+        {
+            HashSet<Triangle> removed = new HashSet<Triangle>();
+            Stack<Triangle> stack = new Stack<Triangle>();
+
+            stack.Push(triangle);
+            double x = node.X;
+            double y = node.Y;
+
+            while (stack.Count > 0)
+            {
+                Triangle current = stack.Pop();
+                if (!removed.Add(current))
+                    continue;
+
+                foreach (Edge edge in current)
+                {
+                    Node a = edge.Origin;
+                    Node b = edge.Next.Origin;
+                    Node c = edge.Prev.Origin;
+
+                    if (DelaunayCriteria.InCircle(x, y, a.X, a.Y, b.X, b.Y, c.X, c.Y))
+                    {
+                        Edge? twin = edge.Twin;
+                        if (twin != null)
+                        {
+                            Triangle neighbor = twin.Triangle;
+                            if (!removed.Contains(neighbor))
+                            {
+                                stack.Push(neighbor);
+                            }
+                        }
+                    }
+                }
+            }
+
+            List<Edge> border = new List<Edge>(removed.Count * 2);
+            foreach (Triangle tri in removed)
+            {
+                foreach (Edge edge in tri)
+                {
+                    if (edge.Twin is not null && removed.Contains(edge.Twin.Triangle))
+                    {
+                        border.Add(edge);
+                    }
+                }
+            }
+
+
+
+            List<Triangle> newTriangles = new List<Triangle>();
+            return newTriangles;
         }
     }
 }
