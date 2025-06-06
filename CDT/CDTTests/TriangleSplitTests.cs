@@ -48,9 +48,11 @@ namespace CDTTests
 
             Node v0 = new Node(0, -50, -50);
             Node v1 = new Node(1, 0, -50);
-            Node v2 = new Node(2, 50, -50);
+            Node v2 = new Node(2, +50, -50);
+
             Node v3 = new Node(3, -25, 0);
             Node v4 = new Node(4, +25, 0);
+
             Node v5 = new Node(5, -50, +50);
             Node v6 = new Node(6, 0, +50);
             Node v7 = new Node(7, +50, +50);
@@ -66,8 +68,31 @@ namespace CDTTests
                 CDT.BuildTriangle(v4, v2, v7, 7),
             ];
 
+            foreach (Triangle item in triangles)
+            {
+                item.Area = CDT.Area(item);
+                if (item.Area < 0)
+                {
+                    throw new Exception();
+                }
+            }
+
             SetAllTwins(triangles);
             return triangles;
+        }
+
+        [Fact]
+        public void Orientation_WhenPointToTheLeft()
+        {
+            EOrientation actual = GeometryHelper.Orientation(-100, 0, 0, -100, 0, 100);
+            Assert.Equal(EOrientation.Left, actual);
+        }
+
+        [Fact]
+        public void Orientation_WhenPointToTheRight()
+        {
+            EOrientation actual = GeometryHelper.Orientation(+100, 0, 0, -100, 0, 100);
+            Assert.Equal(EOrientation.Right, actual);
         }
 
         [Fact]
@@ -115,6 +140,22 @@ namespace CDTTests
             Assert.False(e20.Constrained);
             Assert.Equal(e03.Twin, e30);
             Assert.Equal(e32.Twin, e23);
+        }
+
+        [Fact]
+        public void FindContaining_CorrectlyFindsTriangleWhenPointIsInside()
+        {
+            List<Triangle> tris = TestCase();
+            foreach (Triangle item in tris)
+            {
+                item.Center(out double cx, out double cy);
+
+                (Triangle? t, Edge? e, Node? n) = CDT.FindContaining(tris, cx, cy);
+
+                Assert.Null(e);
+                Assert.Null(n);
+                Assert.Equal(item, t);
+            }
         }
     }
 }

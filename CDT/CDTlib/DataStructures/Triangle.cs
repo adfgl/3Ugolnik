@@ -13,7 +13,17 @@
 
         public int Index { get; set; }
         public Edge Edge { get; set; }
-        public double Area { get; set; }    
+        public double Area { get; set; }
+
+        public void Center(out double x, out double y)
+        {
+            Node a = Edge.Origin;
+            Node b = Edge.Next.Origin;
+            Node c = Edge.Prev.Origin;
+
+            x = (a.X + b.X + c.X) / 3.0;
+            y = (a.Y + b.Y + c.Y) / 3.0;
+        }
 
         public override string ToString()
         {

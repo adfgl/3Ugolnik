@@ -324,33 +324,49 @@ namespace CDTlib
         {
             double dx = b.X - a.X;
             double dy = b.Y - a.Y;
-            double dot = (x - a.X) * dx + (y - a.Y) * dy;
-            return dot >= -eps && dot <= dx * dx + dy * dy + eps;
+
+            double px = x - a.X;
+            double py = y - a.Y;
+
+            double cross = dx * py - dy * px;
+            if (Math.Abs(cross) > eps)
+                return false;
+
+            double dot = px * dx + py * dy;
+            double lenSq = dx * dx + dy * dy;
+            return dot >= -eps && dot <= lenSq + eps;
         }
 
         public static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
         {
-            int max = triangles.Count * 3;
+            if (triangles.Count == 0)
+                return (null, null, null);
+
+            int maxSteps = triangles.Count * 3;
             int steps = 0;
 
-            Triangle current = triangles[^1];
+            Triangle current = triangles[^1]; 
             while (true)
             {
-                if (steps++ > max)
+                if (steps++ > maxSteps)
                 {
-                    throw new Exception("Could not find containing triangle. Most likely mesh topology is invalid.");
+                    throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
                 }
 
                 bool inside = true;
+                Edge? bestExitEdge = null;
+                double bestScore = double.MaxValue;
+
                 foreach (Edge edge in current)
                 {
                     Node a = edge.Origin;
+                    Node b = edge.Next.Origin;
+
                     if (CloseEnoughTo(a, x, y, eps))
                     {
                         return (current, edge, a);
                     }
 
-                    Node b = edge.Next.Origin;
                     if (CloseEnoughTo(b, x, y, eps))
                     {
                         return (current, edge.Next, b);
@@ -364,15 +380,18 @@ namespace CDTlib
                     EOrientation orientation = GeometryHelper.Orientation(x, y, a.X, a.Y, b.X, b.Y, eps);
                     if (orientation != EOrientation.Left)
                     {
-                        Edge? twin = edge.Twin;
-                        if (twin is null)
-                        {
-                            return (null, null, null);
-                        }
-
                         inside = false;
-                        current = twin.Triangle;
-                        break;
+
+                        double mx = (a.X + b.X) * 0.5;
+                        double my = (a.Y + b.Y) * 0.5;
+                        double dx = mx - x;
+                        double dy = my - y;
+                        double distSq = dx * dx + dy * dy;
+                        if (distSq < bestScore)
+                        {
+                            bestScore = distSq;
+                            bestExitEdge = edge;
+                        }
                     }
                 }
 
@@ -380,8 +399,16 @@ namespace CDTlib
                 {
                     return (current, null, null);
                 }
+
+                if (bestExitEdge?.Twin == null)
+                {
+                    return (null, null, null);
+                }
+                    
+                current = bestExitEdge.Twin.Triangle;
             }
         }
+
 
         static (Rect bounds, List<Vec2> uniquePoints) Preporcess(IList<Vec2> points)
         {
