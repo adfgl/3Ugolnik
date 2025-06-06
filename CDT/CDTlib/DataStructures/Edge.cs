@@ -13,5 +13,10 @@
         public Edge Prev { get; set; } = null!;
         public Edge? Twin { get; set; } = null;
         public Triangle Triangle { get; set; } = null!;
+
+        public override string ToString()
+        {
+            return $"{Origin.Index} {Next.Origin.Index}";
+        }
     }
 }

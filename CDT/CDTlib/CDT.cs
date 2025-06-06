@@ -1,18 +1,14 @@
 ﻿using CDTlib.DataStructures;
 using CDTlib.Utils;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Runtime.CompilerServices;
-using System.Xml.Linq;
 
 namespace CDTlib
 {
-    public class CDT
+    public static class CDT
     {
         public const double EPS = 1e-6;
 
-        public CDT Triangulate(IList<Vec2> points)
+        public static List<Triangle> Triangulate(IList<Vec2> points)
         {
             (Rect bounds, List<Vec2> uniquePoints) = Preporcess(points);
 
@@ -24,7 +20,7 @@ namespace CDTlib
                 var (x, y) = point;
                 Insert(triangles, nodes, x, y); 
             }
-            return this;
+            return triangles;
         }
 
         public static void Insert(List<Triangle> triangles, List<Node> nodes, double x, double y)
@@ -45,13 +41,14 @@ namespace CDTlib
 
             Triangle[] tris;
             Edge[] affected;
+            int baseIndex = triangles.Count;
             if (edge == null)
             {
-                tris = SplitTriangle(triangles, triangle, newNode, out affected);
+                tris = SplitTriangle(baseIndex, triangle, newNode, out affected);
             }
             else
             {
-                tris = SplitEdge(triangles, edge, newNode, out affected);
+                tris = SplitEdge(baseIndex, edge, newNode, out affected);
             }
 
             AddNewTriangles(triangles, tris);
@@ -66,7 +63,7 @@ namespace CDTlib
                 Edge edge = toLegalize.Pop();
                 if (ShouldFlip(edge))
                 {
-                    Triangle[] tris = FlipEdge(triangles, edge, out Edge[] newAffected);
+                    Triangle[] tris = FlipEdge(edge, out Edge[] newAffected);
                     AddNewTriangles(triangles, tris);
 
                     foreach (Edge item in newAffected)
@@ -94,7 +91,7 @@ namespace CDTlib
             return false;
         }
 
-        public static Triangle[] FlipEdge(List<Triangle> triangles, Edge edge, out Edge[] affected)
+        public static Triangle[] FlipEdge(Edge edge, out Edge[] affected)
         {
             /*
               v2 - is inserted point, we want to propagate flip away from it, otherwise we 
@@ -151,7 +148,7 @@ namespace CDTlib
         }
 
 
-        public static Triangle[] SplitEdge(List<Triangle> triangles, Edge edge, Node node, out Edge[] affected)
+        public static Triangle[] SplitEdge(int baseIndex, Edge edge, Node node, out Edge[] affected)
         {
             /*
                         v2                          v2            
@@ -172,8 +169,6 @@ namespace CDTlib
                         \/                          \|/            
                         v3                          v3            
             */
-
-            int baseIndex = triangles.Count;
 
             Edge? twin = edge.Twin;
             if (twin == null)
@@ -207,10 +202,8 @@ namespace CDTlib
             return tris;
         }
 
-        public static Triangle[] SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node, out Edge[] affected)
+        public static Triangle[] SplitTriangle(int baseIndex, Triangle triangle, Node node, out Edge[] affected)
         {
-            int baseIndex = triangles.Count;
-
             Triangle new0 = BuildTriangle(triangle.Edge, node, triangle.Index);
             Triangle new1 = BuildTriangle(triangle.Edge.Next, node, baseIndex);
             Triangle new2 = BuildTriangle(triangle.Edge.Prev, node, baseIndex + 1);
@@ -236,13 +229,13 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetTwins(Edge? a, Edge? b)
+        public static void SetTwins(Edge a, Edge? b)
         {
-            if (a == null || b == null)
-                return;
-
             a.Twin = b;
-            b.Twin = a;
+            if (b != null)
+            {
+                b.Twin = a;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -253,7 +246,7 @@ namespace CDTlib
             {
                 Triangle curr = tris[i];
                 Triangle next = tris[(i + 1) % n];
-                SetTwins(curr.Edge.Prev, next.Edge.Next);
+                SetTwins(curr.Edge.Next, next.Edge.Prev);
             }
         }
 
@@ -281,13 +274,8 @@ namespace CDTlib
             }
         }
 
-        public static void Legalize(Stack<Edge> toLegalize)
-        {
-
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static Triangle BuildTriangle(Node a, Node b, Node c, int index)
+        public static Triangle BuildTriangle(Node a, Node b, Node c, int index)
         {
             Edge ab = new Edge(a);
             Edge bc = new Edge(b);
@@ -315,7 +303,7 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static Triangle BuildTriangle(Edge edge, Node node, int index)
+        public static Triangle BuildTriangle(Edge edge, Node node, int index)
         {
             Triangle tri = BuildTriangle(edge.Origin, edge.Next.Origin, node, index);
             tri.Edge.Constrained = edge.Constrained;
@@ -340,7 +328,7 @@ namespace CDTlib
             return dot >= -eps && dot <= dx * dx + dy * dy + eps;
         }
 
-        static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
+        public static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
         {
             int max = triangles.Count * 3;
             int steps = 0;
@@ -395,7 +383,7 @@ namespace CDTlib
             }
         }
 
-        (Rect bounds, List<Vec2> uniquePoints) Preporcess(IList<Vec2> points)
+        static (Rect bounds, List<Vec2> uniquePoints) Preporcess(IList<Vec2> points)
         {
             List<Vec2> uniquePoints = new List<Vec2>(points.Count);
             Rect rect = Rect.FromPoints(points);
@@ -419,7 +407,7 @@ namespace CDTlib
             return (rect, uniquePoints);
         }
 
-        (List<Triangle> triangles, List<Node> nodes) AddSuperStructure(Rect bounds, List<Vec2> uniquePoints, ESuperStructure superStructure)
+        static (List<Triangle> triangles, List<Node> nodes) AddSuperStructure(Rect bounds, List<Vec2> uniquePoints, ESuperStructure superStructure)
         {
             double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
             double midx = (bounds.maxX + bounds.minX) * 0.5;
