@@ -2,6 +2,7 @@
 using CDTlib.Utils;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Xml.Linq;
 
@@ -10,8 +11,6 @@ namespace CDTlib
     public class CDT
     {
         public const double EPS = 1e-6;
-
-        readonly Stack<Edge> _toLegalize = new Stack<Edge>();
 
         public CDT Triangulate(IList<Vec2> points)
         {
@@ -23,40 +22,82 @@ namespace CDTlib
             foreach (Vec2 point in uniquePoints)
             {
                 var (x, y) = point;
-
-                (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y);
-                if (node != null)
-                {
-                    continue;
-                }
-
-                if (triangle == null)
-                {
-                    throw new Exception($"Point [{point}] is outside of topology.");
-                }
-
-                Node newNode = new Node(nodes.Count, x, y);
-                nodes.Add(newNode);
-
-
-                Triangle[] tris;
-                if (edge == null)
-                {
-                    tris = SplitTriangle(triangles, triangle, newNode);
-                }
-                else
-                {
-                    tris = SplitEdge(triangles, edge, newNode);
-                }
-                AddNewTriangles(triangles, tris);
+                Insert(triangles, nodes, x, y); 
             }
             return this;
         }
 
-        public static Triangle[] FlipEdge(List<Triangle> triangles, Edge edge)
+        public static void Insert(List<Triangle> triangles, List<Node> nodes, double x, double y)
+        {
+            (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y);
+            if (node != null)
+            {
+                return;
+            }
+
+            if (triangle == null)
+            {
+                throw new Exception($"Point [{x} {y}] is outside of topology.");
+            }
+
+            Node newNode = new Node(nodes.Count, x, y);
+            nodes.Add(newNode);
+
+            Triangle[] tris;
+            Edge[] affected;
+            if (edge == null)
+            {
+                tris = SplitTriangle(triangles, triangle, newNode, out affected);
+            }
+            else
+            {
+                tris = SplitEdge(triangles, edge, newNode, out affected);
+            }
+
+            AddNewTriangles(triangles, tris);
+            Legalize(triangles, affected);
+        }
+
+        public static void Legalize(List<Triangle> triangles, Edge[] affected)
+        {
+            Stack<Edge> toLegalize = new Stack<Edge>(affected);
+            while (toLegalize.Count > 0)
+            {
+                Edge edge = toLegalize.Pop();
+                if (ShouldFlip(edge))
+                {
+                    Triangle[] tris = FlipEdge(triangles, edge, out Edge[] newAffected);
+                    AddNewTriangles(triangles, tris);
+
+                    foreach (Edge item in newAffected)
+                    {
+                        toLegalize.Push(item);
+                    }
+                }
+            }
+        }
+
+        public static bool ShouldFlip(Edge edge)
+        {
+            Edge? twin = edge.Twin;
+            if (twin is null) return false;
+
+            Node v0 = edge.Origin;
+            Node v1 = edge.Next.Origin;
+            Node v2 = edge.Prev.Origin;
+            Node v3 = twin.Next.Origin;
+
+            if (DelaunayCriteria.SumOfOppositeAngles(v3.X, v3.Y, v0.X, v0.Y, v1.X, v1.Y, v2.X, v2.Y))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static Triangle[] FlipEdge(List<Triangle> triangles, Edge edge, out Edge[] affected)
         {
             /*
-              v1 - is inserted point, we want to propagate flip away from it, otherwise we 
+              v2 - is inserted point, we want to propagate flip away from it, otherwise we 
               are risking ending up in flipping degeneracy
                            v2                        v2
                            /\                        /|\
@@ -105,11 +146,12 @@ namespace CDTlib
             SetTwins(new1.Edge.Next, t1.Edge.Prev.Twin);
             SetTwins(new1.Edge.Prev, t0.Edge.Prev.Twin);
 
-            return Array.Empty<Triangle>();
+            affected = [new0.Edge.Next, new1.Edge.Prev];
+            return [new0, new1];
         }
 
 
-        public static Triangle[] SplitEdge(List<Triangle> triangles, Edge edge, Node node)
+        public static Triangle[] SplitEdge(List<Triangle> triangles, Edge edge, Node node, out Edge[] affected)
         {
             /*
                         v2                          v2            
@@ -160,10 +202,12 @@ namespace CDTlib
 
             Triangle[] tris = [new0, new1, new2, new3];
             SetTwins(tris);
+
+            affected = [new0.Edge, new1.Edge, new2.Edge, new3.Edge];
             return tris;
         }
 
-        public Triangle[] SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node)
+        public static Triangle[] SplitTriangle(List<Triangle> triangles, Triangle triangle, Node node, out Edge[] affected)
         {
             int baseIndex = triangles.Count;
 
@@ -177,6 +221,8 @@ namespace CDTlib
 
             Triangle[] tris = [new0, new1, new2];
             SetTwins(tris);
+
+            affected = [new0.Edge, new1.Edge, new2.Edge];   
             return tris;
         }
 
@@ -188,7 +234,6 @@ namespace CDTlib
             Node c = t.Edge.Prev.Origin;
             return GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y);
         }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetTwins(Edge? a, Edge? b)
@@ -295,7 +340,7 @@ namespace CDTlib
             return dot >= -eps && dot <= dx * dx + dy * dy + eps;
         }
 
-        (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
+        static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
         {
             int max = triangles.Count * 3;
             int steps = 0;
