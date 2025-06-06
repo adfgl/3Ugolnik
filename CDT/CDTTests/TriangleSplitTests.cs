@@ -10,6 +10,66 @@ namespace CDTTests
 {
     public class TriangleSplitTests
     {
+        static void SetAllTwins(List<Triangle> triangles)
+        {
+            Dictionary<(Node, Node), Edge> edgeMap = new();
+
+            foreach (Triangle tri in triangles)
+            {
+                foreach (Edge edge in tri)
+                {
+                    (Node, Node) key = (edge.Origin, edge.Next.Origin);     
+                    (Node, Node) twinKey = (edge.Next.Origin, edge.Origin); 
+                    if (edgeMap.TryGetValue(twinKey, out Edge? twin))
+                    {
+                        CDT.SetTwins(edge, twin);
+                    }
+                    else
+                    {
+                        edgeMap[key] = edge;
+                    }
+                }
+            }
+        }
+
+        static List<Triangle> TestCase()
+        {
+            /*
+               5-------6------7
+               |\  4  /\   5 /|
+               | \   /  \   / |
+               |  \ /  0 \ /  |
+               | 6 3------4  7|
+               |  / \  1 / \  |
+               | /   \  /   \ |
+               |/  2  \/   3 \|
+               0-------1------2
+             */
+
+            Node v0 = new Node(0, -50, -50);
+            Node v1 = new Node(1, 0, -50);
+            Node v2 = new Node(2, 50, -50);
+            Node v3 = new Node(3, -25, 0);
+            Node v4 = new Node(4, +25, 0);
+            Node v5 = new Node(5, -50, +50);
+            Node v6 = new Node(6, 0, +50);
+            Node v7 = new Node(7, +50, +50);
+
+            List<Triangle> triangles = [
+                CDT.BuildTriangle(v3, v4, v6, 0),
+                CDT.BuildTriangle(v1, v4, v3, 1),
+                CDT.BuildTriangle(v0, v1, v3, 2),
+                CDT.BuildTriangle(v1, v2, v4, 3),
+                CDT.BuildTriangle(v3, v6, v5, 4),
+                CDT.BuildTriangle(v4, v7, v6, 5),
+                CDT.BuildTriangle(v0, v3, v5, 6),
+                CDT.BuildTriangle(v4, v2, v7, 7),
+            ];
+
+            SetAllTwins(triangles);
+            return triangles;
+        }
+
         [Fact]
         public void TriangleIsSplitCorrectly()
         {
