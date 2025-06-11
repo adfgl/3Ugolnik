@@ -81,20 +81,6 @@ namespace CDTTests
             return triangles;
         }
 
-        //[Fact]
-        //public void Orientation_WhenPointToTheLeft()
-        //{
-        //    EOrientation actual = GeometryHelper.Orientation(-100, 0, 0, -100, 0, 100);
-        //    Assert.Equal(EOrientation.Left, actual);
-        //}
-
-        //[Fact]
-        //public void Orientation_WhenPointToTheRight()
-        //{
-        //    EOrientation actual = GeometryHelper.Orientation(+100, 0, 0, -100, 0, 100);
-        //    Assert.Equal(EOrientation.Right, actual);
-        //}
-
         [Fact]
         public void TriangleIsSplitCorrectly()
         {
@@ -156,6 +142,50 @@ namespace CDTTests
                 Assert.Null(n);
                 Assert.Equal(item, t);
             }
+        }
+
+        [Fact]
+        public void FindContaining_CorrectlyFindsTriangleWhenPointIsOnNode()
+        {
+            List<Triangle> tris = TestCase();
+            foreach (Triangle tri in tris)
+            {
+                foreach (var edge in tri)
+                {
+                    double x = edge.Origin.X;
+                    double y = edge.Origin.Y;
+
+                    (Triangle? t, Edge? e, Node? n) = CDT.FindContaining(tris, x, y);
+
+                    Assert.Equal(edge.Origin, n);
+                }
+            }
+        }
+
+        [Fact]
+        public void FindContaining_CorrectlyFindsTriangleWhenPointIsOnEdge()
+        {
+            List<Triangle> tris = TestCase();
+            foreach (Triangle tri in tris)
+            {
+                foreach (var edge in tri)
+                {
+                    double x0 = edge.Origin.X;
+                    double y0 = edge.Origin.Y;
+
+                    double x1 = edge.Next.Origin.X;
+                    double y1 = edge.Next.Origin.Y;
+
+                    double cx = (x0 + x1) / 2;
+                    double cy = (y0 + y1) / 2;
+
+                    (Triangle? t, Edge? e, Node? n) = CDT.FindContaining(tris, cx, cy);
+
+                    Assert.Null(n);
+                    Assert.True(e == edge || e == edge.Twin);
+                }
+            }
+
         }
     }
 }

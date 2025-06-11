@@ -342,16 +342,14 @@ namespace CDTlib
 
                     double adx = x - a.X;
                     double ady = y - a.Y;
-                    double apSqr = adx * adx + ady * ady;
-                    if (apSqr < eps)
+                    if (adx * adx + ady * ady < eps)
                     {
                         return (current, edge, a);
                     }
 
                     double bdx = x - b.X;
                     double bdy = y - b.Y;
-                    double bpSqr = bdx * bdx + bdy * bdy;
-                    if (bpSqr < eps)
+                    if (bdx * bdx + bdy * bdy < eps)
                     {
                         return (current, edge.Next, b);
                     }
@@ -361,10 +359,10 @@ namespace CDTlib
                     {
                         double dx = bx - ax;
                         double dy = by - ay;
-
+                        double dot = (x - ax) * dx + (y - ay) * dy;
                         double lenSq = dx * dx + dy * dy;
 
-                        if (Math.Abs(lenSq - apSqr - bpSqr) < eps)
+                        if (dot >= -eps && dot <= lenSq + eps)
                         {
                             return (current, edge, null);
                         }
