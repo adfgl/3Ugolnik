@@ -329,35 +329,69 @@ namespace CDTlib
                     throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
                 }
 
+                Edge? bestExit = null;
+                double mostNegativeCross = 0;
                 bool inside = true;
                 foreach (Edge edge in current)
                 {
                     Node a = edge.Origin;
+                    double ax = a.X, ay = a.Y;
+
                     Node b = edge.Next.Origin;
+                    double bx = b.X, by = b.Y;
 
-                    EOrientation orientation = GeometryHelper.ClassifyPoint(a.X, a.Y, b.X, b.Y, x, y, eps);
-                    switch (orientation)
+                    double adx = x - a.X;
+                    double ady = y - a.Y;
+                    double apSqr = adx * adx + ady * ady;
+                    if (apSqr < eps)
                     {
-                        case EOrientation.NodeA:
-                            return (current, edge, a);
+                        return (current, edge, a);
+                    }
 
-                        case EOrientation.NodeB:
-                            return (current, edge.Next, b);
+                    double bdx = x - b.X;
+                    double bdy = y - b.Y;
+                    double bpSqr = bdx * bdx + bdy * bdy;
+                    if (bpSqr < eps)
+                    {
+                        return (current, edge.Next, b);
+                    }
 
-                        case EOrientation.Edge:
+                    double cross = GeometryHelper.Cross(a.X, a.Y, b.X, b.Y, x, y);
+                    if (Math.Abs(cross) < eps)
+                    {
+                        double dx = bx - ax;
+                        double dy = by - ay;
+
+                        double lenSq = dx * dx + dy * dy;
+
+                        if (Math.Abs(lenSq - apSqr - bpSqr) < eps)
+                        {
                             return (current, edge, null);
+                        }
+                    }
 
-                        case EOrientation.Right:
-                            inside = false;
-                            if (edge.Twin == null)
-                                return (null, null, null);
-                            current = edge.Twin.Triangle;
-                            break;
+                    if (cross < 0)
+                    {
+                        inside = false;
+                        if (bestExit == null || cross < mostNegativeCross)
+                        {
+                            mostNegativeCross = cross;
+                            bestExit = edge;
+                        }
                     }
                 }
 
                 if (inside)
-                    return (current, null, null); 
+                {
+                    return (current, null, null);
+                }
+
+                if (bestExit?.Twin == null)
+                {
+                    return (null, null, null);
+                }
+
+                current = bestExit.Twin.Triangle;
             }
         }
 

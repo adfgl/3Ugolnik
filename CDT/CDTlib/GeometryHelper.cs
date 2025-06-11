@@ -5,7 +5,7 @@ namespace CDTlib
 {
     public enum EOrientation
     {
-        NodeA, NodeB, Edge, Left, Right
+        Edge, Left, Right
     }
 
     public static class GeometryHelper
@@ -17,27 +17,15 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Cross(double x, double y, double x1, double y1, double x2, double y2)
+        public static double Cross(double ax, double ay, double bx, double by, double px, double py)
         {
-            double abx = x1 - x, aby = y1 - y;
-            double acx = x2 - x, acy = y2 - y;
-            return abx * acy - aby * acx;
+            double abx = bx - ax, aby = by - ay;
+            double apx = px - ax, apy = py - ay;
+            return abx * apy - aby * apx;
         }
 
         public static EOrientation ClassifyPoint(double ax, double ay, double bx, double by, double px, double py, double eps = 1e-12)
         {
-            double dax = ax - px, day = ay - py;
-            if (dax * dax + day * day < eps * eps)
-            {
-                return EOrientation.NodeA;
-            }
-
-            double dbx = bx - px, dby = by - py;
-            if (dbx * dbx + dby * dby < eps * eps)
-            {
-                return EOrientation.NodeB;
-            }
-
             double abx = bx - ax, aby = by - ay;
             double apx = px - ax, apy = py - ay;
 
