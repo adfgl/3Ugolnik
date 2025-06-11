@@ -1,8 +1,7 @@
 ﻿using CDTlib.DataStructures;
 using CDTlib.Utils;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.X86;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Text;
 
 namespace CDTlib
 {
@@ -14,7 +13,7 @@ namespace CDTlib
         {
             (Rect bounds, List<Vec2> uniquePoints) = Preporcess(points);
 
-            (List<Triangle> triangles, List<Node> nodes) = AddSuperStructure(bounds, uniquePoints, ESuperStructure.Circle);
+            (List<Triangle> triangles, List<Node> nodes) = AddSuperStructure(bounds, uniquePoints, ESuperStructure.Triangle);
             int superIndex = nodes.Count;
 
             foreach (Vec2 point in uniquePoints)
@@ -25,12 +24,69 @@ namespace CDTlib
             return triangles;
         }
 
-        public static void Insert(List<Triangle> triangles, List<Node> nodes, double x, double y)
+        public static string ToSvg(List<Triangle> triangles, float size = 1000f, float padding = 10f, string fillColor = "#ccc", string edgeColor = "#000")
+        {
+            // https://www.svgviewer.dev/
+
+            if (triangles.Count == 0)
+                return "<svg xmlns='http://www.w3.org/2000/svg'/>";
+
+            var vertices = new HashSet<Node>();
+            foreach (var tri in triangles)
+            {
+                foreach (var edge in tri)
+                {
+                    vertices.Add(edge.Origin);
+                }
+            }
+
+            double minX = double.MaxValue, maxX = double.MinValue;
+            double minY = double.MaxValue, maxY = double.MinValue;
+
+            foreach (var v in vertices)
+            {
+                if (v.X < minX) minX = v.X;
+                if (v.X > maxX) maxX = v.X;
+                if (v.Y < minY) minY = v.Y;
+                if (v.Y > maxY) maxY = v.Y;
+            }
+
+            double scale = (size - 2 * padding) / Math.Max(maxX - minX, maxY - minY);
+
+            var sb = new StringBuilder();
+            sb.Append("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ");
+            sb.Append(size); sb.Append(' '); sb.Append(size); sb.Append("'>");
+
+            foreach (var tri in triangles)
+            {
+                var a = tri.Edge.Origin;
+                var b = tri.Edge.Next.Origin;
+                var c = tri.Edge.Next.Next.Origin;
+
+                var (x1, y1) = Project(a.X, a.Y);
+                var (x2, y2) = Project(b.X, b.Y);
+                var (x3, y3) = Project(c.X, c.Y);
+
+                sb.Append($"<polygon points='{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1}' fill='{fillColor}' fill-opacity='0.5' stroke='{edgeColor}' stroke-width='1'/>");
+            }
+
+            sb.Append("</svg>");
+            return sb.ToString();
+
+            (double x, double y) Project(double x, double y)
+            {
+                double sx = (x - minX) * scale + padding;
+                double sy = (y - minY) * scale + padding;
+                return (sx, size - sy); // Y-flip for SVG coordinates
+            }
+        }
+
+        public static Node? Insert(List<Triangle> triangles, List<Node> nodes, double x, double y)
         {
             (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y);
             if (node != null)
             {
-                return;
+                return node;
             }
 
             if (triangle == null)
@@ -55,6 +111,7 @@ namespace CDTlib
 
             AddNewTriangles(triangles, tris);
             Legalize(triangles, affected);
+            return newNode;
         }
 
         public static void Legalize(List<Triangle> triangles, Edge[] affected)
@@ -81,12 +138,37 @@ namespace CDTlib
             Edge? twin = edge.Twin;
             if (twin is null) return false;
 
-            Node v0 = edge.Origin;
-            Node v1 = edge.Next.Origin;
-            Node v2 = edge.Prev.Origin;
-            Node v3 = twin.Next.Origin;
+            /*
+                           v2             
+                           /\             
+                          /  \            
+                         /    \           
+                        /      \          
+                       /        \         
+                      /          \        
+                     /            \       
+                 v3 +--------------+ v1   
+                     \            /       
+                      \          /        
+                       \        /         
+                        \      /          
+                         \    /           
+                          \  /            
+                           \/             
+                           v0             
+             */
 
-            if (DelaunayCriteria.SumOfOppositeAngles(v3.X, v3.Y, v0.X, v0.Y, v1.X, v1.Y, v2.X, v2.Y))
+            Node v0 = twin.Prev.Origin;
+            Node v1 = twin.Origin;
+            Node v2 = edge.Prev.Origin;
+            Node v3 = edge.Origin;
+
+            if (!GeometryHelper.ConvexQuad(v0.X, v0.Y, v1.X, v1.Y, v2.X, v2.Y, v3.X, v3.Y))
+            {
+                return false;
+            }
+
+            if (DelaunayCriteria.SumOfOppositeAngles(v0.X, v0.Y, v1.X, v1.Y, v2.X, v2.Y, v3.X, v3.Y))
             {
                 return true;
             }
@@ -126,7 +208,7 @@ namespace CDTlib
             Node v0 = edge.Origin;
             Node v1 = edge.Next.Origin;
             Node v2 = edge.Prev.Origin;
-            Node v3 = twin.Next.Origin;
+            Node v3 = twin.Prev.Origin;
 
             Triangle t0 = edge.Triangle;
             Triangle t1 = twin.Triangle;
@@ -139,13 +221,13 @@ namespace CDTlib
 
             SetTwins(new0.Edge, new1.Edge);
 
-            SetTwins(new0.Edge.Next, t1.Edge.Next.Twin);
-            SetTwins(new0.Edge.Prev, t0.Edge.Next.Twin);
+            SetTwins(new0.Edge.Next, twin.Prev.Twin);  
+            SetTwins(new0.Edge.Prev, edge.Next.Twin);  
 
-            SetTwins(new1.Edge.Next, t1.Edge.Prev.Twin);
-            SetTwins(new1.Edge.Prev, t0.Edge.Prev.Twin);
+            SetTwins(new1.Edge.Next, edge.Prev.Twin);  
+            SetTwins(new1.Edge.Prev, twin.Next.Twin);
 
-            affected = [new0.Edge.Next, new1.Edge.Prev];
+            affected =[new0.Edge.Next, new1.Edge.Prev];
             return [new0, new1];
         }
 
@@ -315,16 +397,20 @@ namespace CDTlib
 
         public static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
         {
+            int edgesChecked = 0;
             if (triangles.Count == 0)
+            {
                 return (null, null, null);
+            }
 
             int maxSteps = triangles.Count * 3;
-            int steps = 0;
+            int trianglesChecked = 0;
 
-            Triangle current = triangles[^1]; 
+            Triangle current = triangles[^1];
+            Edge? skipEdge = null;
             while (true)
             {
-                if (steps++ > maxSteps)
+                if (trianglesChecked++ > maxSteps)
                 {
                     throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
                 }
@@ -334,6 +420,13 @@ namespace CDTlib
                 bool inside = true;
                 foreach (Edge edge in current)
                 {
+                    if (edge == skipEdge)
+                    {
+                        continue;
+                    }
+
+                    edgesChecked++;
+
                     Node a = edge.Origin;
                     double ax = a.X, ay = a.Y;
 
@@ -389,6 +482,7 @@ namespace CDTlib
                     return (null, null, null);
                 }
 
+                skipEdge = bestExit.Twin;
                 current = bestExit.Twin.Triangle;
             }
         }
@@ -462,6 +556,8 @@ namespace CDTlib
             for (int i = 0; i < points.Count; i++)
             {
                 var (x, y) = points[i];
+                x = Math.Round(x, 4);
+                y = Math.Round(y, 4);
                 nodes.Add(new Node(i, x, y));
             }
 
@@ -471,6 +567,12 @@ namespace CDTlib
                 Node nodeA = nodes[0];
                 Node nodeB = nodes[i];
                 Node nodeC = nodes[i + 1];
+
+                double area = GeometryHelper.Area(nodeA.X, nodeA.Y, nodeB.X, nodeB.Y, nodeC.X, nodeC.Y);
+                if (area < 0)
+                {
+                    (nodeB, nodeC) = (nodeC, nodeB);
+                }
 
                 Edge ab = new Edge(nodeA);
                 Edge bc = new Edge(nodeB);
@@ -513,7 +615,7 @@ namespace CDTlib
         {
             Triangle,
             Square,
-            Circle
+            Circle,
         }
 
         static IList<Triangle> RemoveAndBuild(List<Triangle> triangles, Triangle triangle, Node node)

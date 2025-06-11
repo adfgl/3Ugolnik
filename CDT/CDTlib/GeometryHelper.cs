@@ -24,7 +24,33 @@ namespace CDTlib
             return abx * apy - aby * apx;
         }
 
-        public static EOrientation ClassifyPoint(double ax, double ay, double bx, double by, double px, double py, double eps = 1e-12)
+        public static bool ConvexQuad(
+            double x0, double y0,
+            double x1, double y1,
+            double x2, double y2,
+            double x3, double y3)
+        {
+            return SameSide(x0, y0, x1, y1, x2, y2, x3, y3) &&
+                   SameSide(x3, y3, x2, y2, x1, y1, x0, y0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool SameSide(
+            double ax, double ay,
+            double bx, double by,
+            double cx, double cy,
+            double dx, double dy)
+        {
+            double cross1 = Cross(ax, ay, bx, by, cx, cy);
+            double cross2 = Cross(cx, cy, dx, dy, ax, ay);
+            return cross1 * cross2 >= 0;
+        }
+
+        public static EOrientation ClassifyPoint(
+            double ax, double ay,
+            double bx, double by,
+            double px, double py,
+            double eps = 1e-12)
         {
             double abx = bx - ax, aby = by - ay;
             double apx = px - ax, apy = py - ay;

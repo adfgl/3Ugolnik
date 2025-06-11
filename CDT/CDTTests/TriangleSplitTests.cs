@@ -185,7 +185,6 @@ namespace CDTTests
                     Assert.True(e == edge || e == edge.Twin);
                 }
             }
-
         }
     }
 }
