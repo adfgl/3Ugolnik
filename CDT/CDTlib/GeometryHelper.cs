@@ -5,7 +5,7 @@ namespace CDTlib
 {
     public enum EOrientation
     {
-        Left, Right, Colinear
+        NodeA, NodeB, Edge, Left, Right
     }
 
     public static class GeometryHelper
@@ -17,45 +17,42 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Cross(double x0, double y0, double x1, double y1, double x2, double y2)
+        public static double Cross(double x, double y, double x1, double y1, double x2, double y2)
         {
-            double abx = x1 - x0, aby = y1 - y0;
-            double acx = x2 - x0, acy = y2 - y0;
+            double abx = x1 - x, aby = y1 - y;
+            double acx = x2 - x, acy = y2 - y;
             return abx * acy - aby * acx;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Rational Cross(Rational x0, Rational y0, Rational x1, Rational y1, Rational x2, Rational y2)
+        public static EOrientation ClassifyPoint(double ax, double ay, double bx, double by, double px, double py, double eps = 1e-12)
         {
-            Rational abx = x1 - x0, aby = y1 - y0;
-            Rational acx = x2 - x0, acy = y2 - y0;
-            return abx * acy - aby * acx;
-        }
-
-        public static EOrientation Orientation(double x0, double y0, double x1, double y1, double x2, double y2, double eps = 1e-6)
-        {
-            double cross = Cross(x0, y0, x1, y1, x2, y2);
-
-            int sign;
-            if (Math.Abs(cross) > eps || cross == 0)
+            double dax = ax - px, day = ay - py;
+            if (dax * dax + day * day < eps * eps)
             {
-                sign = double.Sign(cross);
-            }
-            else
-            {
-                Rational rx0 = new Rational(x0), ry0 = new Rational(y0);
-                Rational rx1 = new Rational(x1), ry1 = new Rational(y1);
-                Rational rx2 = new Rational(x2), ry2 = new Rational(y2);
-
-                Rational exactCross = Cross(rx0, ry0, rx1, ry1, rx2, ry2);
-                sign = exactCross.Sign();
+                return EOrientation.NodeA;
             }
 
-            if (sign == 0)
+            double dbx = bx - px, dby = by - py;
+            if (dbx * dbx + dby * dby < eps * eps)
             {
-                return EOrientation.Colinear;
+                return EOrientation.NodeB;
             }
-            return sign > 0 ? EOrientation.Left : EOrientation.Right;
+
+            double abx = bx - ax, aby = by - ay;
+            double apx = px - ax, apy = py - ay;
+
+            double cross = abx * apy - aby * apx;
+
+            if (Math.Abs(cross) < eps)
+            {
+                return EOrientation.Edge;
+            }
+
+            if (cross > 0)
+            {
+                return EOrientation.Left;
+            }
+            return EOrientation.Right;
         }
     }
 }

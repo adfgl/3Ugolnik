@@ -81,19 +81,19 @@ namespace CDTTests
             return triangles;
         }
 
-        [Fact]
-        public void Orientation_WhenPointToTheLeft()
-        {
-            EOrientation actual = GeometryHelper.Orientation(-100, 0, 0, -100, 0, 100);
-            Assert.Equal(EOrientation.Left, actual);
-        }
+        //[Fact]
+        //public void Orientation_WhenPointToTheLeft()
+        //{
+        //    EOrientation actual = GeometryHelper.Orientation(-100, 0, 0, -100, 0, 100);
+        //    Assert.Equal(EOrientation.Left, actual);
+        //}
 
-        [Fact]
-        public void Orientation_WhenPointToTheRight()
-        {
-            EOrientation actual = GeometryHelper.Orientation(+100, 0, 0, -100, 0, 100);
-            Assert.Equal(EOrientation.Right, actual);
-        }
+        //[Fact]
+        //public void Orientation_WhenPointToTheRight()
+        //{
+        //    EOrientation actual = GeometryHelper.Orientation(+100, 0, 0, -100, 0, 100);
+        //    Assert.Equal(EOrientation.Right, actual);
+        //}
 
         [Fact]
         public void TriangleIsSplitCorrectly()

@@ -1,6 +1,8 @@
 ﻿using CDTlib.DataStructures;
 using CDTlib.Utils;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics.X86;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CDTlib
 {
@@ -311,32 +313,6 @@ namespace CDTlib
             return tri;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool CloseEnoughTo(Node node, double x, double y, double eps)
-        {
-            double dx = node.X - x;
-            double dy = node.Y - y;
-            return dx * dx + dy * dy <= eps;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool OnEdge(Node a, Node b, double x, double y, double eps)
-        {
-            double dx = b.X - a.X;
-            double dy = b.Y - a.Y;
-
-            double px = x - a.X;
-            double py = y - a.Y;
-
-            double cross = dx * py - dy * px;
-            if (Math.Abs(cross) > eps)
-                return false;
-
-            double dot = px * dx + py * dy;
-            double lenSq = dx * dx + dy * dy;
-            return dot >= -eps && dot <= lenSq + eps;
-        }
-
         public static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
         {
             if (triangles.Count == 0)
@@ -354,61 +330,36 @@ namespace CDTlib
                 }
 
                 bool inside = true;
-                Edge? bestExitEdge = null;
-                double bestScore = double.MaxValue;
-
                 foreach (Edge edge in current)
                 {
                     Node a = edge.Origin;
                     Node b = edge.Next.Origin;
 
-                    if (CloseEnoughTo(a, x, y, eps))
+                    EOrientation orientation = GeometryHelper.ClassifyPoint(a.X, a.Y, b.X, b.Y, x, y, eps);
+                    switch (orientation)
                     {
-                        return (current, edge, a);
-                    }
+                        case EOrientation.NodeA:
+                            return (current, edge, a);
 
-                    if (CloseEnoughTo(b, x, y, eps))
-                    {
-                        return (current, edge.Next, b);
-                    }
+                        case EOrientation.NodeB:
+                            return (current, edge.Next, b);
 
-                    if (OnEdge(a, b, x, y, eps))
-                    {
-                        return (current, edge, null);
-                    }
+                        case EOrientation.Edge:
+                            return (current, edge, null);
 
-                    EOrientation orientation = GeometryHelper.Orientation(x, y, a.X, a.Y, b.X, b.Y, eps);
-                    if (orientation != EOrientation.Left)
-                    {
-                        inside = false;
-
-                        double mx = (a.X + b.X) * 0.5;
-                        double my = (a.Y + b.Y) * 0.5;
-                        double dx = mx - x;
-                        double dy = my - y;
-                        double distSq = dx * dx + dy * dy;
-                        if (distSq < bestScore)
-                        {
-                            bestScore = distSq;
-                            bestExitEdge = edge;
-                        }
+                        case EOrientation.Right:
+                            inside = false;
+                            if (edge.Twin == null)
+                                return (null, null, null);
+                            current = edge.Twin.Triangle;
+                            break;
                     }
                 }
 
                 if (inside)
-                {
-                    return (current, null, null);
-                }
-
-                if (bestExitEdge?.Twin == null)
-                {
-                    return (null, null, null);
-                }
-                    
-                current = bestExitEdge.Twin.Triangle;
+                    return (current, null, null); 
             }
         }
-
 
         static (Rect bounds, List<Vec2> uniquePoints) Preporcess(IList<Vec2> points)
         {
