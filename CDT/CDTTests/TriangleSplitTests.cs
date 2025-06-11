@@ -94,7 +94,7 @@ namespace CDTTests
 
             List<Triangle> tris = [tri];
 
-            Triangle[] newTris = CDT.SplitTriangle(tris.Count, tri, v3, out Edge[] affected);
+            CDT.SplitTriangle(tris.Count, tri, v3, out Edge[] affected, out Triangle[] oldTris, out Triangle[] newTris);
             Assert.Equal(3, newTris.Length);    
 
             Triangle t013 = newTris[0];

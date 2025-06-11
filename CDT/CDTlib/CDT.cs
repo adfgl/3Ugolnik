@@ -148,8 +148,8 @@ namespace CDTlib
                         segmentQueue.Enqueue(s2);
                     }
 
-                    Triangle[] tris = SplitEdge(triangles.Count, existing, node, out Edge[] affected);
-                    AddNewTriangles(triangles, tris);
+                    SplitEdge(triangles.Count, existing, node, out Edge[] affected, out Triangle[] oldTris, out Triangle[] newTris);
+                    AddNewTriangles(triangles, newTris, oldTris);
                     Legalize(triangles, affected);
 
                     if (segmentQueue.Count == 0)
@@ -305,8 +305,8 @@ namespace CDTlib
                         }
                         else
                         {
-                            FlipEdge(edge, out Edge[] affected);
-                            SetConstraint(edge, true);
+                            Edge flippedEdge = FlipEdge(edge, out Edge[] affected, out Triangle[] oldTris, out Triangle[] newTris);
+                            SetConstraint(flippedEdge, true);
                             Legalize(triangles, affected);
                         }
 
@@ -379,19 +379,20 @@ namespace CDTlib
             Node newNode = new Node(nodes.Count, x, y);
             nodes.Add(newNode);
 
-            Triangle[] tris;
+            Triangle[] newTris;
+            Triangle[] oldTris;
             Edge[] affected;
             int baseIndex = triangles.Count;
             if (edge == null)
             {
-                tris = SplitTriangle(baseIndex, triangle, newNode, out affected);
+                SplitTriangle(baseIndex, triangle, newNode, out affected, out oldTris, out newTris);
             }
             else
             {
-                tris = SplitEdge(baseIndex, edge, newNode, out affected);
+                SplitEdge(baseIndex, edge, newNode, out affected, out oldTris, out newTris);
             }
 
-            AddNewTriangles(triangles, tris);
+            AddNewTriangles(triangles, newTris, oldTris);
             Legalize(triangles, affected);
 
             return newNode;
@@ -405,8 +406,8 @@ namespace CDTlib
                 Edge edge = toLegalize.Pop();
                 if (ShouldFlip(edge))
                 {
-                    Triangle[] tris = FlipEdge(edge, out Edge[] newAffected);
-                    AddNewTriangles(triangles, tris);
+                    FlipEdge(edge, out Edge[] newAffected, out Triangle[] oldTris, out Triangle[] newTris);
+                    AddNewTriangles(triangles, newTris, oldTris);
                     foreach (Edge item in newAffected)
                     {
                         toLegalize.Push(item);
@@ -460,7 +461,7 @@ namespace CDTlib
             return false;
         }
 
-        public static Triangle[] FlipEdge(Edge edge, out Edge[] affected)
+        public static Edge FlipEdge(Edge edge, out Edge[] affected, out Triangle[] oldTris, out Triangle[] newTris)
         {
             /*
               v2 - is inserted point, we want to propagate flip away from it, otherwise we 
@@ -512,12 +513,13 @@ namespace CDTlib
             SetTwins(new1.Edge.Next, edge.Prev.Twin);  
             SetTwins(new1.Edge.Prev, twin.Next.Twin);
 
+            oldTris =[t0, t1];
+            newTris =[new0, new1];
             affected =[new0.Edge.Next, new1.Edge.Prev];
-            return [new0, new1];
+            return new0.Edge;
         }
 
-
-        public static Triangle[] SplitEdge(int baseIndex, Edge edge, Node node, out Edge[] affected)
+        public static void SplitEdge(int baseIndex, Edge edge, Node node, out Edge[] affected, out Triangle[] oldTris, out Triangle[] newTris)
         {
             /*
                         v2                          v2            
@@ -564,14 +566,13 @@ namespace CDTlib
             new2.Edge.Next.Constrained = constrained;
             new3.Edge.Prev.Constrained = constrained;
 
-            Triangle[] tris = [new0, new1, new2, new3];
-            SetTwins(tris);
-
+            oldTris = [t0, t1];
+            newTris = [new0, new1, new2, new3];
             affected = [new0.Edge, new1.Edge, new2.Edge, new3.Edge];
-            return tris;
+            SetTwins(newTris);
         }
 
-        public static Triangle[] SplitTriangle(int baseIndex, Triangle triangle, Node node, out Edge[] affected)
+        public static void SplitTriangle(int baseIndex, Triangle triangle, Node node, out Edge[] affected, out Triangle[] oldTris, out Triangle[] newTris)
         {
             Triangle new0 = BuildTriangle(triangle.Edge, node, triangle.Index);
             Triangle new1 = BuildTriangle(triangle.Edge.Next, node, baseIndex);
@@ -581,11 +582,10 @@ namespace CDTlib
             new1.Area = Area(new1);
             new2.Area = triangle.Area - new0.Area - new1.Area;
 
-            Triangle[] tris = [new0, new1, new2];
-            SetTwins(tris);
-
-            affected = [new0.Edge, new1.Edge, new2.Edge];   
-            return tris;
+            oldTris = [triangle];
+            newTris = [new0, new1, new2];
+            affected = [new0.Edge, new1.Edge, new2.Edge];
+            SetTwins(newTris);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -629,11 +629,11 @@ namespace CDTlib
             }
         }
 
-        static void AddNewTriangles(List<Triangle> triangles, Triangle[] tris)
+        static void AddNewTriangles(List<Triangle> triangles, Triangle[] newTris, Triangle[] oldTris)
         {
-            for (int i = 0; i < tris.Length; i++)
+            for (int i = 0; i < newTris.Length; i++)
             {
-                Triangle t = tris[i];
+                Triangle t = newTris[i];
 
                 Edge? twin = t.Edge.Twin;
                 if (twin is not null)
@@ -650,6 +650,11 @@ namespace CDTlib
                 {
                     triangles.Add(t);
                 }
+            }
+
+            for (int i = 0; i < oldTris.Length; i++)
+            {
+                oldTris[i].Deleted = true;
             }
         }
 
