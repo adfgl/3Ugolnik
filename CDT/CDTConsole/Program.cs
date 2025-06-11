@@ -8,10 +8,27 @@ namespace CDTConsole
     {
         static void Main(string[] args)
         {
+            var cloud = RandomPointCloud(0, 0, 100, 200);
+            cloud = Star(0, 0, 55, 44, 6);
 
-            var triangles = CDT.Triangulate(Circle(0, 0, 60, 4));
+            var triangles = CDT.Triangulate(cloud);
 
             Console.WriteLine(CDT.ToSvg(triangles));
+        }
+
+        public static List<Vec2> RandomPointCloud(double cx, double cy, double r, int n)
+        {
+            var rand = new Random();
+            var points = new List<Vec2>(n);
+
+            for (int i = 0; i < n; i++)
+            {
+                double x = cx - r + rand.NextDouble() * 2 * r;
+                double y = cy - r + rand.NextDouble() * 2 * r;
+                points.Add(new Vec2(x, y));
+            }
+
+            return points;
         }
 
         public static List<Vec2> Square(double cx, double cy, double r)
@@ -24,7 +41,6 @@ namespace CDTConsole
                 new Vec2(cx - r, cy + r)
             };
         }
-
 
         public static List<Vec2> Circle(double cx, double cy, double r, int steps)
         {

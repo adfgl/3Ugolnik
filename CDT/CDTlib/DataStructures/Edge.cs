@@ -14,6 +14,16 @@
         public Edge? Twin { get; set; } = null;
         public Triangle Triangle { get; set; } = null!;
 
+        public EOrientation Orient(double x, double y)
+        {
+            return GeometryHelper.ClassifyPoint(Origin.X, Origin.Y, Next.Origin.X, Next.Origin.Y, x, y);
+        }
+
+        public bool Contains(Node node)
+        {
+            return Origin == node || Next.Origin == node;
+        }
+
         public override string ToString()
         {
             return $"{Origin.Index} {Next.Origin.Index}";

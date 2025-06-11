@@ -1,5 +1,6 @@
 ﻿using CDTlib.DataStructures;
 using CDTlib.Utils;
+using System;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -81,9 +82,106 @@ namespace CDTlib
             }
         }
 
-        public static Node? Insert(List<Triangle> triangles, List<Node> nodes, double x, double y)
+        static void InsertConstraint(List<Triangle> triangles, List<Node> nodes, Node a, Node b)
         {
-            (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y);
+            if (a == b)
+                return;
+
+            Vec2 start = new Vec2(a.X, a.Y);
+            Vec2 end = new Vec2(b.X, b.Y);
+
+            while (true)
+            {
+                Edge? existing = FindEdge(a, b);
+                if (existing != null)
+                {
+                    SetConstraint(existing, true);
+                    return;
+                }
+
+                Triangle? current = EntranceTriangle(a, b);
+                if (current == null)
+                    throw new Exception("Failed to locate entrance");
+
+                bool changed = false;
+
+                while (true)
+                {
+                    foreach (Edge edge in current)
+                    {
+                        Node n1 = edge.Origin;
+                        Node n2 = edge.Next.Origin;
+
+                        if (n1 == a || n2 == a || n1 == b || n2 == b)
+                            continue;
+
+                        Vec2 e1 = new Vec2(n1.X, n1.Y);
+                        Vec2 e2 = new Vec2(n2.X, n2.Y);
+
+                        if (!GeometryHelper.Intersect(start, end, e1, e2, out Vec2 inter))
+                            continue;
+
+                        if (edge.Constrained)
+                        {
+                            Insert(triangles, nodes, inter.x, inter.y, current);
+                        }
+                        else
+                        {
+                            FlipEdge(edge, out Edge[] affected);
+                            SetConstraint(edge, true);
+                            Legalize(triangles, affected);
+                        }
+
+                        changed = true;
+                        break;
+                    }
+
+                    if (changed)
+                        break;
+
+                    Edge? nextEdge = null;
+                    double mostNegativeCross = 0;
+                    foreach (Edge edge in current)
+                    {
+                        Node a1 = edge.Origin;
+                        Node a2 = edge.Next.Origin;
+
+                        double cross = GeometryHelper.Cross(a1.X, a1.Y, a2.X, a2.Y, b.X, b.Y);
+                        if (cross < mostNegativeCross || nextEdge == null)
+                        {
+                            mostNegativeCross = cross;
+                            nextEdge = edge;
+                        }
+                    }
+
+                    if (nextEdge?.Twin == null)
+                    {
+                        throw new Exception("Stuck during constraint insertion. Mesh may be invalid or degenerate.");
+                    }
+                    current = nextEdge.Twin.Triangle;
+                }
+            }
+        }
+
+
+        static Triangle? EntranceTriangle(Node a, Node b)
+        {
+            double x = b.X; 
+            double y = b.Y;
+            foreach (Edge edge in a.Around())
+            {
+                if (edge.Orient(x, y) == EOrientation.Left &&
+                    edge.Next.Orient(x, y) == EOrientation.Left)
+                {
+                    return edge.Triangle;
+                }
+            }
+            return null;
+        }
+
+        public static Node? Insert(List<Triangle> triangles, List<Node> nodes, double x, double y, Triangle? start = null)
+        {
+            (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y, EPS, start);
             if (node != null)
             {
                 return node;
@@ -124,7 +222,6 @@ namespace CDTlib
                 {
                     Triangle[] tris = FlipEdge(edge, out Edge[] newAffected);
                     AddNewTriangles(triangles, tris);
-
                     foreach (Edge item in newAffected)
                     {
                         toLegalize.Push(item);
@@ -136,10 +233,13 @@ namespace CDTlib
         public static bool ShouldFlip(Edge edge)
         {
             Edge? twin = edge.Twin;
-            if (twin is null) return false;
+            if (twin is null || edge.Constrained)
+            {
+                return false;
+            }
 
             /*
-                           v2             
+                           v2            
                            /\             
                           /  \            
                          /    \           
@@ -147,7 +247,7 @@ namespace CDTlib
                        /        \         
                       /          \        
                      /            \       
-                 v3 +--------------+ v1   
+                 v1 +--------------+ v3   
                      \            /       
                       \          /        
                        \        /         
@@ -159,16 +259,16 @@ namespace CDTlib
              */
 
             Node v0 = twin.Prev.Origin;
-            Node v1 = twin.Origin;
+            Node v1 = edge.Origin;
             Node v2 = edge.Prev.Origin;
-            Node v3 = edge.Origin;
+            Node v3 = twin.Origin;
 
             if (!GeometryHelper.ConvexQuad(v0.X, v0.Y, v1.X, v1.Y, v2.X, v2.Y, v3.X, v3.Y))
             {
                 return false;
             }
 
-            if (DelaunayCriteria.SumOfOppositeAngles(v0.X, v0.Y, v1.X, v1.Y, v2.X, v2.Y, v3.X, v3.Y))
+            if (DelaunayCriteria.InCircle(v0.X, v0.Y, v1.X, v1.Y, v3.X, v3.Y, v2.X, v2.Y))
             {
                 return true;
             }
@@ -323,6 +423,16 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetConstraint(Edge edge, bool value = true)
+        {
+            edge.Constrained = value;
+            if (edge.Twin is not null)
+            {
+                edge.Twin.Constrained = value;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void SetTwins(Triangle[] tris)
         {
             int n = tris.Length;
@@ -395,7 +505,7 @@ namespace CDTlib
             return tri;
         }
 
-        public static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6)
+        public static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6, Triangle? start = null)
         {
             int edgesChecked = 0;
             if (triangles.Count == 0)
@@ -406,7 +516,7 @@ namespace CDTlib
             int maxSteps = triangles.Count * 3;
             int trianglesChecked = 0;
 
-            Triangle current = triangles[^1];
+            Triangle current = start is null ? triangles[^1] : start;
             Edge? skipEdge = null;
             while (true)
             {
@@ -525,8 +635,8 @@ namespace CDTlib
             {
                 case ESuperStructure.Triangle:
                     points.Add(new Vec2(midx - size, midy - size));
-                    points.Add(new Vec2(midx, midy + size));
                     points.Add(new Vec2(midx + size, midy - size));
+                    points.Add(new Vec2(midx, midy + size));
                     break;
 
                 case ESuperStructure.Square:
@@ -568,12 +678,6 @@ namespace CDTlib
                 Node nodeB = nodes[i];
                 Node nodeC = nodes[i + 1];
 
-                double area = GeometryHelper.Area(nodeA.X, nodeA.Y, nodeB.X, nodeB.Y, nodeC.X, nodeC.Y);
-                if (area < 0)
-                {
-                    (nodeB, nodeC) = (nodeC, nodeB);
-                }
-
                 Edge ab = new Edge(nodeA);
                 Edge bc = new Edge(nodeB);
                 Edge ca = new Edge(nodeC);
@@ -607,10 +711,27 @@ namespace CDTlib
 
                 triangles.Add(tri);
             }
+
             return (triangles, nodes);
         }
 
-     
+        public static Edge? FindEdge(Node a, Node b)
+        {
+            foreach (Edge edge in a.Around())
+            {
+                Node s = edge.Origin;
+                Node e = edge.Next.Origin;
+
+                if (a == s && b == e || a == e && b == s)
+                {
+                    return edge;
+                }
+            }
+            return null;
+        }
+
+
+
         public enum ESuperStructure
         {
             Triangle,
