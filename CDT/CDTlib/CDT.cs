@@ -22,16 +22,18 @@ namespace CDTlib
             }
 
             List<Triangle> triangles = new List<Triangle>();
-            QuadTree vertices = new QuadTree(bounds);
+            QuadTree nodes = new QuadTree(bounds);
 
-            AddSuperStructure(triangles, vertices, ESuperStructure.Circle);
-            int superIndex = vertices.Count;
+            AddSuperStructure(triangles, nodes.Bounds);
+            int superIndex = nodes.Count;
 
             foreach (Vec2 point in uniquePoints)
             {
                 var (x, y) = point;
-                Insert(triangles, vertices, x, y); 
+                Insert(triangles, nodes, x, y, out _); 
             }
+
+            Refine(triangles, nodes, 25);
             return triangles;
         }
 
@@ -116,7 +118,7 @@ namespace CDTlib
                 }
             }
 
-            while (segmentQueue.Count > 0 || triangleQueue.Count > 0)
+            while (segmentQueue.Count > 0 || triangleQueue.Count > 0) //  
             {
                 if (segmentQueue.Count > 0)
                 {
@@ -167,15 +169,16 @@ namespace CDTlib
 
                 if (triangleQueue.Count > 0)
                 {
-                    Triangle t = triangleQueue.Dequeue();
+                    Triangle tri = triangleQueue.Dequeue();
 
-                    if (!IsBad(t, maxArea))
+                    if (!IsBad(tri, maxArea))
                     {
                         continue;
                     }
 
                     double x = 0;
                     double y = 0;
+                    Circumcenter(tri, out x, out y);
 
                     bool encroaches = false;
                     foreach (Segment seg in seen)
@@ -193,6 +196,16 @@ namespace CDTlib
                     if (encroaches)
                     {
                         continue;
+                    }
+
+                    Insert(triangles, nodes, x, y, out _);
+
+                    foreach (Triangle t in triangles)
+                    {
+                        if (IsBad(t, maxArea))
+                        {
+                            triangleQueue.Enqueue(t);
+                        }
                     }
                 }
             }
@@ -248,7 +261,12 @@ namespace CDTlib
 
         public static bool IsBad(Triangle t, double maxAllowedArea)
         {
-            if (t.Parents.Count == 0)
+            if (t.Deleted)
+            {
+                return false;
+            }
+
+            if (t.Edge.Origin.Index < 0 || t.Edge.Next.Origin.Index < 0 || t.Edge.Prev.Origin.Index < 0)
             {
                 return false;
             }
@@ -301,7 +319,7 @@ namespace CDTlib
 
                         if (edge.Constrained)
                         {
-                            Insert(triangles, nodes, inter.x, inter.y, current);
+                            Insert(triangles, nodes, inter.x, inter.y, out _, current);
                         }
                         else
                         {
@@ -356,18 +374,19 @@ namespace CDTlib
             return null;
         }
 
-
-        public static Node? Insert(List<Triangle> triangles, QuadTree nodes, double x, double y, Triangle? start = null)
+        public static Node? Insert(List<Triangle> triangles, QuadTree nodes, double x, double y, out List<Triangle> affectedTris, Triangle? start = null)
         {
             Node? existing = nodes.TryGet(x, y);
             if (existing != null)
             {
+                affectedTris = new List<Triangle>();
                 return existing;
             }
 
             (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y, EPS, start);
             if (node != null)
             {
+                affectedTris = new List<Triangle>();
                 return node;
             }
 
@@ -393,33 +412,40 @@ namespace CDTlib
             }
 
             AddNewTriangles(triangles, newTris, oldTris);
-            Legalize(triangles, affected);
-
+            affectedTris = Legalize(triangles, affected);
             return newNode;
         }
 
-        public static void Legalize(List<Triangle> triangles, Edge[] affected)
+        public static List<Triangle> Legalize(List<Triangle> triangles, Edge[] affected)
         {
+            List<Triangle> affectedTris = new List<Triangle>();
             Stack<Edge> toLegalize = new Stack<Edge>(affected);
             while (toLegalize.Count > 0)
             {
                 Edge edge = toLegalize.Pop();
                 if (ShouldFlip(edge))
                 {
-                    FlipEdge(edge, out Edge[] newAffected, out Triangle[] oldTris, out Triangle[] newTris);
+                    Edge flipped = FlipEdge(edge, out Edge[] newAffected, out Triangle[] oldTris, out Triangle[] newTris);
                     AddNewTriangles(triangles, newTris, oldTris);
-                    foreach (Edge item in newAffected)
+                    foreach (Edge e in newAffected)
                     {
-                        toLegalize.Push(item);
+                        toLegalize.Push(e);
+                        affectedTris.Add(e.Triangle);
                     }
                 }
             }
+            return affectedTris;
         }
 
         public static bool ShouldFlip(Edge edge)
         {
             Edge? twin = edge.Twin;
             if (twin is null || edge.Constrained)
+            {
+                return false;
+            }
+
+            if (edge.Triangle.Deleted)
             {
                 return false;
             }
@@ -577,7 +603,7 @@ namespace CDTlib
             Triangle new0 = BuildTriangle(triangle.Edge, node, triangle.Index);
             Triangle new1 = BuildTriangle(triangle.Edge.Next, node, baseIndex);
             Triangle new2 = BuildTriangle(triangle.Edge.Prev, node, baseIndex + 1);
-            
+
             new0.Area = Area(new0);
             new1.Area = Area(new1);
             new2.Area = triangle.Area - new0.Area - new1.Area;
@@ -595,6 +621,14 @@ namespace CDTlib
             Node b = t.Edge.Next.Origin;
             Node c = t.Edge.Prev.Origin;
             return GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+        }
+
+        public static void Circumcenter(Triangle t, out double x, out double y)
+        {
+            Node a = t.Edge.Origin;
+            Node b = t.Edge.Next.Origin;
+            Node c = t.Edge.Prev.Origin;
+            GeometryHelper.Circumcenter(a.X, a.Y, b.X, b.Y, c.X, c.Y, out x, out y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -805,9 +839,8 @@ namespace CDTlib
             return (rect, uniquePoints);
         }
 
-        static void AddSuperStructure(List<Triangle> triangles, QuadTree quad, ESuperStructure superStructure)
+        static void AddSuperStructure(List<Triangle> triangles, Rect bounds)
         {
-            Rect bounds = quad.Bounds;
             double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
             double midx = (bounds.maxX + bounds.minX) * 0.5;
             double midy = (bounds.maxY + bounds.minY) * 0.5;
@@ -816,45 +849,19 @@ namespace CDTlib
             double size = scale * dmax;
 
             List<Vec2> points = new List<Vec2>();
-            switch (superStructure)
-            {
-                case ESuperStructure.Triangle:
-                    points.Add(new Vec2(midx - size, midy - size));
-                    points.Add(new Vec2(midx + size, midy - size));
-                    points.Add(new Vec2(midx, midy + size));
-                    break;
+            points.Add(new Vec2(midx - size, midy - size));
+            points.Add(new Vec2(midx + size, midy - size));
+            points.Add(new Vec2(midx, midy + size));
 
-                case ESuperStructure.Square:
-                    points.Add(new Vec2(midx - size, midy - size)); 
-                    points.Add(new Vec2(midx + size, midy - size)); 
-                    points.Add(new Vec2(midx + size, midy + size)); 
-                    points.Add(new Vec2(midx - size, midy + size)); 
-                    break;
-
-                case ESuperStructure.Circle:
-                    int n = (int)Math.Max(4, Math.Sqrt(quad.Count));
-                    for (int i = 0; i < n; i++)
-                    {
-                        double angle = 2 * Math.PI * i / n;
-                        double x = Math.Cos(angle) * size;
-                        double y = Math.Sin(angle) * size;
-                        points.Add(new Vec2(x, y));
-                    }
-                    break;
-
-                default:
-                    throw new NotImplementedException($"Super-structure '{superStructure}' is not implemented.");
-            }
-
+            List<Node> nodes = new List<Node>(points.Count);
             for (int i = 0; i < points.Count; i++)
             {
                 var (x, y) = points[i];
                 x = Math.Round(x, 4);
                 y = Math.Round(y, 4);
-                quad.Add(new Node(i, x, y));
+                nodes.Add(new Node(i - points.Count, x, y));
             }
 
-            IReadOnlyList<Node> nodes = quad.Items;
             Edge? prevShared = null;
             for (int i = 1; i < points.Count - 1; i++)
             {
@@ -910,15 +917,6 @@ namespace CDTlib
                 }
             }
             return null;
-        }
-
-
-
-        public enum ESuperStructure
-        {
-            Triangle,
-            Square,
-            Circle,
         }
 
         static IList<Triangle> RemoveAndBuild(List<Triangle> triangles, Triangle triangle, Node node)

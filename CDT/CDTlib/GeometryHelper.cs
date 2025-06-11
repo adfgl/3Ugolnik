@@ -10,6 +10,34 @@ namespace CDTlib
 
     public static class GeometryHelper
     {
+        public static void Circumcenter(
+                double x1, double y1,
+                double x2, double y2,
+                double x3, double y3,
+                out double cx, out double cy)
+        {
+            double d = 2 * (x1 * (y2 - y3) +
+                            x2 * (y3 - y1) +
+                            x3 * (y1 - y2));
+
+            if (Math.Abs(d) < 1e-12)
+            {
+                throw new InvalidOperationException("Points are colinear; circumcenter is undefined.");
+            }
+
+            double x1Sq = x1 * x1 + y1 * y1;
+            double x2Sq = x2 * x2 + y2 * y2;
+            double x3Sq = x3 * x3 + y3 * y3;
+
+            cx = (x1Sq * (y2 - y3) +
+                  x2Sq * (y3 - y1) +
+                  x3Sq * (y1 - y2)) / d;
+
+            cy = (x1Sq * (x3 - x2) +
+                  x2Sq * (x1 - x3) +
+                  x3Sq * (x2 - x1)) / d;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Area(double x0, double y0, double x1, double y1, double x2, double y2)
         {

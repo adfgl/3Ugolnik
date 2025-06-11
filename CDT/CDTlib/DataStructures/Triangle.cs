@@ -11,8 +11,6 @@
             Edge = edge;
         }
 
-        public List<int> Parents { get; set; } = new List<int>();
-
         public int Index { get; set; }
         public Edge Edge { get; set; }
         public double Area { get; set; }

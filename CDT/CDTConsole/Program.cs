@@ -8,8 +8,7 @@ namespace CDTConsole
     {
         static void Main(string[] args)
         {
-            var cloud = RandomPointCloud(0, 0, 100, 200);
-            cloud = Star(0, 0, 55, 44, 6);
+            var cloud = Square(0, 0, 55);
 
             var triangles = CDT.Triangulate(cloud);
 
