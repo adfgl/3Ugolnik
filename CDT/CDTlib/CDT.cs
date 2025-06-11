@@ -14,13 +14,22 @@ namespace CDTlib
         {
             (Rect bounds, List<Vec2> uniquePoints) = Preporcess(points);
 
-            (List<Triangle> triangles, List<Node> nodes) = AddSuperStructure(bounds, uniquePoints, ESuperStructure.Triangle);
-            int superIndex = nodes.Count;
+            int count = uniquePoints.Count;
+            if (count < 3)
+            {
+                throw new Exception($"Must have at least 3 points but got only {count} unique points.");
+            }
+
+            List<Triangle> triangles = new List<Triangle>();
+            QuadTree vertices = new QuadTree(bounds);
+
+            AddSuperStructure(triangles, vertices, ESuperStructure.Circle);
+            int superIndex = vertices.Count;
 
             foreach (Vec2 point in uniquePoints)
             {
                 var (x, y) = point;
-                Insert(triangles, nodes, x, y); 
+                Insert(triangles, vertices, x, y); 
             }
             return triangles;
         }
@@ -82,7 +91,7 @@ namespace CDTlib
             }
         }
 
-        static void InsertConstraint(List<Triangle> triangles, List<Node> nodes, Node a, Node b)
+        public static void InsertConstraint(List<Triangle> triangles, QuadTree nodes, Node a, Node b)
         {
             if (a == b)
                 return;
@@ -163,7 +172,6 @@ namespace CDTlib
             }
         }
 
-
         static Triangle? EntranceTriangle(Node a, Node b)
         {
             double x = b.X; 
@@ -179,8 +187,14 @@ namespace CDTlib
             return null;
         }
 
-        public static Node? Insert(List<Triangle> triangles, List<Node> nodes, double x, double y, Triangle? start = null)
+        public static Node? Insert(List<Triangle> triangles, QuadTree nodes, double x, double y, Triangle? start = null)
         {
+            Node? existing = nodes.TryGet(x, y);
+            if (existing != null)
+            {
+                return existing;
+            }
+
             (Triangle? triangle, Edge? edge, Node? node) = FindContaining(triangles, x, y, EPS, start);
             if (node != null)
             {
@@ -191,7 +205,7 @@ namespace CDTlib
             {
                 throw new Exception($"Point [{x} {y}] is outside of topology.");
             }
-
+        
             Node newNode = new Node(nodes.Count, x, y);
             nodes.Add(newNode);
 
@@ -608,21 +622,16 @@ namespace CDTlib
                 var (x, y) = point;
                 if (qt.TryGet(x, y, 1e-6) == null)
                 {
-                    qt.Insert(new Node(-1, x, y));
+                    qt.Add(new Node(-1, x, y));
                     uniquePoints.Add(point);    
                 }
-            }
-
-            int count = uniquePoints.Count;
-            if (count < 3)
-            {
-                throw new Exception($"Must have at least 3 points but got only {count} unique points.");
             }
             return (rect, uniquePoints);
         }
 
-        static (List<Triangle> triangles, List<Node> nodes) AddSuperStructure(Rect bounds, List<Vec2> uniquePoints, ESuperStructure superStructure)
+        static void AddSuperStructure(List<Triangle> triangles, QuadTree quad, ESuperStructure superStructure)
         {
+            Rect bounds = quad.Bounds;
             double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
             double midx = (bounds.maxX + bounds.minX) * 0.5;
             double midy = (bounds.maxY + bounds.minY) * 0.5;
@@ -647,7 +656,7 @@ namespace CDTlib
                     break;
 
                 case ESuperStructure.Circle:
-                    int n = (int)Math.Max(4, Math.Sqrt(uniquePoints.Count));
+                    int n = (int)Math.Max(4, Math.Sqrt(quad.Count));
                     for (int i = 0; i < n; i++)
                     {
                         double angle = 2 * Math.PI * i / n;
@@ -661,16 +670,15 @@ namespace CDTlib
                     throw new NotImplementedException($"Super-structure '{superStructure}' is not implemented.");
             }
 
-            List<Triangle> triangles = new List<Triangle>(points.Count);
-            List<Node> nodes = new List<Node>(points.Count);
             for (int i = 0; i < points.Count; i++)
             {
                 var (x, y) = points[i];
                 x = Math.Round(x, 4);
                 y = Math.Round(y, 4);
-                nodes.Add(new Node(i, x, y));
+                quad.Add(new Node(i, x, y));
             }
 
+            IReadOnlyList<Node> nodes = quad.Items;
             Edge? prevShared = null;
             for (int i = 1; i < points.Count - 1; i++)
             {
@@ -711,8 +719,6 @@ namespace CDTlib
 
                 triangles.Add(tri);
             }
-
-            return (triangles, nodes);
         }
 
         public static Edge? FindEdge(Node a, Node b)

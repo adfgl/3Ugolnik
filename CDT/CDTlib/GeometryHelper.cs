@@ -86,7 +86,7 @@ namespace CDTlib
             // | a  b | * | u | = | e |
             // | c  d |   | v |   | f |
 
-            intersection = Vec2.NaN;
+            intersection = new Vec2();
 
             double a = p2.x - p1.x, b = q1.x - q2.x;
             double c = p2.y - p1.y, d = q1.y - q2.y;

@@ -17,8 +17,9 @@ namespace CDTlib.DataStructures
 
         public Rect Bounds { get; }
         public IReadOnlyList<Node> Items => _items;
+        public int Count => _items.Count;
 
-        public void Insert(Node node)
+        public void Add(Node node)
         {
             if (!Bounds.Contains(node.X, node.Y))
             {

@@ -21,7 +21,7 @@ namespace CDTTests
             for (int i = 0; i < vertices.Length; i++)
             {
                 var (x, y) = vertices[i];
-                quadTree.Insert(new Node(i, x, y));
+                quadTree.Add(new Node(i, x, y));
             }
             return quadTree;
         }
