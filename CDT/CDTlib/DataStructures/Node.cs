@@ -12,6 +12,7 @@ namespace CDTlib.DataStructures
         }
 
         public int Index { get; }
+        public bool Super { get; }
         public double X { get; set; }
         public double Y { get; set; }
         public Edge Edge { get; set; } = null!;

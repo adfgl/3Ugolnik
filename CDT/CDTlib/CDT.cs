@@ -2,6 +2,7 @@
 using CDTlib.Utils;
 using System;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace CDTlib
@@ -89,6 +90,174 @@ namespace CDTlib
                 double sy = (y - minY) * scale + padding;
                 return (sx, size - sy); // Y-flip for SVG coordinates
             }
+        }
+
+        public static void Refine(List<Triangle> triangles, QuadTree nodes, double maxArea)
+        {
+            HashSet<Segment> seen = new HashSet<Segment>();
+            Queue<Triangle> triangleQueue = new Queue<Triangle>();
+            Queue<Segment> segmentQueue = new Queue<Segment>();
+            foreach (Triangle t in triangles)
+            {
+                if (IsBad(t, maxArea))
+                {
+                    triangleQueue.Enqueue(t);
+                }
+
+                foreach (Edge e in t)
+                {
+                    if (!e.Constrained) continue;
+
+                    Segment segment = new Segment(e.Origin, e.Next.Origin);
+                    if (seen.Add(segment) && Enchrouched(nodes, segment))
+                    {
+                        segmentQueue.Enqueue(segment);
+                    }
+                }
+            }
+
+            while (segmentQueue.Count > 0 || triangleQueue.Count > 0)
+            {
+                if (segmentQueue.Count > 0)
+                {
+                    Segment seg = segmentQueue.Dequeue();
+                    Edge? existing = FindEdge(seg.a, seg.b);
+                    if (existing is null)
+                    {
+                        throw new Exception($"Midpoint of segment ({seg.a},{seg.b}) not found on any edge.");
+                    }
+
+                    double x = seg.cx;
+                    double y = seg.cy;
+
+                    Node node = new Node(nodes.Count, x, y);
+                    nodes.Add(node);
+
+                    Segment s1 = new Segment(seg.a, node);
+                    Segment s2 = new Segment(node, seg.b);
+                    seen.Remove(seg);
+                    seen.Add(s1);
+                    seen.Add(s2);
+
+                    if (IsVisibleFromInterior(seen, s1, x, y) && Enchrouched(nodes, s1))
+                    {
+                        segmentQueue.Enqueue(s1);
+                    }
+                    if (IsVisibleFromInterior(seen, s2, x, y) && Enchrouched(nodes, s2))
+                    {
+                        segmentQueue.Enqueue(s2);
+                    }
+
+                    Triangle[] tris = SplitEdge(triangles.Count, existing, node, out Edge[] affected);
+                    AddNewTriangles(triangles, tris);
+                    Legalize(triangles, affected);
+
+                    if (segmentQueue.Count == 0)
+                    {
+                        foreach (Triangle t in triangles)
+                        {
+                            if (IsBad(t, maxArea))
+                            {
+                                triangleQueue.Enqueue(t);
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                if (triangleQueue.Count > 0)
+                {
+                    Triangle t = triangleQueue.Dequeue();
+
+                    if (!IsBad(t, maxArea))
+                    {
+                        continue;
+                    }
+
+                    double x = 0;
+                    double y = 0;
+
+                    bool encroaches = false;
+                    foreach (Segment seg in seen)
+                    {
+                        double dx = seg.cx - x;
+                        double dy = seg.cy - y;
+                        bool insideCircle = dx * dx + dy * dy < seg.lengthSqr * 0.25;
+                        if (insideCircle && IsVisibleFromInterior(seen, seg, x, y))
+                        {
+                            segmentQueue.Enqueue(seg);
+                            encroaches = true;
+                        }
+                    }
+
+                    if (encroaches)
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        public static bool IsVisibleFromInterior(IEnumerable<Segment> segments, Segment seg, double x, double y)
+        {
+            Vec2 pt = new Vec2(x, y);
+            Vec2 mid = new Vec2(seg.cx, seg.cy);
+            foreach (Segment s in segments)
+            {
+                if (s.Equals(seg))
+                    continue;
+
+                Node start = s.a;
+                Node end = s.b;
+                if (GeometryHelper.Intersect(mid, pt, new Vec2(start.X, start.Y), new Vec2(end.X, end.Y), out _))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static bool Enchrouched(QuadTree nodes, Segment segment)
+        {
+            Node a = segment.a;
+            Node b = segment.b;
+
+            double cx = segment.cx;
+            double cy = segment.cy;
+
+            double radiusSqr = segment.lengthSqr * 0.25;
+            double radius = Math.Sqrt(radiusSqr);
+            Rect bound = new Rect(cx - radius, cy - radius, cx + radius, cy + radius);
+
+            List<Node> points = nodes.Query(bound);
+            foreach (Node n in points)
+            {
+                if (n == a || n == b) continue;
+
+                double dxn = n.X - cx;
+                double dyn = n.Y - cy;
+                double distSq = dxn * dxn + dyn * dyn;
+
+                if (distSq < radiusSqr)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsBad(Triangle t, double maxAllowedArea)
+        {
+            if (t.Parents.Count == 0)
+            {
+                return false;
+            }
+
+            if (t.Area > maxAllowedArea)
+            {
+                return true;
+            }
+            return false;
         }
 
         public static void InsertConstraint(List<Triangle> triangles, QuadTree nodes, Node a, Node b)
@@ -187,6 +356,7 @@ namespace CDTlib
             return null;
         }
 
+
         public static Node? Insert(List<Triangle> triangles, QuadTree nodes, double x, double y, Triangle? start = null)
         {
             Node? existing = nodes.TryGet(x, y);
@@ -223,6 +393,7 @@ namespace CDTlib
 
             AddNewTriangles(triangles, tris);
             Legalize(triangles, affected);
+
             return newNode;
         }
 
