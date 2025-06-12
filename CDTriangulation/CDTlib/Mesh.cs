@@ -18,7 +18,24 @@
             set => _eps = value;
         }
 
-        public void Add(TopologyChange source)
+        public Mesh AddSuperStructure(Rectangle bounds)
+        {
+            double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+            double midx = (bounds.maxX + bounds.minX) * 0.5;
+            double midy = (bounds.maxY + bounds.minY) * 0.5;
+            double size = 2 * dmax;
+
+            Node a = new Node(-3, midx - size, midy - size);
+            Node b = new Node(-2, midx + size, midy - size);
+            Node c = new Node(-1, midx, midy + size);
+
+            Face superFace = new Face(0, a, b, c).ComputeArea();
+            _faces.Add(superFace);
+
+            return this;
+        }
+
+        public Mesh Add(TopologyChange source)
         {
             int n = source.NewFaces.Length;
             if (n != source.AffectedEdges.Length)
@@ -70,6 +87,7 @@
                 //    e.Twin = null!;
                 //}
             }
+            return this;
         }
 
         public (Face? t, Edge? e, Node? n) FindContaining(double x, double y, Face? start = null)

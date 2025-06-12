@@ -1,4 +1,6 @@
-﻿using System.Drawing;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Drawing;
 
 namespace CDTlib
 {
@@ -6,63 +8,84 @@ namespace CDTlib
     {
         public static List<Face> Triangulate<T>(IEnumerable<T> points, Func<T, double> getX, Func<T, double> getY)
         {
-            List<Node> dirtyNodes = new List<Node>();
-            double minX, minY, maxX, maxY;
-            minX = minY = double.MaxValue;
-            maxX = maxY = double.MinValue;
-            foreach (T point in points)
+            Rectangle rectangle = Rectangle.FromPoints(points, getX, getY);
+
+            Mesh mesh = new Mesh();
+            QuadTree nodes = new QuadTree(rectangle);
+            foreach (T pt in points)
             {
-                double x = getX(point);
-                double y = getY(point);
-
-                if (x < minX) minX = x;
-                if (x < minX) minX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-
-                dirtyNodes.Add(new Node(-1, x, y));
+                double x = getX(pt);
+                double y = getY(pt);
+                Node node = Insert(mesh, nodes, x, y, out _);
             }
 
 
             List<Face> faces = new List<Face>();
-            QuadTree nodes = new QuadTree(new Rectangle(minX, minY, maxX, maxY));
-            AddSuperStructure(faces, nodes.Bounds);
-
-
-
             return faces;
         }
 
-        public static Node Insert(List<Face> faces, QuadTree nodes, double x, double y)
+
+        public static Node Insert(Mesh mesh, QuadTree nodes, double x, double y, out List<Face> affected, Face? start = null)
         {
-            Node? node = nodes.TryGet(x, y);
-            if (node != null)
+            Node? newNode = nodes.TryGet(x, y);
+            if (newNode != null)
             {
-                return node;
+                affected = new List<Face>();
+                return newNode;
             }
 
-            node = new Node(nodes.Count, x, y);
+            (Face? face, Edge? edge, Node? node) = mesh.FindContaining(x, y, start);
+            if (node != null)
+            {
+                throw new Exception("Logic error. Should not have duplicate points at this point.");
+            }
 
+            if (face == null)
+            {
+                throw new Exception($"Point [{x} {y}] is outside of topology.");
+            }
 
-            return node;
+            newNode = new Node(nodes.Count, x, y);
+            nodes.Add(newNode);
+
+            TopologyChange topologyChange;
+            if (edge == null)
+            {
+                topologyChange = face.Split(newNode);
+            }
+            else
+            {
+                topologyChange = edge.Split(newNode);
+            }
+
+            // do something before adding?
+
+            mesh.Add(topologyChange);
+            affected = Legalize(mesh, topologyChange);
+            return newNode;
         }
 
-        static void AddSuperStructure(List<Face> faces, Rectangle bounds)
+        public static List<Face> Legalize(Mesh mesh, TopologyChange topologyChange)
         {
-            double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
-            double midx = (bounds.maxX + bounds.minX) * 0.5;
-            double midy = (bounds.maxY + bounds.minY) * 0.5;
-            double size = 2 * dmax;
+            List<Face> affected = new List<Face>();
+            Stack<Edge> toLegalize = new Stack<Edge>(topologyChange.AffectedEdges);
+            while (toLegalize.Count > 0)
+            {
+                Edge edge = toLegalize.Pop();
+                if (!edge.ShouldFlip())
+                {
+                    continue;
+                }
 
-            Node a = new Node(-3, midx - size, midy - size);
-            Node b = new Node(-2, midx + size, midy - size);
-            Node c = new Node(-1, midx, midy + size);
+                TopologyChange flipped = edge.Flip();
+                mesh.Add(flipped);
 
-            Face superFace = new Face(0, a, b, c).ComputeArea();
-            faces.Add(superFace);
+                foreach (Edge item in flipped.AffectedEdges)
+                {
+                    toLegalize.Push(item);
+                }
+            }
+            return affected;
         }
-
-
-      
     }
 }

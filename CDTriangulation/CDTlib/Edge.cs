@@ -59,6 +59,42 @@ namespace CDTlib
             d.Edge = da;
         }
 
+        public bool ShouldFlip()
+        {
+            Edge? twin = Twin;
+            if (twin is null || Constrained)
+            {
+                return false;
+            }
+
+            if (Face.Dead)
+            {
+                return false;
+            }
+
+            Quad(out Node a, out Node b, out Node c, out Node d);
+
+            if (!QuadConvex(a, b, c, d))
+            {
+                return false;
+            }
+
+            if (Face.Circle.Contains(d.X, d.Y))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static bool QuadConvex(Node a, Node b, Node c, Node d)
+        {
+            double ab_bc = Node.Cross(a, b, c);
+            double bc_cd = Node.Cross(b, c, d);
+            double cd_da = Node.Cross(c, d, a);
+            double da_ab = Node.Cross(d, a, b);
+            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
+        }
+
         public TopologyChange Flip()
         {
             if (Twin is null)

@@ -23,6 +23,24 @@
             );
         }
 
+        public static Rectangle FromPoints<T>(IEnumerable<T> points, Func<T, double> getX, Func<T, double> getY)
+        {
+            double minX, minY, maxX, maxY;
+            minX = minY = double.MaxValue;
+            maxX = maxY = double.MinValue;
+            foreach (T point in points)
+            {
+                double x = getX(point);
+                double y = getY(point);
+
+                if (x < minX) minX = x;
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+            return new Rectangle(minX, minY, maxX, maxY);
+        }
+
         public Rectangle Expand(double margin)
         {
             return new Rectangle(
