@@ -4,10 +4,58 @@ namespace CDTlib
 {
     public static class CDT
     {
-        public static List<Face> Triangulate<T>(IEnumerable<T> points, Func<T, double> getX, Func<T, double> getY)
+        public static List<Face> Triangulate<T>(Func<T, double> getX, Func<T, double> getY, IEnumerable<T> outline, IEnumerable<(T, T)>? constraintEdges = null, IEnumerable<T>? constraintPoints = null)
         {
-            Rectangle rectangle = Rectangle.FromPoints(points, getX, getY);
+            List<T> points = new List<T>();
+            List<T> contour = new List<T>();
+            List<(T, T)> constraints = new List<(T, T)>();
 
+            double minX, minY, maxX, maxY;
+            minX = minY = double.MaxValue;
+            maxX = maxY = double.MinValue;
+            void updateBounds(T pt)
+            {
+                double x = getX(pt);
+                double y = getY(pt);
+                points.Add(pt);
+
+                if (x < minX) minX = x;
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+
+            foreach (var pt in outline)
+            {
+                updateBounds(pt);
+                contour.Add(pt);
+            }
+
+            int n = contour.Count;
+            for (int i = 0; i < n; i++)
+            {
+                constraints.Add((contour[i], contour[(i + 1) % n]));
+            }
+
+            if (constraintEdges != null)
+            {
+                foreach (var edge in constraintEdges)
+                {
+                    updateBounds(edge.Item1);
+                    updateBounds(edge.Item2);
+                    constraints.Add(edge);
+                }
+            }
+
+            if (constraintPoints != null)
+            {
+                foreach (T pt in constraintPoints)
+                {
+                    updateBounds(pt);
+                }
+            }
+
+            Rectangle rectangle = new Rectangle(minX, minY, maxX, maxY);
             Mesh mesh = new Mesh();
             QuadTree nodes = new QuadTree(rectangle);
             foreach (T pt in points)
@@ -17,6 +65,34 @@ namespace CDTlib
                 Node node = Insert(mesh, nodes, x, y, out _);
             }
 
+            foreach ((T a, T b) in constraints)
+            {
+                double x0 = getX(a);
+                double y0 = getY(a);
+
+                double x1 = getX(b);
+                double y1 = getY(b);
+
+                Node? na = nodes.TryGet(x0, y0);
+                Node? nb = nodes.TryGet(x1, y1);
+
+                if (na is null || nb is null)
+                {
+                    throw new Exception();
+                }
+
+                InsertConstraint(mesh, nodes, na, nb);
+            }
+
+            if (constraintPoints != null)
+            {
+                foreach (T pt in constraintPoints)
+                {
+                    double x = getX(pt);
+                    double y = getY(pt);
+                    Node node = Insert(mesh, nodes, x, y, out _);
+                }
+            }
 
             List<Face> faces = new List<Face>();
             return faces;
@@ -124,7 +200,6 @@ namespace CDTlib
                 }
             }
         }
-
 
         public static void InsertConstraint(Mesh mesh, QuadTree nodes, Node a, Node b)
         {

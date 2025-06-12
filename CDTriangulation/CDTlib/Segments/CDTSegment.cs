@@ -26,12 +26,4 @@
             return Math.Sqrt(dx * dx + dy * dy + dz * dz);
         }
     }
-
-
-
-
-
-
-
-
 }

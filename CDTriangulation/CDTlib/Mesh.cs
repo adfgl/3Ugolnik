@@ -1,4 +1,6 @@
-﻿namespace CDTlib
+﻿using System.Text;
+
+namespace CDTlib
 {
     public class Mesh
     {
@@ -209,6 +211,65 @@
 
                 skipEdge = bestExit.Twin;
                 current = bestExit.Twin.Face;
+            }
+        }
+
+
+        public string ToSvg(float size = 1000f, float padding = 10f, string fillColor = "#ccc", string edgeColor = "#000")
+        {
+            // https://www.svgviewer.dev/
+
+            var faces = Faces;
+            if (faces.Count == 0)
+                return "<svg xmlns='http://www.w3.org/2000/svg'/>";
+
+            var vertices = new HashSet<Node>();
+            foreach (var tri in faces)
+            {
+                foreach (var edge in tri)
+                {
+                    vertices.Add(edge.Origin);
+                }
+            }
+
+            double minX = double.MaxValue, maxX = double.MinValue;
+            double minY = double.MaxValue, maxY = double.MinValue;
+
+            foreach (var v in vertices)
+            {
+                if (v.X < minX) minX = v.X;
+                if (v.X > maxX) maxX = v.X;
+                if (v.Y < minY) minY = v.Y;
+                if (v.Y > maxY) maxY = v.Y;
+            }
+
+            double scale = (size - 2 * padding) / Math.Max(maxX - minX, maxY - minY);
+
+            var sb = new StringBuilder();
+            sb.Append("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ");
+            sb.Append(size); sb.Append(' '); sb.Append(size); sb.Append("'>");
+
+            foreach (var tri in faces)
+            {
+                var a = tri.Edge.Origin;
+                var b = tri.Edge.Next.Origin;
+                var c = tri.Edge.Next.Next.Origin;
+
+                var (x1, y1) = Project(a.X, a.Y);
+                var (x2, y2) = Project(b.X, b.Y);
+                var (x3, y3) = Project(c.X, c.Y);
+
+                sb.Append($"<polygon points='{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1}' fill='{fillColor}' fill-opacity='0.5' stroke='{edgeColor}' stroke-width='1'/>");
+            }
+
+            sb.Append("</svg>");
+            return sb.ToString();
+
+            (double x, double y) Project(double x, double y)
+            {
+                double sx = (x - minX) * scale + padding;
+                double sy = (y - minY) * scale + padding;
+                return (sx, size - sy); // Y-flip for SVG coordinates
             }
         }
 

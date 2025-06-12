@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTlib", "CDTlib\CDTlib.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTTests", "CDTTests\CDTTests.csproj", "{45DB47B0-ECC2-437F-BAFA-0141FE77377A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTConsole", "CDTConsole\CDTConsole.csproj", "{D2999D8C-2A29-4522-8281-16DF6A2BFF36}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{45DB47B0-ECC2-437F-BAFA-0141FE77377A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45DB47B0-ECC2-437F-BAFA-0141FE77377A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{45DB47B0-ECC2-437F-BAFA-0141FE77377A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2999D8C-2A29-4522-8281-16DF6A2BFF36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2999D8C-2A29-4522-8281-16DF6A2BFF36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2999D8C-2A29-4522-8281-16DF6A2BFF36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2999D8C-2A29-4522-8281-16DF6A2BFF36}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

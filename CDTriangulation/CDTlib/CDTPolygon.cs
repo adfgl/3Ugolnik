@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CDTlib.Segments;
 
 namespace CDTlib
 {
     public class CDTPolygon
     {
-        public List<CDTPoint> Contour { get; set; }
-
+        public List<CDTSegment> Contour { get; set; } 
+        public List<CDTPoint>? ConstraintPoints { get; set; }
+        public List<CDTSegment>? Constraints { get; set; }
     }
 }
