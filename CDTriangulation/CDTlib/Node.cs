@@ -25,7 +25,8 @@ namespace CDTlib
         public override string ToString()
         {
             CultureInfo culture = CultureInfo.InvariantCulture;
-            return $"({Index}) {X.ToString(culture)}, {Y.ToString(culture)}";
+            const int precision = 4;
+            return $"({Index}) {Math.Round(X, precision).ToString(culture)}, {Math.Round(Y, precision).ToString(culture)}";
         }
     }
 }

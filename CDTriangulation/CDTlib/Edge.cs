@@ -20,6 +20,18 @@
         public Face Face { get; set; } = null!;
         public bool Constrained { get; set; } = false;
 
+        public void SetPrev(Edge value)
+        {
+            Prev = value;
+            value.Next = this;
+        }
+
+        public void SetNext(Edge value)
+        {
+            Next = value;
+            value.Prev = this;
+        }
+
         public void SetTwin(Edge? twin)
         {
             Twin = twin;
@@ -40,7 +52,8 @@
 
         public override string ToString()
         {
-            return $"{Origin.Index} {Next.Origin.Index}";
+            var (a, b) = this;
+            return $"{a.Index} {b.Index}";
         }
     }
 }
