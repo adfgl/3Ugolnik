@@ -25,6 +25,17 @@ namespace CDTlib
         }
 
 
+        public static void InsertConstraint(List<Face> triangles, QuadTree nodes, Node a, Node b)
+        {
+            if (a == b)
+                return;
+
+            while (true)
+            {
+
+            }
+        }
+
         public static Node Insert(Mesh mesh, QuadTree nodes, double x, double y, out List<Face> affected, Face? start = null)
         {
             Node? newNode = nodes.TryGet(x, y);
