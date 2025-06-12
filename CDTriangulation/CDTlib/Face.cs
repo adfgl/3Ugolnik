@@ -2,7 +2,6 @@
 {
     using System.Collections;
     using System.Collections.Generic;
-    using System.Diagnostics;
 
     public class Face : ISplittable, IEnumerable<Edge>
     {
@@ -14,8 +13,6 @@
 
         public Face(int index, Node a, Node b, Node c)
         {
-            Debug.Assert(Node.Cross(a, b, c) > 0, "Incorrect winding order.");
-
             Index = index;
 
             Edge ab = new Edge(a); 
@@ -69,6 +66,11 @@
         {
             var (a, b, c) = this;
             Area = Node.Cross(a, b, c) * 0.5;
+
+            if (Area < 0)
+            {
+                throw new Exception("Incorrect winding order!");
+            }
             return this;
         }
 
