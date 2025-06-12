@@ -5,7 +5,7 @@
         readonly QuadNode root;
         readonly List<Node> _items;
 
-        public QuadTree(Rect bounds, int maxDepth = 10, int maxItems = 8)
+        public QuadTree(Rectangle bounds, int maxDepth = 10, int maxItems = 8)
         {
             bounds = ExpandedBounds(bounds);
             root = new QuadNode(bounds, 0, maxDepth, maxItems);
@@ -13,7 +13,7 @@
             _items = new List<Node>();
         }
 
-        public Rect Bounds { get; }
+        public Rectangle Bounds { get; }
         public IReadOnlyList<Node> Items => _items;
         public int Count => _items.Count;
 
@@ -27,14 +27,14 @@
             _items.Add(node);
         }
 
-        public List<Node> Query(Rect area)
+        public List<Node> Query(Rectangle area)
         {
             List<Node> results = new List<Node>();
             root.Query(area, results);
             return results;
         }
 
-        Rect ExpandedBounds(Rect rect)
+        Rectangle ExpandedBounds(Rectangle rect)
         {
             double dx = rect.maxX - rect.minX;
             double dy = rect.maxY - rect.minY;
@@ -52,13 +52,13 @@
         {
             const int TOP_L = 0, TOP_R = 1, BOT_L = 2, BOT_R = 3;
 
-            readonly Rect _bounds;
+            readonly Rectangle _bounds;
             readonly double _cx, _cy;
             readonly int _depth, _maxDepth, _maxItems;
             readonly List<Node> _items;
             QuadNode[]? _children;
 
-            public QuadNode(Rect bounds, int depth, int maxDepth, int maxItems)
+            public QuadNode(Rectangle bounds, int depth, int maxDepth, int maxItems)
             {
                 _bounds = bounds;
                 _depth = depth;
@@ -121,7 +121,7 @@
                 return null;
             }
 
-            public void Query(Rect area, List<Node> results)
+            public void Query(Rectangle area, List<Node> results)
             {
                 if (!_bounds.Intersects(area))
                     return;
@@ -165,10 +165,10 @@
 
                 int depth = _depth + 1;
                 _children = new QuadNode[4];
-                _children[TOP_L] = new QuadNode(new Rect(minX, _cy, _cx, maxY), depth, _maxDepth, _maxItems);
-                _children[TOP_R] = new QuadNode(new Rect(_cx, _cy, maxX, maxY), depth, _maxDepth, _maxItems);
-                _children[BOT_L] = new QuadNode(new Rect(minX, minY, _cx, _cy), depth, _maxDepth, _maxItems);
-                _children[BOT_R] = new QuadNode(new Rect(_cx, minY, maxX, _cy), depth, _maxDepth, _maxItems);
+                _children[TOP_L] = new QuadNode(new Rectangle(minX, _cy, _cx, maxY), depth, _maxDepth, _maxItems);
+                _children[TOP_R] = new QuadNode(new Rectangle(_cx, _cy, maxX, maxY), depth, _maxDepth, _maxItems);
+                _children[BOT_L] = new QuadNode(new Rectangle(minX, minY, _cx, _cy), depth, _maxDepth, _maxItems);
+                _children[BOT_R] = new QuadNode(new Rectangle(_cx, minY, maxX, _cy), depth, _maxDepth, _maxItems);
             }
 
             QuadNode GetChild(double x, double y)

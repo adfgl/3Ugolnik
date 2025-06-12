@@ -1,13 +1,13 @@
 ﻿namespace CDTlib
 {
-    public readonly struct Rect
+    public readonly struct Rectangle
     {
         public readonly double minX, minY;
         public readonly double maxX, maxY;
 
-        public static Rect Empty => new Rect(double.MaxValue, double.MaxValue, double.MinValue, double.MinValue);
+        public static Rectangle Empty => new Rectangle(double.MaxValue, double.MaxValue, double.MinValue, double.MinValue);
 
-        public Rect(double minX, double minY, double maxX, double maxY)
+        public Rectangle(double minX, double minY, double maxX, double maxY)
         {
             this.minX = minX;
             this.minY = minY;
@@ -15,17 +15,17 @@
             this.maxY = maxY;
         }
 
-        public static Rect Build(double minX, double minY, double maxX, double maxY)
+        public static Rectangle Build(double minX, double minY, double maxX, double maxY)
         {
-            return new Rect(
+            return new Rectangle(
                 Math.Min(minX, maxX), Math.Min(minY, maxY),
                 Math.Max(minX, maxX), Math.Max(minY, maxY)
             );
         }
 
-        public Rect Expand(double margin)
+        public Rectangle Expand(double margin)
         {
-            return new Rect(
+            return new Rectangle(
                 minX - margin,
                 minY - margin,
                 maxX + margin,
@@ -43,23 +43,23 @@
             return dx * dx + dy * dy <= radius * radius;
         }
 
-        public Rect Union(double x, double y)
+        public Rectangle Union(double x, double y)
         {
-            return new Rect(
+            return new Rectangle(
                 Math.Min(minX, x), Math.Min(minY, y),
                 Math.Max(maxX, x), Math.Max(maxY, y)
             );
         }
 
-        public Rect Union(Rect other)
+        public Rectangle Union(Rectangle other)
         {
-            return new Rect(
+            return new Rectangle(
                 Math.Min(minX, other.minX), Math.Min(minY, other.minY),
                 Math.Max(maxX, other.maxX), Math.Max(maxY, other.maxY)
             );
         }
 
-        public bool Intersection(Rect other, out Rect intersection)
+        public bool Intersection(Rectangle other, out Rectangle intersection)
         {
             double minX = Math.Max(this.minX, other.minX);
             double minY = Math.Max(this.minY, other.minY);
@@ -67,7 +67,7 @@
             double maxY = Math.Min(this.maxY, other.maxY);
             if (minX <= maxX && minY <= maxY)
             {
-                intersection = new Rect(minX, minY, maxX, maxY);
+                intersection = new Rectangle(minX, minY, maxX, maxY);
                 return true;
             }
 
@@ -75,24 +75,24 @@
             return false;
         }
 
-        public Rect Move(double dx, double dy) => new Rect(minX + dx, minY + dy, maxX + dx, maxY + dy);
+        public Rectangle Move(double dx, double dy) => new Rectangle(minX + dx, minY + dy, maxX + dx, maxY + dy);
 
         public bool Contains(double x, double y) => x >= minX && x <= maxX && y >= minY && y <= maxY;
         public bool ContainsStrict(double x, double y) => x > minX && x < maxX && y > minY && y < maxY;
 
-        public bool Contains(Rect other) =>
+        public bool Contains(Rectangle other) =>
             minX <= other.minX && minY <= other.minY &&
             maxX >= other.maxX && maxY >= other.maxY;
 
-        public bool ContainsStrict(Rect other) =>
+        public bool ContainsStrict(Rectangle other) =>
             minX < other.minX && minY < other.minY &&
             maxX > other.maxX && maxY > other.maxY;
 
-        public bool Intersects(Rect other) =>
+        public bool Intersects(Rectangle other) =>
             minX <= other.maxX && minY <= other.maxY &&
             maxX >= other.minX && maxY >= other.minY;
 
-        public bool IntersectsStrict(Rect other) =>
+        public bool IntersectsStrict(Rectangle other) =>
             minX < other.maxX && minY < other.maxY &&
             maxX > other.minX && maxY > other.minY;
     }
