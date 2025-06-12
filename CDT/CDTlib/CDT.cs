@@ -615,44 +615,7 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Area(Triangle t)
-        {
-            Node a = t.Edge.Origin;
-            Node b = t.Edge.Next.Origin;
-            Node c = t.Edge.Prev.Origin;
-            return GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y);
-        }
-
-        public static void Circumcenter(Triangle t, out double x, out double y)
-        {
-            Node a = t.Edge.Origin;
-            Node b = t.Edge.Next.Origin;
-            Node c = t.Edge.Prev.Origin;
-            GeometryHelper.Circumcenter(a.X, a.Y, b.X, b.Y, c.X, c.Y, out x, out y);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetTwins(Edge a, Edge? b)
-        {
-            a.Twin = b;
-            if (b != null)
-            {
-                b.Twin = a;
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetConstraint(Edge edge, bool value = true)
-        {
-            edge.Constrained = value;
-            if (edge.Twin is not null)
-            {
-                edge.Twin.Constrained = value;
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void SetTwins(Triangle[] tris)
+        public static void SetTwins(Triangle[] tris)
         {
             int n = tris.Length;
             for (int i = 0; i < n; i++)
@@ -663,32 +626,13 @@ namespace CDTlib
             }
         }
 
-        static void AddNewTriangles(List<Triangle> triangles, Triangle[] newTris, Triangle[] oldTris)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetTwins(Edge a, Edge? b)
         {
-            for (int i = 0; i < newTris.Length; i++)
+            a.Twin = b;
+            if (b != null)
             {
-                Triangle t = newTris[i];
-
-                Edge? twin = t.Edge.Twin;
-                if (twin is not null)
-                {
-                    twin.Twin = t.Edge;
-                }
-
-                int index = t.Index;
-                if (index < triangles.Count)
-                {
-                    triangles[index] = t;
-                }
-                else
-                {
-                    triangles.Add(t);
-                }
-            }
-
-            for (int i = 0; i < oldTris.Length; i++)
-            {
-                oldTris[i].Deleted = true;
+                b.Twin = a;
             }
         }
 
@@ -728,6 +672,66 @@ namespace CDTlib
             tri.Edge.Twin = edge.Twin;
             return tri;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double Area(Triangle t)
+        {
+            Node a = t.Edge.Origin;
+            Node b = t.Edge.Next.Origin;
+            Node c = t.Edge.Prev.Origin;
+            return GeometryHelper.Area(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+        }
+
+        public static void Circumcenter(Triangle t, out double x, out double y)
+        {
+            Node a = t.Edge.Origin;
+            Node b = t.Edge.Next.Origin;
+            Node c = t.Edge.Prev.Origin;
+            GeometryHelper.Circumcenter(a.X, a.Y, b.X, b.Y, c.X, c.Y, out x, out y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetConstraint(Edge edge, bool value = true)
+        {
+            edge.Constrained = value;
+            if (edge.Twin is not null)
+            {
+                edge.Twin.Constrained = value;
+            }
+        }
+
+
+
+        static void AddNewTriangles(List<Triangle> triangles, Triangle[] newTris, Triangle[] oldTris)
+        {
+            for (int i = 0; i < newTris.Length; i++)
+            {
+                Triangle t = newTris[i];
+
+                Edge? twin = t.Edge.Twin;
+                if (twin is not null)
+                {
+                    twin.Twin = t.Edge;
+                }
+
+                int index = t.Index;
+                if (index < triangles.Count)
+                {
+                    triangles[index] = t;
+                }
+                else
+                {
+                    triangles.Add(t);
+                }
+            }
+
+            for (int i = 0; i < oldTris.Length; i++)
+            {
+                oldTris[i].Deleted = true;
+            }
+        }
+
+    
 
         public static (Triangle? t, Edge? e, Node? n) FindContaining(List<Triangle> triangles, double x, double y, double eps = 1e-6, Triangle? start = null)
         {
