@@ -65,6 +65,13 @@
             return GetEnumerator();
         }
 
+        public Face ComputeArea()
+        {
+            var (a, b, c) = this;
+            Area = Node.Cross(a, b, c) * 0.5;
+            return this;
+        }
+
         public TopologyChange Split(Node node)
         {
             /*
@@ -85,9 +92,12 @@
             Edge bc = ab.Next;
             Edge ca = bc.Next;
 
-            Face new0 = new Face(Index, node, a, b);
-            Face new1 = new Face(-1, node, b, c);
-            Face new2 = new Face(-1, node, c, a);
+            Face new0 = new Face(Index, node, a, b).ComputeArea();
+            Face new1 = new Face(-1, node, b, c).ComputeArea();
+            Face new2 = new Face(-1, node, c, a)
+            {
+                Area = Area - new0.Area - new1.Area
+            };
 
             // twins
             new0.Edge.Twin = new2.Edge.Prev;
@@ -121,8 +131,6 @@
             x = (a.X + b.X + c.X) / 3.0;
             y = (a.Y + b.Y + c.Y) / 3.0;
         }
-
-
 
         public override string ToString()
         {
