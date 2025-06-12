@@ -5,12 +5,6 @@
 
     public class Face : ISplittable, IEnumerable<Edge>
     {
-        public Face(int index, Edge edge)
-        {
-            Index = index;
-            Edge = edge;
-        }
-
         public Face(int index, Node a, Node b, Node c)
         {
             Index = index;
@@ -30,6 +24,8 @@
             ca.Prev = bc;
 
             ab.Face = bc.Face = ca.Face = this;
+
+            Circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
         }
 
         public Face(int index, Edge e, Node n)
@@ -49,6 +45,7 @@
         public Edge Edge { get; set; }
         public bool Dead { get; set; } = false;
         public double Area { get; set; }
+        public Circle Circle { get; }
 
         public IEnumerator<Edge> GetEnumerator()
         {
