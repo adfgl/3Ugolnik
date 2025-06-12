@@ -1,6 +1,6 @@
 ﻿namespace CDTlib
 {
-    public class Edge
+    public class Edge : ISplittable
     {
         public Edge(Node origin)
         {
@@ -48,6 +48,11 @@
             {
                 Twin.Constrained = value;
             }
+        }
+
+        public SplitResult Split(Node node)
+        {
+            return null;
         }
 
         public override string ToString()
