@@ -20,6 +20,13 @@
         public Face Face { get; set; } = null!;
         public bool Constrained { get; set; } = false;
 
+        public void Quad(out Node a, out Node b, out Node c, out Node d)
+        {
+            (a, c) = this;
+            d = Prev.Origin;
+            b = Twin!.Prev.Origin;
+        }
+
         public SplitResult Split(Node node)
         {
             if (Twin is null)
@@ -58,9 +65,7 @@
             Edge ab = ca.Next;
             Edge bc = ab.Next;
 
-            var (a, c) = this;
-            Node d = Prev.Origin;
-            Node b = Twin.Prev.Origin;
+            Quad(out Node a, out Node b, out Node c, out Node d);
 
             Face f0 = new Face(old0.Index, node, d, a);
             Face f1 = new Face(old1.Index, node, c, d);
