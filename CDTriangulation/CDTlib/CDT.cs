@@ -61,7 +61,6 @@ namespace CDTlib
                     double x = seg.circle.x;
                     double y = seg.circle.y;
 
-
                     Node inserted = Insert(mesh, nodes, x, y, out List<Face> affected, existing.Face);
 
                     Segment s1 = new Segment(seg.a, inserted);

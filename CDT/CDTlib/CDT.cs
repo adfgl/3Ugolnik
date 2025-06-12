@@ -763,8 +763,6 @@ namespace CDTlib
                         continue;
                     }
 
-                    edgesChecked++;
-
                     Node a = edge.Origin;
                     double ax = a.X, ay = a.Y;
 
