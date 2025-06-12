@@ -2,6 +2,7 @@
 {
     using System.Collections;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     public class Face : ISplittable, IEnumerable<Edge>
     {
@@ -13,6 +14,8 @@
 
         public Face(int index, Node a, Node b, Node c)
         {
+            Debug.Assert(Node.Cross(a, b, c) > 0, "Incorrect winding order.");
+
             Index = index;
 
             Edge ab = new Edge(a); 
@@ -20,10 +23,6 @@
             Edge ca = new Edge(c); 
 
             Edge = ab;
-
-            a.Edge = ab;
-            b.Edge = bc;
-            c.Edge = ca;
 
             ab.Next = bc;
             bc.Next = ca;
@@ -52,6 +51,7 @@
         public int Index { get; set; }
         public Edge Edge { get; set; }
         public bool Dead { get; set; } = false;
+        public double Area { get; set; }
 
         public IEnumerator<Edge> GetEnumerator()
         {
@@ -67,35 +67,38 @@
 
         public SplitResult Split(Node node)
         {
-            Edge[] edges = [Edge, Edge.Next, Edge.Prev];
+            var (a, b, c) = this;
+            Edge ab = Edge;
+            Edge bc = ab.Next;
+            Edge ca = bc.Next;
 
-            Edge[] affected = new Edge[3];
-            Face[] faces = new Face[3];
-            Face prev = null!;
-            for (int i = 0; i < 3; i++)
-            {
-                bool first = i == 0;
-                Edge edge = edges[i];
-                Face face = new Face(first ? Index : -1, edge, node);
+            a.Edge = ab;
+            b.Edge = bc;
+            c.Edge = ca;
 
-                face.Edge.Constrained = edge.Constrained;
-                face.Edge.Twin = edge.Twin;
-                if (!first)
-                {
-                    face.Edge.Prev.SetTwin(prev.Edge.Next);
-                }
-                prev = face;
+            Face new0 = new Face(Index, node, a, b);
+            Face new1 = new Face(-1, node, b, c);
+            Face new2 = new Face(-1, node, c, a);
 
-                faces[i] = face;
-                affected[i] = face.Edge;
-            }
+            new0.Edge.Twin = new2.Edge.Prev;
+            new0.Edge.Next.Twin = ab;
+            new0.Edge.Prev.Twin = new1.Edge;
+            new0.Edge.Next.Constrained = ab.Constrained;
 
-            faces[0].Edge.Prev.SetTwin(prev.Edge.Next);
+            new1.Edge.Twin = new0.Edge.Prev;
+            new1.Edge.Next.Twin = bc;
+            new1.Edge.Prev.Twin = new2.Edge;
+            new1.Edge.Next.Constrained = bc.Constrained;
+
+            new2.Edge.Twin = new1.Edge.Prev;
+            new2.Edge.Next.Twin = ca;
+            new2.Edge.Prev.Twin = new0.Edge;
+            new2.Edge.Next.Constrained = ca.Constrained;
 
             return new SplitResult()
             {
-                Affected = affected,
-                NewFaces = faces,
+                AffectedEdges =[new0.Edge, new1.Edge, new2.Edge],
+                NewFaces = [new0, new1, new2],
                 OldFaces = [this]
             };
         }

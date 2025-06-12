@@ -52,7 +52,34 @@
 
         public SplitResult Split(Node node)
         {
+            bool constrained = Constrained;
+            if (Twin is null)
+            {
+
+            }
+
             return null;
+        }
+
+
+        void SplitNoTwin(Node node)
+        {
+            var (a, b, c) = Face;
+            Edge ab = Face.Edge;
+            Edge bc = ab.Next;
+            Edge ca = bc.Next;
+
+            a.Edge = ab;
+            b.Edge = bc;
+            c.Edge = ca;
+
+            Face new0 = new Face(Face.Index, node, c, a);
+            Face new1 = new Face(-1, node, b, c); 
+
+            new0.Edge.SetTwin(new1.Edge);
+
+            new0.Edge.Prev.Twin = new1.Edge.Next.Twin = null;
+            new0.Edge.Prev.Constrained = new1.Edge.Next.Constrained = Constrained;
         }
 
         public override string ToString()

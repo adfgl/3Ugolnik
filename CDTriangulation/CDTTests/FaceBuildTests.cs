@@ -37,9 +37,9 @@ namespace CDTTests
             Assert.Equal(bc.Face, face);
             Assert.Equal(ca.Face, face);
 
-            Assert.Equal(a.Edge, ab);
-            Assert.Equal(b.Edge, bc);
-            Assert.Equal(c.Edge, ca);
+            Assert.Null(a.Edge);
+            Assert.Null(b.Edge);
+            Assert.Null(c.Edge);
         }
     }
 }

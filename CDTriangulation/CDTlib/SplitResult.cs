@@ -10,6 +10,6 @@ namespace CDTlib
     {
         public Face[] NewFaces { get; set; }
         public Face[] OldFaces { get; set; }
-        public Edge[] Affected {  get; set; }
+        public Edge[] AffectedEdges {  get; set; }
     }
 }

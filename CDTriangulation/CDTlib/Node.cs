@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace CDTlib
 {
@@ -21,6 +22,16 @@ namespace CDTlib
         public double X { get; set; }
         public double Y { get; set; }
         public Edge Edge { get; set; } = null!;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double Cross(Node start, Node end, Node point)
+        {
+            double abx = end.X - start.X;
+            double aby = end.Y - start.Y;
+            double apx = point.X - start.X;
+            double apy = point.Y - start.Y;
+            return abx * apy - aby * apx;
+        }
 
         public override string ToString()
         {
