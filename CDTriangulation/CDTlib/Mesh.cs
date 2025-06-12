@@ -18,6 +18,37 @@
             set => _eps = value;
         }
 
+        public Edge? FindEdge(Node a, Node b)
+        {
+            foreach (Edge edge in a.Around())
+            {
+                Node s = edge.Origin;
+                Node e = edge.Next.Origin;
+                if (a == s && b == e || a == e && b == s)
+                {
+                    return edge;
+                }
+            }
+            return null;
+        }
+
+        public Face? EntranceTriangle(Node a, Node b)
+        {
+            foreach (Edge edge in a.Around())
+            {
+                var (start, end) = edge;
+                if (Node.Cross(start, end, b) > 0)
+                {
+                    (start, end) = edge.Next;
+                    if (Node.Cross(start, end, b) > 0)
+                    {
+                        return edge.Face;
+                    }
+                }
+            }
+            return null;
+        }
+
         public Mesh AddSuperStructure(Rectangle bounds)
         {
             double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);

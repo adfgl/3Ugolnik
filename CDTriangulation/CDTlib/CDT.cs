@@ -25,14 +25,83 @@ namespace CDTlib
         }
 
 
-        public static void InsertConstraint(List<Face> triangles, QuadTree nodes, Node a, Node b)
+        public static void InsertConstraint(Mesh mesh, QuadTree nodes, Node a, Node b)
         {
             if (a == b)
                 return;
 
             while (true)
             {
+                Edge? existing = mesh.FindEdge(a, b);
+                if (existing != null)
+                {
+                    existing.SetConstraint(true);
+                    return;
+                }
 
+                Face? current = mesh.EntranceTriangle(a, b);
+                if (current == null)
+                {
+                    throw new Exception("Failed to locate entrance");
+                }
+
+                bool changed = false;
+                while (true)
+                {
+                    foreach (Edge edge in current)
+                    {
+                        var (n1, n2) = edge;
+                        if (n1 == a || n2 == a || n1 == b || n2 == b)
+                        {
+                            continue;
+                        }
+
+                        Node? inter = Node.Intersect(a, b, n1, n2);
+                        if (inter is null)
+                        {
+                            continue;
+                        }
+
+                        if (edge.Constrained)
+                        {
+                            Insert(mesh, nodes, inter.X, inter.Y, out _, current);
+                        }
+                        else
+                        {
+                            TopologyChange flipped = edge.Flip();
+                            mesh.Add(flipped);
+                            Legalize(mesh, flipped);
+                        }
+
+                        changed = true;
+                        break;
+                    }
+
+                    if (changed)
+                    {
+                        break;
+                    }
+
+
+                    Edge? nextEdge = null;
+                    double mostNegativeCross = 0;
+                    foreach (Edge edge in current)
+                    {
+                        var (n1, n2) = edge;
+                        double cross = Node.Cross(n1, n2, b);
+                        if (cross < mostNegativeCross || nextEdge == null)
+                        {
+                            mostNegativeCross = cross;
+                            nextEdge = edge;
+                        }
+                    }
+
+                    if (nextEdge?.Twin == null)
+                    {
+                        throw new Exception("Stuck during constraint insertion. Mesh may be invalid or degenerate.");
+                    }
+                    current = nextEdge.Twin.Face;
+                }
             }
         }
 

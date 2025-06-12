@@ -22,6 +22,15 @@ namespace CDTlib
         public Face Face { get; set; } = null!;
         public bool Constrained { get; set; } = false;
 
+        public void SetConstraint(bool value)
+        {
+            Constrained = value;
+            if (Twin is not null)
+            {
+                Twin.Constrained = value;
+            }
+        }
+
         public void Quad(out Node a, out Node b, out Node c, out Node d)
         {
             /*
