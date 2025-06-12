@@ -46,7 +46,7 @@
         public bool Dead { get; set; } = false;
         public double Area { get; set; }
         public Circle Circle { get; }
-        public bool ContainsSuper { get; }
+        public bool Hole { get; set; } = false;
 
         public IEnumerator<Edge> GetEnumerator()
         {

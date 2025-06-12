@@ -7,7 +7,7 @@
             
         }
 
-        public CDTPoint(double x, double y, double z)
+        public CDTPoint(double x, double y, double z = 0)
         {
             X = x; Y = y; Z = z;
         }

@@ -4,7 +4,7 @@ namespace CDTlib
 {
     public static class CDT
     {
-        public static List<Face> Triangulate<T>(Func<T, double> getX, Func<T, double> getY, IEnumerable<T> outline, IEnumerable<(T, T)>? constraintEdges = null, IEnumerable<T>? constraintPoints = null)
+        public static Mesh Triangulate<T>(Func<T, double> getX, Func<T, double> getY, IEnumerable<T> outline, IEnumerable<(T, T)>? constraintEdges = null, IEnumerable<T>? constraintPoints = null)
         {
             List<T> points = new List<T>();
             List<T> contour = new List<T>();
@@ -94,8 +94,12 @@ namespace CDTlib
                 }
             }
 
-            List<Face> faces = new List<Face>();
-            return faces;
+            return mesh;
+        }
+
+        public static void MarkHoles()
+        {
+
         }
 
         public static void Refine(Mesh mesh, QuadTree nodes, double maxArea)
@@ -383,7 +387,7 @@ namespace CDTlib
 
         public static bool IsBad(Face t, double maxAllowedArea)
         {
-            if (t.Dead)
+            if (t.Dead || t.Hole)
             {
                 return false;
             }
