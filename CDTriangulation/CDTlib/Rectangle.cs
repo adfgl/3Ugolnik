@@ -15,6 +15,18 @@
             this.maxY = maxY;
         }
 
+        public Rectangle(Circle circle, double extra = 0)
+        {
+            double radius = Math.Sqrt(circle.radiusSqr) + Math.Abs(extra);
+            double x = circle.x;
+            double y = circle.y;
+
+            this.minX = x - radius;
+            this.minY = y - radius;
+            this.maxX = x + radius;
+            this.maxY = y + radius;
+        }
+
         public static Rectangle Build(double minX, double minY, double maxX, double maxY)
         {
             return new Rectangle(

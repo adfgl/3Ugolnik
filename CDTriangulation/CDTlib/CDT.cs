@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Xml.Linq;
 
 namespace CDTlib
 {
@@ -22,6 +20,110 @@ namespace CDTlib
 
             List<Face> faces = new List<Face>();
             return faces;
+        }
+
+        public static void Refine(Mesh mesh, QuadTree nodes, double maxArea)
+        {
+            HashSet<Segment> seen = new HashSet<Segment>();
+            Queue<Face> triangleQueue = new Queue<Face>();
+            Queue<Segment> segmentQueue = new Queue<Segment>();
+
+            foreach (Face face in mesh.Faces)
+            {
+                if (IsBad(face, maxArea))
+                {
+                    triangleQueue.Enqueue(face);
+                }
+
+                foreach (Edge edge in face)
+                {
+                    if (!edge.Constrained) continue;
+
+                    Segment segment = new Segment(edge);
+                    if (seen.Add(segment) && Enchrouched(nodes, segment))
+                    {
+                        segmentQueue.Enqueue(segment);
+                    }
+                }
+            }
+
+            while (segmentQueue.Count > 0 || triangleQueue.Count > 0)
+            {
+                if (segmentQueue.Count > 0)
+                {
+                    Segment seg = segmentQueue.Dequeue();
+                    Edge? existing = mesh.FindEdge(seg.a, seg.b);
+                    if (existing is null)
+                    {
+                        throw new Exception($"Midpoint of segment ({seg.a},{seg.b}) not found on any edge.");
+                    }
+
+                    double x = seg.circle.x;
+                    double y = seg.circle.y;
+
+
+                    Node inserted = Insert(mesh, nodes, x, y, out List<Face> affected, existing.Face);
+
+                    Segment s1 = new Segment(seg.a, inserted);
+                    Segment s2 = new Segment(inserted, seg.b);
+                    seen.Remove(seg);
+                    seen.Add(s1);
+                    seen.Add(s2);
+
+                    if (IsVisibleFromInterior(seen, s1, x, y) && Enchrouched(nodes, s1))
+                    {
+                        segmentQueue.Enqueue(s1);
+                    }
+                    if (IsVisibleFromInterior(seen, s2, x, y) && Enchrouched(nodes, s2))
+                    {
+                        segmentQueue.Enqueue(s2);
+                    }
+
+                    foreach (Face f in affected)
+                    {
+                        if (IsBad(f, maxArea))
+                        {
+                            triangleQueue.Enqueue(f);
+                        }
+                    }
+                }
+
+                if (triangleQueue.Count > 0)
+                {
+                    Face tri = triangleQueue.Dequeue();
+                    if (!IsBad(tri, maxArea))
+                    {
+                        continue;
+                    }
+
+                    double x = tri.Circle.x;
+                    double y = tri.Circle.y;
+
+                    bool encroaches = false;
+                    foreach (Segment seg in seen)
+                    {
+                        if (seg.circle.Contains(x, y) && IsVisibleFromInterior(seen, seg, x, y))
+                        {
+                            segmentQueue.Enqueue(seg);
+                            encroaches = true;
+                        }
+                    }
+
+                    if (encroaches)
+                    {
+                        continue;
+                    }
+
+                    Node inserted = Insert(mesh, nodes, x, y, out List<Face> affected);
+                    foreach (Face f in affected)
+                    {
+                        if (IsBad(f, maxArea))
+                        {
+                            triangleQueue.Enqueue(f);
+                        }
+                    }
+                }
+            }
         }
 
 
@@ -166,6 +268,62 @@ namespace CDTlib
                 }
             }
             return affected;
+        }
+
+
+        public static bool Enchrouched(QuadTree nodes, Segment segment)
+        {
+            Node a = segment.a;
+            Node b = segment.b;
+
+            Rectangle bound = new Rectangle(segment.circle);
+            List<Node> points = nodes.Query(bound);
+            foreach (Node n in points)
+            {
+                if (n == a || n == b) continue;
+                if (segment.circle.Contains(n.X, n.Y))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+
+        public static bool IsVisibleFromInterior(IEnumerable<Segment> segments, Segment segment, double x, double y)
+        {
+            Node node = new Node(-1, x, y);
+            Node mid = new Node(-1, segment.circle.x, segment.circle.y);
+            foreach (Segment seg in segments)
+            {
+                if (seg.Equals(segment))
+                    continue;
+
+                if (Node.Intersect(mid, node, seg.a, seg.b) is not null)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public static bool IsBad(Face t, double maxAllowedArea)
+        {
+            if (t.Dead)
+            {
+                return false;
+            }
+
+            if (t.Edge.Origin.Index < 0 || t.Edge.Next.Origin.Index < 0 || t.Edge.Prev.Origin.Index < 0)
+            {
+                return false;
+            }
+
+            if (t.Area > maxAllowedArea)
+            {
+                return true;
+            }
+            return false;
         }
     }
 }

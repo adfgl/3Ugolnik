@@ -71,7 +71,7 @@ namespace CDTlib
         public bool ShouldFlip()
         {
             Edge? twin = Twin;
-            if (twin is null || Constrained)
+            if (twin is null || Constrained || twin.Constrained)
             {
                 return false;
             }
