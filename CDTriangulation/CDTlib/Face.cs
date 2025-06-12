@@ -67,32 +67,44 @@
 
         public SplitResult Split(Node node)
         {
+            /*
+                        c            
+                        /\           
+                       /  \          
+                      /    \         
+                     /      \        
+                    /  f0    \       
+                   /          \      
+                  /            \     
+               a +--------------+ b  
+                                     
+            */
+
             var (a, b, c) = this;
             Edge ab = Edge;
             Edge bc = ab.Next;
             Edge ca = bc.Next;
 
-            a.Edge = ab;
-            b.Edge = bc;
-            c.Edge = ca;
-
             Face new0 = new Face(Index, node, a, b);
             Face new1 = new Face(-1, node, b, c);
             Face new2 = new Face(-1, node, c, a);
 
+            // twins
             new0.Edge.Twin = new2.Edge.Prev;
-            new0.Edge.Next.Twin = ab;
+            new0.Edge.Next.Twin = ab.Twin;
             new0.Edge.Prev.Twin = new1.Edge;
-            new0.Edge.Next.Constrained = ab.Constrained;
 
             new1.Edge.Twin = new0.Edge.Prev;
-            new1.Edge.Next.Twin = bc;
+            new1.Edge.Next.Twin = bc.Twin;
             new1.Edge.Prev.Twin = new2.Edge;
-            new1.Edge.Next.Constrained = bc.Constrained;
 
             new2.Edge.Twin = new1.Edge.Prev;
-            new2.Edge.Next.Twin = ca;
+            new2.Edge.Next.Twin = ca.Twin;
             new2.Edge.Prev.Twin = new0.Edge;
+
+            // constraints
+            new0.Edge.Next.Constrained = ab.Constrained;
+            new1.Edge.Next.Constrained = bc.Constrained;
             new2.Edge.Next.Constrained = ca.Constrained;
 
             return new SplitResult()
