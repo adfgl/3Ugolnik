@@ -65,7 +65,7 @@
             return GetEnumerator();
         }
 
-        public SplitResult Split(Node node)
+        public TopologyChange Split(Node node)
         {
             /*
                         c            
@@ -107,13 +107,22 @@
             new1.Edge.Next.Constrained = bc.Constrained;
             new2.Edge.Next.Constrained = ca.Constrained;
 
-            return new SplitResult()
+            return new TopologyChange()
             {
                 AffectedEdges =[new0.Edge, new1.Edge, new2.Edge],
                 NewFaces = [new0, new1, new2],
                 OldFaces = [this]
             };
         }
+
+        public void Center(out double x, out double y)
+        {
+            var (a, b, c) = this;
+            x = (a.X + b.X + c.X) / 3.0;
+            y = (a.Y + b.Y + c.Y) / 3.0;
+        }
+
+
 
         public override string ToString()
         {

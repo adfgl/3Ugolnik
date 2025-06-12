@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CDTlib
 {
-    public class SplitResult
+    public class TopologyChange
     {
         public Face[] NewFaces { get; set; }
         public Face[] OldFaces { get; set; }

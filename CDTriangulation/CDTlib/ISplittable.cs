@@ -2,6 +2,7 @@
 {
     public interface ISplittable
     {
-        SplitResult Split(Node node);
+        TopologyChange Split(Node node);
+        void Center(out double x, out double y);
     }
 }
