@@ -56,16 +56,6 @@ namespace CDTlib
             (a, c) = this;
             d = Prev.Origin;
             b = Twin!.Prev.Origin;
-
-            Edge ab = Twin.Next;
-            Edge bc = ab.Next;
-            Edge cd = this.Next;
-            Edge da = cd.Next;
-
-            a.Edge = ab;
-            b.Edge = bc;
-            c.Edge = cd;
-            d.Edge = da;
         }
 
         public bool ShouldFlip()
@@ -81,7 +71,9 @@ namespace CDTlib
                 return false;
             }
 
-            Quad(out Node a, out Node b, out Node c, out Node d);
+            var (a, c) = this;
+            Node d = Prev.Origin;
+            Node b = Twin!.Prev.Origin;
 
             if (!QuadConvex(a, b, c, d))
             {
@@ -134,19 +126,21 @@ namespace CDTlib
              */
 
 
-            Quad(out Node a, out Node b, out Node c, out Node d);
-
             Face old0 = Face;
             Face old1 = Twin.Face;
+
+            var (a, c) = this;
+            Node d = Prev.Origin;
+            Node b = Twin!.Prev.Origin;
 
             Edge ac = this;
             Edge ca = ac.Twin;
 
-            Edge cd = c.Edge;
-            Edge da = d.Edge;
+            Edge cd = ac.Next;
+            Edge da = cd.Next;
 
-            Edge ab = a.Edge;
-            Edge bc = b.Edge;
+            Edge ab = ca.Next;
+            Edge bc = ab.Next;
 
             Face f0 = new Face(old0.Index, d, b, c);
             Face f1 = new Face(old1.Index, b, d, a);
@@ -207,15 +201,18 @@ namespace CDTlib
             Face old0 = Face;
             Face old1 = Twin.Face;
 
-            Quad(out Node a, out Node b, out Node c, out Node d);
+            var (a, c) = this;
+            Node d = Prev.Origin;
+            Node b = Twin!.Prev.Origin;
+
             Edge ac = this;
             Edge ca = ac.Twin;
 
-            Edge cd = c.Edge;
-            Edge da = d.Edge;
+            Edge cd = ac.Next;
+            Edge da = cd.Next;
 
-            Edge ab = a.Edge;
-            Edge bc = b.Edge;
+            Edge ab = ca.Next;
+            Edge bc = ab.Next;
 
             Face f0 = new Face(old0.Index, node, d, a);
             Face f1 = new Face(old1.Index, node, c, d);

@@ -102,6 +102,7 @@ namespace CDTlib
                 if (twin is not null)
                 {
                     twin.Twin = e;
+                    twin.Origin.Edge = twin;
                 }
 
                 e.Origin.Edge = e;
@@ -120,22 +121,7 @@ namespace CDTlib
             foreach (Face f in source.OldFaces)
             {
                 f.Dead = true;
-                //foreach (Edge e in f)
-                //{
-                //    e.Face = null!;
-                //    if (e.Twin?.Face == f)
-                //    {
-                //        e.Twin.Twin = null;
-                //    }
-                //    if (e.Origin.Edge == e)
-                //    {
-                //        e.Origin.Edge = null!;
-                //    }
 
-                //    e.Next = null!;
-                //    e.Prev = null!;
-                //    e.Twin = null!;
-                //}
             }
             return this;
         }

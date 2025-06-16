@@ -7,7 +7,7 @@ namespace CDTConsole
         static void Main(string[] args)
         {
             var points = Square(0, 0, 100);
-            //points = RandomPointCloud(0, 0, 100, 50);
+            points = RandomPointCloud(0, 0, 100, 50);
 
             var mesh = CDT.Triangulate(o => o.X, o => o.Y, points);
 
