@@ -20,7 +20,7 @@ namespace CDTlib
                 points.Add(pt);
 
                 if (x < minX) minX = x;
-                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
                 if (y < minY) minY = y;
                 if (y > maxY) maxY = y;
             }
@@ -57,6 +57,9 @@ namespace CDTlib
 
             Rectangle rectangle = new Rectangle(minX, minY, maxX, maxY);
             Mesh mesh = new Mesh();
+
+            mesh.AddSuperStructure(rectangle);
+
             QuadTree nodes = new QuadTree(rectangle);
             foreach (T pt in points)
             {

@@ -33,60 +33,11 @@ namespace CDTlib
             while (true)
             {
                 Edge? twin = current.Twin;
-                if (twin == null)
-                    yield break;
-
                 current = twin.Next;
                 if (current == start)
                     yield break;
 
                 yield return current;
-            }
-        }
-
-        public IEnumerable<Edge> Backward()
-        {
-            Edge start = Edge;
-            Edge? current = start.Prev;
-
-            while (true)
-            {
-                Edge? twin = current.Twin;
-                if (twin == null)
-                    yield break;
-
-                current = twin.Prev;
-                if (current == start)
-                    yield break;
-
-                yield return current;
-            }
-        }
-
-        public IEnumerable<Edge> Around()
-        {
-            using IEnumerator<Edge> forward = Forward().GetEnumerator();
-            if (!forward.MoveNext())
-                yield break;
-
-            yield return forward.Current;
-
-            bool hitNull = false;
-            while (forward.MoveNext())
-            {
-                if (forward.Current.Twin == null)
-                {
-                    hitNull = true;
-                    break;
-                }
-
-                yield return forward.Current;
-            }
-
-            if (hitNull)
-            {
-                foreach (Edge e in Backward())
-                    yield return e;
             }
         }
 

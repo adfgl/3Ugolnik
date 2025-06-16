@@ -12,7 +12,7 @@ namespace CDTlib
             _faces = new List<Face>(Math.Max(capacity, 4));
         }
 
-        public IReadOnlyList<Face> Faces => _faces;
+        public List<Face> Faces => _faces;
 
         public double Eps
         {
@@ -20,9 +20,26 @@ namespace CDTlib
             set => _eps = value;
         }
 
+        public Edge? FindEdgeBrute(Node a, Node b)
+        {
+            foreach (Face face in _faces)
+            {
+                foreach (Edge edge in face)
+                {
+                    Node s = edge.Origin;
+                    Node e = edge.Next.Origin;
+                    if (a == s && b == e || a == e && b == s)
+                    {
+                        return edge;
+                    }
+                }
+            }
+            return null;
+        }
+
         public Edge? FindEdge(Node a, Node b)
         {
-            foreach (Edge edge in a.Around())
+            foreach (Edge edge in a.Forward())
             {
                 Node s = edge.Origin;
                 Node e = edge.Next.Origin;
@@ -36,7 +53,7 @@ namespace CDTlib
 
         public Face? EntranceTriangle(Node a, Node b)
         {
-            foreach (Edge edge in a.Around())
+            foreach (Edge edge in a.Forward())
             {
                 var (start, end) = edge;
                 if (Node.Cross(start, end, b) > 0)
@@ -62,7 +79,7 @@ namespace CDTlib
             Node b = new Node(-2, midx + size, midy - size);
             Node c = new Node(-1, midx, midy + size);
 
-            Face superFace = new Face(0, a, b, c).ComputeArea();
+            Face superFace = new Face(0, a, b, c);
             _faces.Add(superFace);
 
             return this;

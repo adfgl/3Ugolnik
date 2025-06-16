@@ -148,11 +148,8 @@ namespace CDTlib
             Edge ab = a.Edge;
             Edge bc = b.Edge;
 
-            Face f0 = new Face(old0.Index, d, b, c).ComputeArea();
-            Face f1 = new Face(old1.Index, b, c, a)
-            {
-                Area = old0.Area + old1.Area - f0.Area
-            };
+            Face f0 = new Face(old0.Index, d, b, c);
+            Face f1 = new Face(old1.Index, b, c, a);
 
             // twins
             f0.Edge.Twin = f1.Edge;
@@ -220,10 +217,10 @@ namespace CDTlib
             Edge ab = a.Edge;
             Edge bc = b.Edge;
 
-            Face f0 = new Face(old0.Index, node, d, a).ComputeArea();
-            Face f1 = new Face(old1.Index, node, c, d) { Area = old0.Area - f0.Area };
-            Face f2 = new Face(-1, node, b, c).ComputeArea();
-            Face f3 = new Face(-1, node, a, b) { Area = old1.Area - f1.Area };
+            Face f0 = new Face(old0.Index, node, d, a);
+            Face f1 = new Face(old1.Index, node, c, d);
+            Face f2 = new Face(-1, node, b, c);
+            Face f3 = new Face(-1, node, a, b);
 
             // twins
             f0.Edge.Twin = f1.Edge.Prev;
@@ -282,8 +279,8 @@ namespace CDTlib
             Edge bc = ab.Next;
             Edge ca = bc.Next;
 
-            Face f0 = new Face(Face.Index, node, c, a).ComputeArea();
-            Face f1 = new Face(-1, node, b, c) { Area = Face.Area - f0.Area };
+            Face f0 = new Face(Face.Index, node, c, a);
+            Face f1 = new Face(-1, node, b, c);
 
             f0.Edge.Twin = f1.Edge;
             f0.Edge.Next.Twin = ca.Twin;

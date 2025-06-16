@@ -26,6 +26,12 @@
             ab.Face = bc.Face = ca.Face = this;
 
             Circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+
+            Area = Node.Cross(a, b, c) * 0.5;
+            if (Area < 0)
+            {
+                throw new Exception($"{this}: wrong winding order!");
+            }
         }
 
         public Face(int index, Edge e, Node n)
@@ -60,18 +66,6 @@
             return GetEnumerator();
         }
 
-        public Face ComputeArea()
-        {
-            var (a, b, c) = this;
-            Area = Node.Cross(a, b, c) * 0.5;
-
-            if (Area < 0)
-            {
-                throw new Exception("Incorrect winding order!");
-            }
-            return this;
-        }
-
         public TopologyChange Split(Node node)
         {
             /*
@@ -92,12 +86,9 @@
             Edge bc = ab.Next;
             Edge ca = bc.Next;
 
-            Face new0 = new Face(Index, node, a, b).ComputeArea();
-            Face new1 = new Face(-1, node, b, c).ComputeArea();
-            Face new2 = new Face(-1, node, c, a)
-            {
-                Area = Area - new0.Area - new1.Area
-            };
+            Face new0 = new Face(Index, node, a, b);
+            Face new1 = new Face(-1, node, b, c);
+            Face new2 = new Face(-1, node, c, a);
 
             // twins
             new0.Edge.Twin = new2.Edge.Prev;
