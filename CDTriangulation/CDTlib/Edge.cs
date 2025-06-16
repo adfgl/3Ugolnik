@@ -88,7 +88,7 @@ namespace CDTlib
                 return false;
             }
 
-            if (Face.Circle.Contains(d.X, d.Y))
+            if (Face.Circle.Contains(b.X, b.Y))
             {
                 return true;
             }
@@ -149,7 +149,7 @@ namespace CDTlib
             Edge bc = b.Edge;
 
             Face f0 = new Face(old0.Index, d, b, c);
-            Face f1 = new Face(old1.Index, b, c, a);
+            Face f1 = new Face(old1.Index, b, d, a);
 
             // twins
             f0.Edge.Twin = f1.Edge;

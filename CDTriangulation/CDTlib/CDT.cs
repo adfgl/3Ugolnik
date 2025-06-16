@@ -68,24 +68,24 @@ namespace CDTlib
                 Node node = Insert(mesh, nodes, x, y, out _);
             }
 
-            foreach ((T a, T b) in constraints)
-            {
-                double x0 = getX(a);
-                double y0 = getY(a);
+            //foreach ((T a, T b) in constraints)
+            //{
+            //    double x0 = getX(a);
+            //    double y0 = getY(a);
 
-                double x1 = getX(b);
-                double y1 = getY(b);
+            //    double x1 = getX(b);
+            //    double y1 = getY(b);
 
-                Node? na = nodes.TryGet(x0, y0);
-                Node? nb = nodes.TryGet(x1, y1);
+            //    Node? na = nodes.TryGet(x0, y0);
+            //    Node? nb = nodes.TryGet(x1, y1);
 
-                if (na is null || nb is null)
-                {
-                    throw new Exception();
-                }
+            //    if (na is null || nb is null)
+            //    {
+            //        throw new Exception();
+            //    }
 
-                InsertConstraint(mesh, nodes, na, nb);
-            }
+            //    InsertConstraint(mesh, nodes, na, nb);
+            //}
 
             if (constraintPoints != null)
             {

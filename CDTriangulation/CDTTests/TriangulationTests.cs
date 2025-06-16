@@ -59,5 +59,19 @@ namespace CDTTests
 
             return mesh;
         }
+
+        [Fact]
+        public void TriangleSplitTest()
+        {
+            Mesh mesh = TestCase();
+            Face f0 = mesh.Faces[0];
+            f0.Center(out double x, out double y);
+
+            Node inserted = new Node(-1, x, y);
+            TopologyChange split = f0.Split(inserted);
+            mesh.Add(split);
+
+
+        }
     }
 }

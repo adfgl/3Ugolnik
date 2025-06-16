@@ -110,7 +110,7 @@
 
             return new TopologyChange()
             {
-                AffectedEdges =[new0.Edge, new1.Edge, new2.Edge],
+                AffectedEdges =[new0.Edge.Next, new1.Edge.Next, new2.Edge.Next],
                 NewFaces = [new0, new1, new2],
                 OldFaces = [this]
             };
