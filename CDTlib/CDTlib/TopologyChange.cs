@@ -8,5 +8,6 @@ namespace CDTlib
 {
     public class TopologyChange
     {
+        public Triangle[] NewTriangles { get; set; }
     }
 }
