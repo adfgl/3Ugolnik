@@ -22,6 +22,25 @@
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
 
+        public Mesh AddSuperStructure(Rectangle bounds)
+        {
+            double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+            double midx = (bounds.maxX + bounds.minX) * 0.5;
+            double midy = (bounds.maxY + bounds.minY) * 0.5;
+            double size = 2 * dmax;
+
+            Node a = new Node(-3, midx - size, midy - size);
+            Node b = new Node(-2, midx + size, midy - size);
+            Node c = new Node(-1, midx, midy + size);
+
+            Triangle triangle = new Triangle(0, a, b, c);
+            _triangles.Add(triangle);
+
+            a.Triangle = b.Triangle = c.Triangle = triangle.index;
+            return this;
+        }
+
+
         public void FindContaining(double x, double y, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
         {
             triangle = edge = node = -1;

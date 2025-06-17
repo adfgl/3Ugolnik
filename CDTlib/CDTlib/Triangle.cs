@@ -40,16 +40,14 @@
             return -1;
         }
 
-        public int IndexOfInvariant(int from, int to)
+        public override string ToString()
         {
+            string s = "";
             for (int i = 0; i < 3; i++)
             {
-                if (indices[i] == from && (indices[Mesh.NEXT[i]] == to || indices[Mesh.PREV[i]] == to))
-                {
-                    return i;
-                }
+                s += adjacent[i] + " " + constrained[i] + (i != 2 ? ", " : "");
             }
-            return -1;
+            return $"{String.Join(' ', indices.Select(i => i))} ({s})";
         }
     }
 }
