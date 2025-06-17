@@ -22,6 +22,153 @@
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
 
+        public void FindContaining(double x, double y, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
+        {
+            triangle = edge = node = -1;
+            if (_triangles.Count == 0)
+            {
+                return;
+            }
+
+            int maxSteps = _triangles.Count * 3;
+            int trianglesChecked = 0;
+
+            Node pt = new Node() { X = x, Y = y };
+
+            int skipEdge = -1;
+            int current = searchStart == -1 ? _triangles.Count - 1 : searchStart; 
+            while (true)
+            {
+                if (trianglesChecked++ > maxSteps)
+                {
+                    throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
+                }
+
+                int bestExit = -1;
+                double worstCross = 0;
+                bool inside = true;
+
+                Triangle currentTriangle = _triangles[current];
+                for (int edgeIndex = 0; edgeIndex < 3; edgeIndex++)
+                {
+                    if (edgeIndex == skipEdge)
+                    {
+                        continue;
+                    }
+
+                    int aIndex = currentTriangle.indices[edgeIndex];
+                    Node a = _nodes[aIndex];
+                    double adx = x - a.X;
+                    double ady = y - a.Y;
+                    if (adx * adx + ady * ady < eps)
+                    {
+                        triangle = current;
+                        edge = edgeIndex;
+                        node = a.Index;
+                        return;
+                    }
+
+                    int bIndex = currentTriangle.indices[NEXT[edgeIndex]];
+                    Node b = _nodes[bIndex];
+                    double bdx = x - b.X;
+                    double bdy = y - b.Y;
+                    if (bdx * bdx + bdy * bdy < eps)
+                    {
+                        triangle = current;
+                        edge = NEXT[edgeIndex];
+                        node = b.Index;
+                        return;
+                    }
+
+                    double cross = Node.Cross(a, b, pt);
+                    if (Math.Abs(cross) < eps)
+                    {
+                        double dx = b.X - a.X;
+                        double dy = b.Y - a.Y;
+                        double dot = adx * dx + ady * dy;
+                        double lenSq = dx * dx + dy * dy;
+
+                        if (dot >= -eps && dot <= lenSq + eps)
+                        {
+                            triangle = current;
+                            edge = edgeIndex;
+                            node = -1;
+                            return;
+                        }
+                    }
+
+                    if (cross < 0)
+                    {
+                        inside = false;
+                        if (bestExit == -1 || cross < worstCross)
+                        {
+                            worstCross = cross;
+                            bestExit = edgeIndex;
+                        }
+                    }
+                }
+
+                if (inside)
+                {
+                    triangle = current;
+                    edge = node = -1;
+                    return;
+                }
+
+                int next = currentTriangle.adjacent[bestExit];
+                if (next == -1)
+                {
+                    triangle = edge = node = -1;
+                    return;
+                }
+
+                Triangle nextTriangle = _triangles[next];
+                int aStart = currentTriangle.indices[bestExit];
+                int bEnd = currentTriangle.indices[NEXT[bestExit]];
+                skipEdge = nextTriangle.IndexOf(bEnd, aStart);
+                current = next;
+            }
+        }
+
+        public void FindEdgeBrute(int a, int b, out int triangle, out int edge)
+        {
+            for (int i = 0; i < _triangles.Count; i++)
+            {
+                int e = _triangles[i].IndexOf(a, b);
+                if (e != -1)
+                {
+                    triangle = i;
+                    edge = e;
+                    return;
+                }
+            }
+
+            triangle = -1;
+            edge = -1;
+        }
+
+        public void FindEdge(int a, int b, out int triangle, out int edge)
+        {
+            Node nodeA = _nodes[a];
+            TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
+            do
+            {
+                int current = walker.Current;
+                int e = _triangles[current].IndexOf(a, b);
+                if (e != -1)
+                {
+                    triangle = current;
+                    edge = e;
+                    return;
+                }
+                    
+            }
+            while (walker.MoveNextCW());
+
+            triangle = -1;
+            edge = -1;
+        }
+
         public void Add(Affected[] tris)
         {
             foreach (Affected item in tris)
@@ -80,6 +227,10 @@
             dab.constrained[1] = triangle.constrained[0];
             dbc.constrained[1] = triangle.constrained[1];
             dca.constrained[1] = triangle.constrained[2];
+
+            a.Triangle = d.Triangle = t0;
+            b.Triangle = t1;
+            c.Triangle = t2;
 
             return [new Affected(dab, 1), new Affected(dbc, 1), new Affected(dca, 1)];
         }
@@ -163,6 +314,10 @@
             ebc.constrained[1] = cab.constrained[bc];
             eab.constrained[1] = cab.constrained[ab];
 
+            a.Triangle = d.Triangle = e.Triangle = t0;
+            c.Triangle = t1;
+            b.Triangle = t2;
+
             return [new Affected(eda, 1), new Affected(ecd, 1), new Affected(ebc, 1), new Affected(eab, 1)];
         }
 
@@ -208,10 +363,13 @@
             bool constrained = abc.constrained[0];
             dca.constrained[2] = cdb.constrained[1] = constrained;
 
+            a.Triangle = c.Triangle = d.Triangle = t0;
+            b.Triangle = t1;
+
             return [new Affected(dca, 1), new Affected(cdb, 2)];
         }
 
-        public void Flip(Triangle triangle, int edge)
+        public Affected[] Flip(Triangle triangle, int edge)
         {
             int adj = triangle.adjacent[edge];
             if (adj == -1)
@@ -273,6 +431,11 @@
 
             bool constrained = cba.constrained[ac];
             new0.constrained[0] = new1.constrained[1] = constrained;
+
+            a.Triangle = b.Triangle = c.Triangle = t0;
+            c.Triangle = t1;
+
+            return [new Affected(new0, 2), new Affected(new1, 1)];
         }
     }
 
