@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Xml.Linq;
 
 namespace CDTlib
 {
@@ -40,6 +41,10 @@ namespace CDTlib
             Node a = new Node(0, midx - size, midy - size);
             Node b = new Node(1, midx + size, midy - size);
             Node c = new Node(2, midx, midy + size);
+
+            _nodes.Add(a);
+            _nodes.Add(b);
+            _nodes.Add(c);
 
             Triangle triangle = new Triangle(0, a, b, c, Area(a, b, c));
             _triangles.Add(triangle);
