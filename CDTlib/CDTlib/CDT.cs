@@ -10,6 +10,8 @@
             CDTPreprocessor processed = new CDTPreprocessor(input);
             _quadTree = new QuadTree(processed.Rectangle);
 
+            _mesh.AddSuperStructure(_quadTree.Bounds, 2);
+
             foreach (Node item in processed.ContourPoints)
             {
                 AddPoint(item.X, item.Y, item.Z, out _);
@@ -26,6 +28,11 @@
             }
 
             AssignParentsToTriangles(processed.Polygons);
+        }
+
+        void FinalizeMesh()
+        {
+
         }
 
         void AssignParentsToTriangles(List<(Polygon, List<Polygon>)> polygons)
