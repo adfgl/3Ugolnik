@@ -24,6 +24,7 @@ namespace CDTlib
             Z = z;
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double SquareDistance(Node a, Node b)
         {

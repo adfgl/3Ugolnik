@@ -93,6 +93,43 @@
             {
                 return false;
             }
+
+            List<Node> av = Nodes, ab = other.Nodes;
+            int ac = av.Count, bc = ab.Count;
+
+            for (int i = 0; i < ac; i++)
+            {
+                Node p1 = av[i];
+                Node p2 = av[(i + 1) % ac];
+                for (int j = 0; j < bc; j++)
+                {
+                    Node q1 = ab[j];
+                    Node q2 = ab[(j + 1) % bc];
+
+                    if (Node.Intersect(p1, p2, q1, q2) is not null)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public static bool Contains(Polygon contour, List<Polygon> holes, double x, double y)
+        {
+            if (!contour.Contains(x, y))
+            {
+                return false;
+            }
+
+            foreach (Polygon hole in holes)
+            {
+                if (hole.Contains(x, y))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }
