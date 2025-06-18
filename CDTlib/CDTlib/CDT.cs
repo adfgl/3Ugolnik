@@ -1,13 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-
-namespace CDTlib
+﻿namespace CDTlib
 {
     public class CDT
     {
@@ -39,12 +30,128 @@ namespace CDTlib
 
             // do something before adding?
 
-            _mesh.Add(affected);
+            _mesh.Nodes.Add(newNode);   
             _quadTree.Add(newNode);
 
+            _mesh.Add(affected);
             _mesh.Legalize(affectedTriangles, affected);
             return newNode;
         }
+
+        public void AddConstraint(double x1, double y1, double x2, double y2)
+        {
+            Node start = AddPoint(x1, y1, out _);
+            Node end = AddPoint(x2, y2, out _);
+
+            Queue<(Node, Node)> toInsert = new();
+            toInsert.Enqueue((start, end));
+
+            while (toInsert.Count > 0)
+            {
+                var (a, b) = toInsert.Dequeue();
+                if (a.Index == b.Index)
+                    continue;
+
+                InsertConstraintSegment(a, b, toInsert);
+            }
+        }
+
+        private void InsertConstraintSegment(Node start, Node end, Queue<(Node, Node)> toInsert)
+        {
+            while (true)
+            {
+                _mesh.FindEdge(start.Index, end.Index, out int triangleIndex, out int edgeIndex);
+                if (edgeIndex != -1)
+                {
+                    _mesh.SetConstraint(triangleIndex, edgeIndex, true);
+                    return;
+                }
+
+                Triangle current = _mesh.EntranceTriangle(start.Index, end.Index);
+                if (WalkAndInsert(current, start, end, toInsert))
+                    return;
+            }
+        }
+
+        private bool WalkAndInsert(Triangle current, Node start, Node end, Queue<(Node, Node)> toInsert)
+        {
+            List<int> affected = new();
+
+            while (true)
+            {
+                for (int edge = 0; edge < 3; edge++)
+                {
+                    if (TrySplitOrFlip(current, edge, start, end, toInsert))
+                        return true;
+                }
+
+                int exitEdge = FindExitEdge(current, end);
+                int adjIndex = current.adjacent[exitEdge];
+                if (adjIndex == -1)
+                    throw new Exception("Constraint insertion failed: no adjacent triangle during walk.");
+
+                current = _mesh.Triangles[adjIndex];
+            }
+        }
+
+        private bool TrySplitOrFlip(Triangle triangle, int edge, Node start, Node end, Queue<(Node, Node)> toInsert)
+        {
+            triangle.Edge(edge, out int aIndex, out int bIndex);
+            if (aIndex == start.Index || bIndex == start.Index || aIndex == end.Index || bIndex == end.Index)
+                return false;
+
+            Node a = _mesh.Nodes[aIndex];
+            Node b = _mesh.Nodes[bIndex];
+
+            Node? intersection = Node.Intersect(a, b, start, end);
+            if (intersection is null)
+                return false;
+
+            Affected[] tris;
+            if (_mesh.CanFlip(triangle, edge))
+            {
+                tris = _mesh.Flip(triangle, edge); ;
+            }
+            else
+            {
+                Node newNode = new Node(_mesh.Nodes.Count, intersection.X, intersection.Y);
+                tris = _mesh.Split(triangle, edge, newNode);
+
+                toInsert.Enqueue((start, newNode));
+                toInsert.Enqueue((newNode, end));
+
+                _mesh.Nodes.Add(newNode);
+                _quadTree.Add(newNode);
+            }
+
+            _mesh.Add(tris);
+            _mesh.Legalize(new List<int>(), tris);
+
+            return true;
+        }
+
+        private int FindExitEdge(Triangle triangle, Node target)
+        {
+            int bestEdge = -1;
+            double bestCross = 0;
+
+            for (int edge = 0; edge < 3; edge++)
+            {
+                triangle.Edge(edge, out int aIndex, out int bIndex);
+                Node a = _mesh.Nodes[aIndex];
+                Node b = _mesh.Nodes[bIndex];
+
+                double cross = Node.Cross(a, b, target);
+                if (bestEdge == -1 || cross < bestCross)
+                {
+                    bestCross = cross;
+                    bestEdge = edge;
+                }
+            }
+
+            return bestEdge;
+        }
+
 
         public void Refine(double maxArea)
         {
@@ -91,8 +198,8 @@ namespace CDTlib
                     double x = seg.circle.x;
                     double y = seg.circle.y;
                     Node newNode = new Node(_mesh.Nodes.Count, x, y);
-
-                    List<int> affected = _mesh.SplitAndAdd(_mesh.Triangles[triangle], edge, newNode);
+                    _mesh.Nodes.Add(newNode);
+                    _quadTree.Add(newNode);
 
                     seg.Split(newNode, out Segment a, out Segment b);
                     seen.Remove(seg);
@@ -108,6 +215,7 @@ namespace CDTlib
                         segmentQueue.Enqueue(b);
                     }
 
+                    List<int> affected = _mesh.SplitAndAdd(_mesh.Triangles[triangle], edge, newNode);
                     foreach (int item in affected)
                     {
                         triangleQueue.Enqueue(_mesh.Triangles[item]);
@@ -217,102 +325,6 @@ namespace CDTlib
                 }
             }
             return true;
-        }
-
-        public void AddConstraint(double x1, double y1, double x2, double y2)
-        {
-            Node start = AddPoint(x1, y1, out _);
-            Node end = AddPoint(x2, y2, out _);
-
-            int startIndex = start.Index;
-            int endIndex = end.Index;
-
-            if (startIndex == endIndex)
-            {
-                return;
-            }
-
-            while (true)
-            {
-                _mesh.FindEdge(startIndex, endIndex, out int triangleIndex, out int edgeIndex);
-
-                if (edgeIndex != -1)
-                {
-                    _mesh.SetConstraint(triangleIndex, edgeIndex, true);
-                    return;
-                }
-
-                Triangle current = _mesh.EntranceTriangle(startIndex, endIndex);
-                List<int> affected = new List<int>();
-
-                bool changed = false;
-                while (true)
-                {
-                    affected.Clear();
-                    for (int edge = 0; edge < 3; edge++)
-                    {
-                        current.Edge(edge, out int aIndex, out int bIndex);
-                        if (aIndex == startIndex || bIndex == startIndex || 
-                            aIndex == endIndex || bIndex == endIndex)
-                        {
-                            continue;
-                        }
-
-                        Node a = _mesh.Nodes[aIndex];
-                        Node b = _mesh.Nodes[bIndex];
-
-                        Node? inter = Node.Intersect(a, b, start, end);
-                        if (inter is null)
-                        {
-                            continue;
-                        }
-
-                        Affected[] tris;
-                        if (!_mesh.CanFlip(current, edge))
-                        {
-                            tris = _mesh.Split(current, edge, inter);
-                        }
-                        else
-                        {
-                            tris = _mesh.Flip(current, edge);
-                        }
-
-                        _mesh.Add(tris);
-                        _mesh.Legalize(affected, tris);
-
-                        changed = true;
-                        break;
-                    }
-
-                    if (changed)
-                    {
-                        break;
-                    }
-
-                    int next = -1;
-                    double bestCross = 0;
-                    for (int edge = 0; edge < 3; edge++)
-                    {
-                        current.Edge(edge, out int aIndex, out int bIndex);
-                        Node a = _mesh.Nodes[aIndex];
-                        Node b = _mesh.Nodes[bIndex];
-
-                        double cross = Node.Cross(a, b, end);
-                        if (next == -1 || cross < bestCross)
-                        {
-                            bestCross = cross;
-                            next = edge;
-                        }
-                    }
-
-                    int adjIndex = current.adjacent[next];
-                    if (adjIndex == -1)
-                    {
-                        throw new Exception("Stuck during constraint insertion. Mesh may be invalid or degenerate.");
-                    }
-                    current = _mesh.Triangles[adjIndex];
-                }
-            }
         }
     }
 }

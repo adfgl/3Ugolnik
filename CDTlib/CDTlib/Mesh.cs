@@ -387,7 +387,6 @@ namespace CDTlib
 
         public List<int> SplitAndAdd(Triangle triangle, int edge, Node node)
         {
-            _nodes.Add(node);
             Affected[] affected = Split(triangle, edge, node);
             Add(affected);
             return Legalize(new List<int>(), affected);
