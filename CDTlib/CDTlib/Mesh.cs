@@ -10,6 +10,12 @@
             this.triangle = triangle;
             this.edge = edge;
         }
+
+        public void Deconstruct(out Triangle triangle, out int edge)
+        {
+            triangle = this.triangle;
+            edge = this.edge;
+        }
     }
 
     public class Mesh
@@ -42,12 +48,101 @@
 
         static double Area(Node a, Node b, Node c)
         {
-            double area = Node.Cross(a, b, c) * 0.5;
-            if (area <= 0)
+            double cross = Node.Cross(a, b, c);
+            if (cross <= 0)
             {
                 throw new Exception("Invalid triangle");
             }
-            return area;
+            return cross * 0.5;
+        }
+
+        public List<int> Legalize(List<int> affected, Affected[] newElements)
+        {
+            Stack<Affected> toLegalize = new Stack<Affected>(newElements);
+            while (toLegalize.Count > 0)
+            {
+                var (triangle, edge) = toLegalize.Pop();
+                if (!ShouldFlip(triangle, edge))
+                {
+                    continue;
+                }
+
+                Affected[] flipped = Flip(triangle, edge);
+                Add(flipped);
+                affected.Add(triangle.index);
+
+                foreach (Affected item in flipped)
+                {
+                    toLegalize.Push(item);
+                }
+            }
+            return affected;
+        }
+
+        public bool ShouldFlip(Triangle tri, int edge)
+        {
+            int adj = tri.adjacent[edge];
+            if (adj == -1 || tri.constrained[edge])
+            {
+                return false;
+            }
+
+            /*
+                         d            
+                         /\           
+                        /  \          
+                       /    \         
+                      /      \        
+                     /   f0   \       
+                    /          \      
+                   /            \     
+                a +--------------+ c  
+                   \            /     
+                    \          /      
+                     \   f1   /       
+                      \      /        
+                       \    /         
+                        \  /          
+                         \/           
+                         b            
+            */
+
+            Triangle acd = tri;
+            Triangle cab = _triangles[adj];
+
+            int ac = edge;
+            int cd = NEXT[ac];
+            int da = PREV[ac];
+
+            int ca = cab.IndexOf(cd, ac);
+            int ab = NEXT[ca];
+            int bc = PREV[ca];
+
+            Node a = _nodes[acd.indices[ac]];
+            Node b = _nodes[cab.indices[bc]];
+            Node c = _nodes[acd.indices[cd]];
+            Node d = _nodes[acd.indices[da]];
+
+            if (!QuadConvex(a, b, c, d))
+            {
+                return false;
+            }
+
+            if (acd.circle.Contains(b.X, b.Y))
+            {
+                return true;
+            }
+            return false;
+        }
+
+
+        public static bool QuadConvex(Node a, Node b, Node c, Node d)
+        {
+            double ab_bc = Node.Cross(a, b, c);
+            double bc_cd = Node.Cross(b, c, d);
+            double cd_da = Node.Cross(c, d, a);
+            double da_ab = Node.Cross(d, a, b);
+            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
         }
 
 
