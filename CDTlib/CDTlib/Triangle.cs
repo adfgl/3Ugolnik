@@ -6,14 +6,16 @@
         public readonly int[] indices, adjacent;
         public readonly bool[] constrained;
         public readonly Circle circle;
+        public readonly double area;
 
-        public Triangle(int index, Node a, Node b, Node c)
+        public Triangle(int index, Node a, Node b, Node c, double area)
         {
             this.index = index;
             this.indices = [a.Index, b.Index, c.Index];
             this.adjacent = [-1, -1, -1];
             this.constrained = [false, false, false];
             this.circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+            this.area = area;
         }
 
         public int IndexOf(int vertex)
