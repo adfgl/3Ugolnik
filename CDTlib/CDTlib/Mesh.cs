@@ -46,7 +46,7 @@ namespace CDTlib
             _nodes.Add(b);
             _nodes.Add(c);
 
-            Triangle triangle = new Triangle(0, a, b, c, Area(a, b, c));
+            Triangle triangle = new Triangle(0, a, b, c, Area(a, b, c), null);
             _triangles.Add(triangle);
 
             a.Triangle = b.Triangle = c.Triangle = triangle.index;
@@ -340,6 +340,7 @@ namespace CDTlib
             do
             {
                 int current = walker.Current;
+
                 int e = _triangles[current].IndexOf(a, b);
                 if (e != -1)
                 {
@@ -410,9 +411,9 @@ namespace CDTlib
             int t1 = _triangles.Count;
             int t2 = t1 + 1;
 
-            Triangle dab = new Triangle(t0, d, a, b, Area(d, a, b));
-            Triangle dbc = new Triangle(t1, d, b, c, Area(d, b, c));
-            Triangle dca = new Triangle(t2, d, c, a, abc.area - dab.area - dbc.area);
+            Triangle dab = new Triangle(t0, d, a, b, Area(d, a, b), abc.parents);
+            Triangle dbc = new Triangle(t1, d, b, c, Area(d, b, c), abc.parents);
+            Triangle dca = new Triangle(t2, d, c, a, abc.area - dab.area - dbc.area, abc.parents);
 
             dab.adjacent[0] = t2;
             dab.adjacent[1] = abc.adjacent[0];
@@ -487,10 +488,10 @@ namespace CDTlib
             Node d = _nodes[acd.indices[da]];
             Node e = node;
 
-            Triangle eda = new Triangle(t0, e, d, a, Area(e, d, a));
-            Triangle ecd = new Triangle(t1, e, c, d, acd.area - eda.area);
-            Triangle ebc = new Triangle(t2, e, b, c, Area(e, b, c));
-            Triangle eab = new Triangle(t3, e, a, b, cab.area - ebc.area);
+            Triangle eda = new Triangle(t0, e, d, a, Area(e, d, a), acd.parents);
+            Triangle ecd = new Triangle(t1, e, c, d, acd.area - eda.area, acd.parents);
+            Triangle ebc = new Triangle(t2, e, b, c, Area(e, b, c), cab.parents);
+            Triangle eab = new Triangle(t3, e, a, b, cab.area - ebc.area, cab.parents);
 
             eda.adjacent[0] = t1;
             eda.adjacent[1] = acd.adjacent[da];
@@ -548,8 +549,8 @@ namespace CDTlib
             int t0 = triangle.index;
             int t1 = _triangles.Count;
 
-            Triangle dca = new Triangle(t0, d, c, a, Area(d, c, a));
-            Triangle cdb = new Triangle(t1, c, d, b, abc.area - dca.area);
+            Triangle dca = new Triangle(t0, d, c, a, Area(d, c, a), triangle.parents);
+            Triangle cdb = new Triangle(t1, c, d, b, abc.area - dca.area, triangle.parents);
 
             dca.adjacent[0] = t1;
             dca.adjacent[1] = abc.adjacent[2];
@@ -620,8 +621,17 @@ namespace CDTlib
             int t0 = acd.index;
             int t1 = cba.index;
 
-            Triangle bda = new Triangle(t0, b, d, a, Area(b, d, a));
-            Triangle dbc = new Triangle(t1, d, b, c, acd.area + cba.area - bda.area);
+            List<int> parents = new List<int>(acd.parents);
+            foreach (var item in cba.parents)
+            {
+                if (!parents.Contains(item))
+                {
+                    parents.Add(item);
+                }
+            }
+
+            Triangle bda = new Triangle(t0, b, d, a, Area(b, d, a), parents);
+            Triangle dbc = new Triangle(t1, d, b, c, acd.area + cba.area - bda.area, parents);
 
             bda.adjacent[0] = t1;
             bda.adjacent[1] = acd.adjacent[da];

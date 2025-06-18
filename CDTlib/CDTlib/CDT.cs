@@ -5,66 +5,56 @@
         readonly QuadTree _quadTree;
         readonly Mesh _mesh = new Mesh();
 
-        public CDT(CDTPolygon contour, CDTQuality quality, List<CDTPolygon>? holes = null, List<CDTSegment>? constraintSegments = null, List<CDTPoint>? constraintPoints = null)
+        public CDT(CDTInput input)
         {
-            List<CDTPoint> allContourPoints = new List<CDTPoint>();
-            List<CDTPoint> allConstrainedPoints = new List<CDTPoint>();
-            List<(CDTPoint, CDTPoint)> constraints = new List<(CDTPoint, CDTPoint)>();
+            CDTPreprocessor processed = new CDTPreprocessor(input);
+            _quadTree = new QuadTree(processed.Rectangle);
 
-            double minX, minY, maxX, maxY;
-            minX = minY = double.MaxValue;
-            maxX = maxY = double.MinValue;
-            void updateBounds(CDTPoint pt)
+            foreach (Node item in processed.ContourPoints)
             {
-                double x = pt.X;
-                double y = pt.Y;
-                allContourPoints.Add(pt);
-
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
+                AddPoint(item.X, item.Y, item.Z, out _);
             }
 
-            foreach (CDTSegment segment in contour.Segments)
+            foreach (Constraint item in processed.ConstraintSegments)
             {
-                IReadOnlyList<CDTSegment> segments = segment.Split(segment.NumSegments);
-                foreach (CDTSegment s in segments)
+                AddConstraint(item.a.X, item.a.Y, item.a.Z, item.b.X, item.b.Y, item.b.Z);
+            }
+
+            foreach (Node item in processed.ContourPoints)
+            {
+                AddPoint(item.X, item.Y, item.Z, out _);
+            }
+
+            AssignParentsToTriangles(processed.Polygons);
+        }
+
+        void AssignParentsToTriangles(List<(Polygon, List<Polygon>)> polygons)
+        {
+            foreach (var item in _mesh.Triangles)
+            {
+                item.parents.Clear();
+                if (item.super)
                 {
-                    updateBounds(s.Start);
-                    constraints.Add((s.Start, s.End));
+                    continue;
                 }
-                updateBounds(segments.Last().End);
-            }
 
-            if (holes != null)
-            {
-                foreach (CDTPolygon polygon in holes)
+                Node a = _mesh.Nodes[item.indices[0]];
+                Node b = _mesh.Nodes[item.indices[1]];
+                Node c = _mesh.Nodes[item.indices[2]];
+
+                double x = (a.X + b.X + c.X) / 3.0;
+                double y = (a.Y + b.Y + c.Y) / 3.0;
+
+                int count = 0;
+                foreach ((Polygon contour, List<Polygon> holes) in polygons)
                 {
-                    foreach (CDTSegment segment in polygon.Segments)
+                    if (Polygon.Contains(contour, holes, x, y))
                     {
-                        IReadOnlyList<CDTSegment> segments = segment.Split(segment.NumSegments);
-                        foreach (CDTSegment s in segments)
-                        {
-                            updateBounds(s.Start);
-                            constraints.Add((s.Start, s.End));
-                        }
-                        updateBounds(segments.Last().End);
+                        item.parents.Add(count);
                     }
+                    count++;
                 }
             }
-
-            if (constraintPoints != null)
-            {
-                foreach (CDTPoint item in constraintPoints)
-                {
-                    updateBounds(item);
-                }
-            }
-
-            _quadTree = new QuadTree(new Rectangle(minX, minY, maxX, maxY));
-
-       
         }
 
         public Node AddPoint(double x, double y, double? z, out List<int> affectedTriangles)

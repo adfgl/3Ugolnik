@@ -7,6 +7,7 @@ namespace CDTlib
         readonly List<Node> _contourPoints, _constraintPoints;
         readonly List<Constraint> _constraintSegments;
         readonly List<(Polygon, List<Polygon>)> _polygons;
+        readonly Rectangle _rectangle;
 
         public CDTPreprocessor(CDTInput input)
         {
@@ -16,8 +17,9 @@ namespace CDTlib
 
             _contourPoints = new List<Node>();
             _constraintPoints = new List<Node>();
-             _constraintSegments = new List<Constraint>();
+            _constraintSegments = new List<Constraint>();
 
+            Rectangle rectangle = Rectangle.Empty;
             foreach (CDTPolygon polygon in input.Polygons)
             {
                 List<Constraint> polygonConstraints = new List<Constraint>();
@@ -25,6 +27,8 @@ namespace CDTlib
                 Polygon contour = new Polygon(polygon.GetPoints());
                 List<Polygon> holes = ExtractHoles(contour, polygon.Holes);
                 _polygons.Add((contour, holes));
+
+                rectangle = rectangle.Union(contour.Rect);
 
                 ExtractConstraints(polygonConstraints, EConstraint.Contour, contour);
                 foreach (Polygon hole in holes)
@@ -60,6 +64,7 @@ namespace CDTlib
                     }
                 }
             }
+            _rectangle = rectangle;
         }
 
         public CDTInput Input => _input;
@@ -68,6 +73,7 @@ namespace CDTlib
         public List<Node> ContourPoints => _contourPoints;
         public List<Node > ConstraintPoints => _constraintPoints;
         public List<Constraint> ConstraintSegments => _constraintSegments;
+        public Rectangle Rectangle => _rectangle;
 
         static void AddConstraint(List<Constraint> constraints, Constraint constraint)
         {

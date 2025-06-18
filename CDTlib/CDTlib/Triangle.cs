@@ -8,8 +8,9 @@
         public readonly Circle circle;
         public readonly double area;
         public readonly bool super;
+        public readonly List<int> parents;
 
-        public Triangle(int index, Node a, Node b, Node c, double area)
+        public Triangle(int index, Node a, Node b, Node c, double area, IEnumerable<int>? parents)
         {
             this.index = index;
             this.indices = [a.Index, b.Index, c.Index];
@@ -18,6 +19,7 @@
             this.circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
             this.area = area;
             this.super = a.Index < 3 || b.Index < 3 || c.Index < 3;
+            this.parents = parents != null ? new List<int>(parents) : new List<int>();
         }
 
         public void Edge(int edge, out int start, out int end)
