@@ -17,6 +17,7 @@
 
         public abstract double Length { get; }
 
+        public int NumSegments { get; set; } = 1;
 
         protected static double Distance(CDTPoint a, CDTPoint b)
         {

@@ -2,12 +2,69 @@
 {
     public class CDT
     {
-        QuadTree _quadTree = new QuadTree(new Rectangle());
-        Mesh _mesh = new Mesh();
+        readonly QuadTree _quadTree;
+        readonly Mesh _mesh = new Mesh();
 
         public CDT(CDTPolygon contour, CDTQuality quality, List<CDTPolygon>? holes = null, List<CDTSegment>? constraintSegments = null, List<CDTPoint>? constraintPoints = null)
         {
-            
+            List<CDTPoint> allContourPoints = new List<CDTPoint>();
+            List<CDTPoint> allConstrainedPoints = new List<CDTPoint>();
+            List<(CDTPoint, CDTPoint)> constraints = new List<(CDTPoint, CDTPoint)>();
+
+            double minX, minY, maxX, maxY;
+            minX = minY = double.MaxValue;
+            maxX = maxY = double.MinValue;
+            void updateBounds(CDTPoint pt)
+            {
+                double x = pt.X;
+                double y = pt.Y;
+                allContourPoints.Add(pt);
+
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+
+            foreach (CDTSegment segment in contour.Segments)
+            {
+                IReadOnlyList<CDTSegment> segments = segment.Split(segment.NumSegments);
+                foreach (CDTSegment s in segments)
+                {
+                    updateBounds(s.Start);
+                    constraints.Add((s.Start, s.End));
+                }
+                updateBounds(segments.Last().End);
+            }
+
+            if (holes != null)
+            {
+                foreach (CDTPolygon polygon in holes)
+                {
+                    foreach (CDTSegment segment in polygon.Segments)
+                    {
+                        IReadOnlyList<CDTSegment> segments = segment.Split(segment.NumSegments);
+                        foreach (CDTSegment s in segments)
+                        {
+                            updateBounds(s.Start);
+                            constraints.Add((s.Start, s.End));
+                        }
+                        updateBounds(segments.Last().End);
+                    }
+                }
+            }
+
+            if (constraintPoints != null)
+            {
+                foreach (CDTPoint item in constraintPoints)
+                {
+                    updateBounds(item);
+                }
+            }
+
+            _quadTree = new QuadTree(new Rectangle(minX, minY, maxX, maxY));
+
+       
         }
 
         public Node AddPoint(double x, double y, double? z, out List<int> affectedTriangles)
@@ -287,6 +344,16 @@
 
         public bool IsBad(Triangle triangle, double maxAllowedArea)
         {
+            if (triangle.super)
+            {
+                return false;
+            }
+
+            if (triangle.area > maxAllowedArea)
+            {
+                return true;
+            }
+
             double minEdgeSq = double.MaxValue;
             for (int i = 0; i < 3; i++)
             {
@@ -304,11 +371,6 @@
                 {
                     minEdgeSq = lenSqr;
                 }
-            }
-
-            if (triangle.area > maxAllowedArea)
-            {
-                return true;
             }
             return triangle.circle.radiusSqr / minEdgeSq > 2;
         }

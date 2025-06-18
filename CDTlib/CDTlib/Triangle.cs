@@ -7,6 +7,7 @@
         public readonly bool[] constrained;
         public readonly Circle circle;
         public readonly double area;
+        public readonly bool super;
 
         public Triangle(int index, Node a, Node b, Node c, double area)
         {
@@ -16,6 +17,7 @@
             this.constrained = [false, false, false];
             this.circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
             this.area = area;
+            this.super = a.Index < 3 || b.Index < 3 || c.Index < 3;
         }
 
         public void Edge(int edge, out int start, out int end)

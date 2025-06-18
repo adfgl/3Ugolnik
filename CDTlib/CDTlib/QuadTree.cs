@@ -1,15 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace CDTlib
+﻿namespace CDTlib
 {
     public class QuadTree
     {
         readonly QuadNode root;
         readonly List<Node> _items;
+
+        public QuadTree(Rectangle bounds, int numPoints)
+        {
+            bounds = ExpandedBounds(bounds);
+
+            int maxItems = Math.Clamp(numPoints / 1024, 4, 16);
+            int maxDepth = (int)Math.Ceiling(Math.Log2((double)numPoints / maxItems));
+            maxDepth = Math.Clamp(maxDepth, 1, 16);
+
+            root = new QuadNode(bounds, 0, maxDepth, maxItems);
+            Bounds = bounds;
+            _items = new List<Node>(numPoints);
+        }
 
         public QuadTree(Rectangle bounds, int maxDepth = 10, int maxItems = 8)
         {

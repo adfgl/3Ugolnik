@@ -6,6 +6,7 @@ namespace CDTlib
     {
         public int Index { get; internal set; }
         public int Triangle { get; internal set; } = -1;
+
         public double X { get; internal set; }
         public double Y { get; internal set; }
         public double Z { get; internal set; }
