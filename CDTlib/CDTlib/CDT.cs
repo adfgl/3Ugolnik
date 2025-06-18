@@ -5,7 +5,12 @@
         QuadTree _quadTree = new QuadTree(new Rectangle());
         Mesh _mesh = new Mesh();
 
-        public Node AddPoint(double x, double y, out List<int> affectedTriangles)
+        public CDT(CDTPolygon contour, CDTQuality quality, List<CDTPolygon>? holes = null, List<CDTSegment>? constraintSegments = null, List<CDTPoint>? constraintPoints = null)
+        {
+            
+        }
+
+        public Node AddPoint(double x, double y, double? z, out List<int> affectedTriangles)
         {
             affectedTriangles = new List<int>();
 
@@ -15,17 +20,38 @@
                 return _mesh.Nodes[nodeIndex];
             }
 
-            Node newNode = new Node(_mesh.Nodes.Count, x, y);
+            Node newNode = new Node(_mesh.Nodes.Count, x, y, double.NaN);
 
             Triangle tri = _mesh.Triangles[triIndex];
             Affected[] affected;
+
+            double zActual;
             if (edgeIndex == -1)
             {
                 affected = _mesh.Split(tri, newNode);
+
+                zActual = 0;
+                for (int i = 0; i < 3; i++)
+                {
+                    zActual += _mesh.Nodes[tri.indices[i]].Z;
+                }
+                zActual /= 3.0;
             }
             else
             {
                 affected = _mesh.Split(tri, edgeIndex, newNode);
+
+                tri.Edge(edgeIndex, out int a, out int b);
+                zActual = (_mesh.Nodes[a].Z + _mesh.Nodes[b].Z) / 2.0;
+            }
+
+            if (z is null)
+            {
+                newNode.Z = zActual;
+            }
+            else
+            {
+                newNode.Z = z.Value;
             }
 
             // do something before adding?
@@ -38,10 +64,10 @@
             return newNode;
         }
 
-        public void AddConstraint(double x1, double y1, double x2, double y2)
+        public void AddConstraint(double x1, double y1, double z1, double x2, double y2, double z2)
         {
-            Node start = AddPoint(x1, y1, out _);
-            Node end = AddPoint(x2, y2, out _);
+            Node start = AddPoint(x1, y1, z1, out _);
+            Node end = AddPoint(x2, y2, z2, out _);
 
             Queue<(Node, Node)> toInsert = new();
             toInsert.Enqueue((start, end));
@@ -110,11 +136,11 @@
             Affected[] tris;
             if (_mesh.CanFlip(triangle, edge))
             {
-                tris = _mesh.Flip(triangle, edge); ;
+                tris = _mesh.Flip(triangle, edge);
             }
             else
             {
-                Node newNode = new Node(_mesh.Nodes.Count, intersection.X, intersection.Y);
+                Node newNode = new Node(_mesh.Nodes.Count, intersection.X, intersection.Y, intersection.Z);
                 tris = _mesh.Split(triangle, edge, newNode);
 
                 toInsert.Enqueue((start, newNode));
@@ -197,7 +223,9 @@
 
                     double x = seg.circle.x;
                     double y = seg.circle.y;
-                    Node newNode = new Node(_mesh.Nodes.Count, x, y);
+                    double z = (seg.a.Z + seg.b.Z) * 0.5;
+
+                    Node newNode = new Node(_mesh.Nodes.Count, x, y, z);
                     _mesh.Nodes.Add(newNode);
                     _quadTree.Add(newNode);
 
@@ -248,7 +276,7 @@
                         continue;
                     }
 
-                    Node inserted = AddPoint(x, y, out List<int> affected);
+                    Node inserted = AddPoint(x, y, null, out List<int> affected);
                     foreach (int item in affected)
                     {
                         triangleQueue.Enqueue(_mesh.Triangles[item]);
@@ -312,8 +340,8 @@
 
         public static bool IsVisibleFromInterior(IEnumerable<Segment> segments, Segment segment, double x, double y)
         {
-            Node node = new Node(-1, x, y);
-            Node mid = new Node(-1, segment.circle.x, segment.circle.y);
+            Node node = new Node(-1, x, y, 0);
+            Node mid = new Node(-1, segment.circle.x, segment.circle.y, 0);
             foreach (Segment seg in segments)
             {
                 if (seg.Equals(segment))

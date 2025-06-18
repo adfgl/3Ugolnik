@@ -8,17 +8,19 @@ namespace CDTlib
         public int Triangle { get; internal set; } = -1;
         public double X { get; internal set; }
         public double Y { get; internal set; }
+        public double Z { get; internal set; }
         
         public Node()
         {
             
         }
 
-        public Node(int index, double x, double y)
+        public Node(int index, double x, double y, double z)
         {
             Index = index;
             X = x;
             Y = y;
+            Z = z;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -59,21 +61,24 @@ namespace CDTlib
             double a = p2.X - p1.X, b = q1.X - q2.X;
             double c = p2.Y - p1.Y, d = q1.Y - q2.Y;
 
+            double e = q1.X - p1.X, f = q1.Y - p1.Y;
+
+            // Determinant
             double det = a * d - b * c;
             if (Math.Abs(det) < 1e-12)
-            {
-                return null;
-            }
-
-            double e = q1.X - p1.X, f = q1.Y - p1.Y;
+                return null; // Lines are parallel or coincident
 
             double u = (e * d - b * f) / det;
             double v = (a * f - e * c) / det;
+
             if (u < 0 || u > 1 || v < 0 || v > 1)
-            {
                 return null;
-            }
-            return new Node(-1, p1.X + u * a, p1.Y + u * c);
+
+            double x = p1.X + u * a;
+            double y = p1.Y + u * c;
+            double z = p1.Z + u * (p2.Z - p1.Z); 
+
+            return new Node(-1, x, y, z);
         }
     }
 }

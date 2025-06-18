@@ -38,9 +38,9 @@ namespace CDTlib
             double midy = (bounds.maxY + bounds.minY) * 0.5;
             double size = 2 * dmax;
 
-            Node a = new Node(0, midx - size, midy - size);
-            Node b = new Node(1, midx + size, midy - size);
-            Node c = new Node(2, midx, midy + size);
+            Node a = new Node(0, midx - size, midy - size, 0);
+            Node b = new Node(1, midx + size, midy - size, 0);
+            Node c = new Node(2, midx, midy + size, 0);
 
             _nodes.Add(a);
             _nodes.Add(b);
