@@ -37,9 +37,9 @@ namespace CDTlib
             double midy = (bounds.maxY + bounds.minY) * 0.5;
             double size = 2 * dmax;
 
-            Node a = new Node(-3, midx - size, midy - size);
-            Node b = new Node(-2, midx + size, midy - size);
-            Node c = new Node(-1, midx, midy + size);
+            Node a = new Node(0, midx - size, midy - size);
+            Node b = new Node(1, midx + size, midy - size);
+            Node c = new Node(2, midx, midy + size);
 
             Triangle triangle = new Triangle(0, a, b, c, Area(a, b, c));
             _triangles.Add(triangle);
@@ -375,6 +375,22 @@ namespace CDTlib
                     _triangles.Add(triangle);
                 }
             }
+        }
+
+        public List<int> SplitAndAdd(Triangle triangle, Node node)
+        {
+            _nodes.Add(node);
+            Affected[] affected = Split(triangle, node);
+            Add(affected);
+            return Legalize(new List<int>(), affected);
+        }
+
+        public List<int> SplitAndAdd(Triangle triangle, int edge, Node node)
+        {
+            _nodes.Add(node);
+            Affected[] affected = Split(triangle, edge, node);
+            Add(affected);
+            return Legalize(new List<int>(), affected);
         }
 
         public Affected[] Split(Triangle triangle, Node node)

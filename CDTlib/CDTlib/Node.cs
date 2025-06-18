@@ -22,6 +22,14 @@ namespace CDTlib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double SquareDistance(Node a, Node b)
+        {
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            return dx * dx + dy * dy;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Cross(Node start, Node end, Node point)
         {
             double abx = end.X - start.X;

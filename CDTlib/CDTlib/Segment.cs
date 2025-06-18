@@ -20,6 +20,12 @@
             }
         }
 
+        public void Split(Node node, out Segment a, out Segment b)
+        {
+            a = new Segment(this.a, node);
+            b = new Segment(node, this.b);
+        }
+
         public bool Equals(Segment other) => a.Index == other.a.Index && b.Index == other.b.Index;
 
         public override bool Equals(object? obj) => obj is Segment other && Equals(other);
