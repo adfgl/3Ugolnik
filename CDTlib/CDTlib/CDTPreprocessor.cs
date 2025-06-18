@@ -38,7 +38,7 @@ namespace CDTlib
 
                 foreach (CDTSegment segment in input.Segments)
                 {
-                    foreach (CDTSegment seg in segment.Split(segment.NumSegments))
+                    foreach (CDTSegment seg in segment.Split())
                     {
                         CDTPoint start = seg.Start;
                         CDTPoint end = seg.End;

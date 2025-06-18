@@ -19,6 +19,8 @@
 
         public int NumSegments { get; set; } = 1;
 
+        public IReadOnlyList<CDTSegment> Split() => Split(Math.Max(1, NumSegments));
+
         protected static double Distance(CDTPoint a, CDTPoint b)
         {
             double dx = b.X - a.X;
