@@ -33,11 +33,21 @@
             Node b = new Node(-2, midx + size, midy - size);
             Node c = new Node(-1, midx, midy + size);
 
-            Triangle triangle = new Triangle(0, a, b, c);
+            Triangle triangle = new Triangle(0, a, b, c, Area(a, b, c));
             _triangles.Add(triangle);
 
             a.Triangle = b.Triangle = c.Triangle = triangle.index;
             return this;
+        }
+
+        static double Area(Node a, Node b, Node c)
+        {
+            double area = Node.Cross(a, b, c) * 0.5;
+            if (area <= 0)
+            {
+                throw new Exception("Invalid triangle");
+            }
+            return area;
         }
 
 
@@ -218,34 +228,36 @@
 
         public Affected[] Split(Triangle triangle, Node node)
         {
-            Node a = _nodes[triangle.indices[0]];
-            Node b = _nodes[triangle.indices[1]];
-            Node c = _nodes[triangle.indices[2]];
+            Triangle abc = triangle;
+
+            Node a = _nodes[abc.indices[0]];
+            Node b = _nodes[abc.indices[1]];
+            Node c = _nodes[abc.indices[2]];
             Node d = node;
 
-            int t0 = triangle.index;
+            int t0 = abc.index;
             int t1 = _triangles.Count;
             int t2 = t1 + 1;
 
-            Triangle dab = new Triangle(t0, d, a, b);
-            Triangle dbc = new Triangle(t1, d, b, c);
-            Triangle dca = new Triangle(t2, d, c, a);
+            Triangle dab = new Triangle(t0, d, a, b, Area(d, a, b));
+            Triangle dbc = new Triangle(t1, d, b, c, Area(d, b, c));
+            Triangle dca = new Triangle(t2, d, c, a, abc.area - dab.area - dbc.area);
 
             dab.adjacent[0] = t2;
-            dab.adjacent[1] = triangle.adjacent[0];
+            dab.adjacent[1] = abc.adjacent[0];
             dab.adjacent[2] = t1;
 
             dbc.adjacent[0] = t0;
-            dbc.adjacent[1] = triangle.adjacent[1];
+            dbc.adjacent[1] = abc.adjacent[1];
             dbc.adjacent[2] = t2;
 
             dca.adjacent[0] = t1;
-            dca.adjacent[1] = triangle.adjacent[2];
+            dca.adjacent[1] = abc.adjacent[2];
             dca.adjacent[2] = t0;
 
-            dab.constrained[1] = triangle.constrained[0];
-            dbc.constrained[1] = triangle.constrained[1];
-            dca.constrained[1] = triangle.constrained[2];
+            dab.constrained[1] = abc.constrained[0];
+            dbc.constrained[1] = abc.constrained[1];
+            dca.constrained[1] = abc.constrained[2];
 
             a.Triangle = d.Triangle = t0;
             b.Triangle = t1;
@@ -304,10 +316,10 @@
             Node d = _nodes[acd.indices[da]];
             Node e = node;
 
-            Triangle eda = new Triangle(t0, e, d, a);
-            Triangle ecd = new Triangle(t1, e, c, d);
-            Triangle ebc = new Triangle(t2, e, b, c);
-            Triangle eab = new Triangle(t3, e, a, b);
+            Triangle eda = new Triangle(t0, e, d, a, Area(e, d, a));
+            Triangle ecd = new Triangle(t1, e, c, d, acd.area - eda.area);
+            Triangle ebc = new Triangle(t2, e, b, c, Area(e, b, c));
+            Triangle eab = new Triangle(t3, e, a, b, cab.area - ebc.area);
 
             eda.adjacent[0] = t1;
             eda.adjacent[1] = acd.adjacent[da];
@@ -365,8 +377,8 @@
             int t0 = triangle.index;
             int t1 = _triangles.Count;
 
-            Triangle dca = new Triangle(t0, d, c, a);
-            Triangle cdb = new Triangle(t1, c, d, b);
+            Triangle dca = new Triangle(t0, d, c, a, Area(d, c, a));
+            Triangle cdb = new Triangle(t1, c, d, b, abc.area - dca.area);
 
             dca.adjacent[0] = t1;
             dca.adjacent[1] = abc.adjacent[2];
@@ -437,24 +449,24 @@
             int t0 = acd.index;
             int t1 = cba.index;
 
-            Triangle new0 = new Triangle(t0, b, d, a);
-            Triangle new1 = new Triangle(t1, d, b, c);
+            Triangle bda = new Triangle(t0, b, d, a, Area(b, d, a));
+            Triangle dbc = new Triangle(t1, d, b, c, acd.area + cba.area - bda.area);
 
-            new0.adjacent[0] = t1;
-            new0.adjacent[1] = acd.adjacent[da];
-            new0.adjacent[2] = cba.adjacent[ab];
+            bda.adjacent[0] = t1;
+            bda.adjacent[1] = acd.adjacent[da];
+            bda.adjacent[2] = cba.adjacent[ab];
 
-            new1.adjacent[0] = t0;
-            new1.adjacent[1] = cba.adjacent[bc];
-            new1.adjacent[2] = acd.adjacent[cd];
+            dbc.adjacent[0] = t0;
+            dbc.adjacent[1] = cba.adjacent[bc];
+            dbc.adjacent[2] = acd.adjacent[cd];
 
             bool constrained = cba.constrained[ac];
-            new0.constrained[0] = new1.constrained[1] = constrained;
+            bda.constrained[0] = dbc.constrained[1] = constrained;
 
             a.Triangle = b.Triangle = c.Triangle = t0;
             c.Triangle = t1;
 
-            return [new Affected(new0, 2), new Affected(new1, 1)];
+            return [new Affected(bda, 2), new Affected(dbc, 1)];
         }
     }
 
