@@ -18,6 +18,12 @@
             this.area = area;
         }
 
+        public void Edge(int edge, out int start, out int end)
+        {
+            start = indices[edge];
+            end = indices[Mesh.NEXT[edge]];
+        }
+
         public int IndexOf(int vertex)
         {
             for (int i = 0; i < 3; i++)

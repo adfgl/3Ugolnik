@@ -1,4 +1,6 @@
-﻿namespace CDTlib
+﻿using System;
+
+namespace CDTlib
 {
     public readonly struct Affected
     {
@@ -56,13 +58,64 @@
             return cross * 0.5;
         }
 
+        public Triangle EntranceTriangle(int start, int end)
+        {
+            Node nodeA = _nodes[start];
+            Node nodeB = _nodes[end];
+
+            TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
+            do
+            {
+                Triangle current = _triangles[walker.Current];
+
+                int count = 0;
+                for (int i = 0; i < 3; i++)
+                {
+                    current.Edge(i, out int a, out int b);
+                    if (a == start || b == start)
+                    {
+                        double cross = Node.Cross(_nodes[a], _nodes[b], nodeB);
+                        if (cross >= 0)
+                        {
+                            count++;
+                        }
+                    }
+
+                    if (count == 2)
+                    {
+                        return current;
+                    }
+                }
+            }
+            while (walker.MoveNextCW());
+
+            throw new Exception("Could not find entrance triangle.");
+        }
+
+        public void SetConstraint(int triangle, int edge, bool value)
+        {
+            Triangle tri = _triangles[triangle];
+            tri.constrained[edge] = value;
+
+            int adjIndex = tri.adjacent[edge];
+            if (adjIndex == -1)
+            {
+                return;
+            }
+
+            tri.Edge(edge, out int a, out int b);
+
+            Triangle adj = _triangles[adjIndex];
+            adj.constrained[adj.IndexOf(b, a)] = value;
+        }
+
         public List<int> Legalize(List<int> affected, Affected[] newElements)
         {
             Stack<Affected> toLegalize = new Stack<Affected>(newElements);
             while (toLegalize.Count > 0)
             {
                 var (triangle, edge) = toLegalize.Pop();
-                if (!ShouldFlip(triangle, edge))
+                if (!CanFlip(triangle, edge) || !ShouldFlip(triangle, edge))
                 {
                     continue;
                 }
@@ -79,35 +132,15 @@
             return affected;
         }
 
-        public bool ShouldFlip(Triangle tri, int edge)
+        public int[] Quad(Triangle triangle, int edge)
         {
-            int adj = tri.adjacent[edge];
-            if (adj == -1 || tri.constrained[edge])
+            int adj = triangle.adjacent[edge];
+            if (adj == -1)
             {
-                return false;
+                return [-1, -1, -1, -1];
             }
 
-            /*
-                         d            
-                         /\           
-                        /  \          
-                       /    \         
-                      /      \        
-                     /   f0   \       
-                    /          \      
-                   /            \     
-                a +--------------+ c  
-                   \            /     
-                    \          /      
-                     \   f1   /       
-                      \      /        
-                       \    /         
-                        \  /          
-                         \/           
-                         b            
-            */
-
-            Triangle acd = tri;
+            Triangle acd = triangle;
             Triangle cab = _triangles[adj];
 
             int ac = edge;
@@ -118,23 +151,50 @@
             int ab = NEXT[ca];
             int bc = PREV[ca];
 
-            Node a = _nodes[acd.indices[ac]];
-            Node b = _nodes[cab.indices[bc]];
-            Node c = _nodes[acd.indices[cd]];
-            Node d = _nodes[acd.indices[da]];
+            return 
+            [
+                acd.indices[ac],
+                cab.indices[bc],
+                acd.indices[cd],
+                acd.indices[da]
+            ];
+        }
 
-            if (!QuadConvex(a, b, c, d))
+        public bool CanFlip(Triangle triangle, int edge)
+        {
+            if (triangle.constrained[edge])
             {
                 return false;
             }
 
-            if (acd.circle.Contains(b.X, b.Y))
+            int[] points = Quad(triangle, edge);
+            Node a = _nodes[points[0]];
+            Node b = _nodes[points[1]];
+            Node c = _nodes[points[2]];
+            Node d = _nodes[points[3]];
+            if (!QuadConvex(a, b, c, d))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public bool ShouldFlip(Triangle triangle, int edge)
+        {
+            int adjIndex = triangle.adjacent[edge];
+
+            triangle.Edge(edge, out int a, out int b);
+
+            Triangle adj = _triangles[adjIndex];
+            int adjEdge = adj.IndexOf(b, a);
+
+            Node opposite = _nodes[adj.indices[PREV[adjEdge]]];
+            if (triangle.circle.Contains(opposite.X, opposite.Y))
             {
                 return true;
             }
             return false;
         }
-
 
         public static bool QuadConvex(Node a, Node b, Node c, Node d)
         {
@@ -144,7 +204,6 @@
             double da_ab = Node.Cross(d, a, b);
             return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
         }
-
 
         public void FindContaining(double x, double y, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
         {
@@ -246,10 +305,8 @@
                     return;
                 }
 
-                Triangle nextTriangle = _triangles[next];
-                int aStart = currentTriangle.indices[bestExit];
-                int bEnd = currentTriangle.indices[NEXT[bestExit]];
-                skipEdge = nextTriangle.IndexOf(bEnd, aStart);
+                currentTriangle.Edge(bestExit, out int aStart, out int bEnd);
+                skipEdge = _triangles[next].IndexOf(bEnd, aStart);
                 current = next;
             }
         }
@@ -301,13 +358,12 @@
                 int edge = item.edge;
 
                 int index = triangle.index;
-                int adj = triangle.adjacent[edge];
-                if (adj != -1)
+                int adjIndex = triangle.adjacent[edge];
+                if (adjIndex != -1)
                 {
-                    int start = triangle.indices[edge];
-                    int end = triangle.indices[NEXT[edge]];
-                    Triangle twin = _triangles[adj];
-                    twin.adjacent[twin.IndexOf(end, start)] = index;
+                    triangle.Edge(edge, out int a, out int b);
+                    Triangle adj = _triangles[adjIndex];
+                    adj.adjacent[adj.IndexOf(b, a)] = index;
                 }
 
                 if (index < _triangles.Count)
