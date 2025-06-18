@@ -1,6 +1,6 @@
 ﻿namespace CDTlib
 {
-    public class CDTPoint
+    public class CDTPoint : IEquatable<CDTPoint>
     {
         public CDTPoint()
         {
@@ -21,5 +21,12 @@
         public double X { get; set; }
         public double Y { get; set; }
         public double Z { get; set; }
+
+        public bool Equals(CDTPoint? other)
+        {
+            if (ReferenceEquals(this, other)) return true;
+            if (other is null) return false;
+            return X == other.X && Y == other.Y;
+        }
     }
 }

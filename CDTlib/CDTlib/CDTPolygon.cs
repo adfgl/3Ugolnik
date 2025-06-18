@@ -12,7 +12,7 @@
             List<CDTPoint> points = new List<CDTPoint>();
             foreach (CDTSegment segment in Contour)
             {
-                foreach (CDTSegment s in segment.Split(segment.NumSegments))
+                foreach (CDTSegment s in segment.Split())
                 {
                     points.Add(s.Start);
                 }
