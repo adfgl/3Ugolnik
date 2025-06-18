@@ -10,7 +10,7 @@
         public List<CDTPoint> GetPoints()
         {
             List<CDTPoint> points = new List<CDTPoint>();
-            foreach (CDTSegment segment in Segments)
+            foreach (CDTSegment segment in Contour)
             {
                 foreach (CDTSegment s in segment.Split(segment.NumSegments))
                 {

@@ -652,6 +652,8 @@ namespace CDTlib
 
         public string ToSvg(int size = 1000, float padding = 10f, bool fill = true, bool drawConstraints = false, bool drawCircles = false)
         {
+            // https://www.svgviewer.dev/
+
             if (Nodes.Count == 0 || Triangles.Count == 0)
                 return "<svg xmlns='http://www.w3.org/2000/svg'/>";
 

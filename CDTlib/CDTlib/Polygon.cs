@@ -26,9 +26,9 @@
 
             var first = Nodes.First();
             var last = Nodes.Last();
-            if (first.X == last.X && first.Y == last.Y)
+            if (first.X != last.X && first.Y != last.Y)
             {
-                Nodes.RemoveAt(Nodes.Count - 1);
+                Nodes.Add(last);
             }
 
             Rect = new Rectangle(minX, minY, maxX, maxY);
@@ -44,29 +44,27 @@
                 return false;
             }
 
-            int count = Nodes.Count;
+            int count = Nodes.Count - 1;
             bool inside = false;
+
             for (int i = 0, j = count - 1; i < count; j = i++)
             {
                 Node a = Nodes[i];
                 Node b = Nodes[j];
 
-                double xi = a.X;
-                double yi = a.Y;
-
-                double xj = b.X;
-                double yj = b.Y;
+                double xi = a.X, yi = a.Y;
+                double xj = b.X, yj = b.Y;
 
                 bool crosses = (yi > y + tolerance) != (yj > y + tolerance);
                 if (!crosses) continue;
 
-                double t = (y - yi) / (yj - yi);
+                double t = (y - yi) / (yj - yi + double.Epsilon);
                 double xCross = xi + t * (xj - xi);
+
                 if (x < xCross - tolerance)
-                {
                     inside = !inside;
-                }
             }
+
             return inside;
         }
 
@@ -97,14 +95,14 @@
             List<Node> av = Nodes, ab = other.Nodes;
             int ac = av.Count, bc = ab.Count;
 
-            for (int i = 0; i < ac; i++)
+            for (int i = 0; i < ac - 1; i++)
             {
                 Node p1 = av[i];
-                Node p2 = av[(i + 1) % ac];
-                for (int j = 0; j < bc; j++)
+                Node p2 = av[i + 1];
+                for (int j = 0; j < bc - 1; j++)
                 {
                     Node q1 = ab[j];
-                    Node q2 = ab[(j + 1) % bc];
+                    Node q2 = ab[j + 1];
 
                     if (Node.Intersect(p1, p2, q1, q2) is not null)
                     {

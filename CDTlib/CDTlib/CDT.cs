@@ -30,6 +30,8 @@
             AssignParentsToTriangles(processed.Polygons);
         }
 
+        public Mesh Mesh => _mesh;
+
         void FinalizeMesh()
         {
 
