@@ -28,7 +28,7 @@ namespace CDTConsole
                 Polygons = [polygon],
                 Quality = new CDTQuality()
                 {
-                    MaxArea = double.MaxValue
+                    MaxArea = 2
                 }
             };
 

@@ -44,7 +44,7 @@
 
 #if DEBUG
             MeshSummary summary = MeshSummary.ComputeMeshSummary(_mesh);
-            Console.WriteLine();
+            Console.WriteLine(summary);
 #endif
 
             Mesh = FinalizeMesh();
@@ -372,6 +372,14 @@
                     {
                         triangleQueue.Enqueue(item);
                     }
+
+                    //foreach (Triangle t in _mesh.Triangles)
+                    //{
+                    //    if (IsBad(t, maxArea))
+                    //    {
+                    //        triangleQueue.Enqueue(t.index);
+                    //    }
+                    //}
                 }
 
                 if (triangleQueue.Count > 0)
