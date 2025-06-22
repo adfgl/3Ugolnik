@@ -42,7 +42,10 @@
             AssignParentsToTriangles(processed.Polygons);
             Refine(input.Quality.MaxArea);
 
-            //Console.WriteLine(_mesh.ToSvg(fill: false, drawConstraints: true));
+#if DEBUG
+            MeshSummary summary = MeshSummary.ComputeMeshSummary(_mesh);
+            Console.WriteLine();
+#endif
 
             Mesh = FinalizeMesh();
         }
@@ -323,7 +326,7 @@
                     triangle.Edge(i, out int a, out int b);
 
                     Segment segment = new Segment(_mesh.Nodes[a], _mesh.Nodes[b]);
-                    if (Enchrouched(_quadTree, segment) && seen.Add(segment))
+                    if (seen.Add(segment) && Enchrouched(_quadTree, segment))
                     {
                         segmentQueue.Enqueue(segment);
                     }
@@ -339,7 +342,7 @@
                     _mesh.FindEdge(seg.a.Index, seg.b.Index, out int triangle, out int edge);
                     if (triangle == -1 || edge == -1)
                     {
-                        throw new Exception($"Midpoint of segment ({seg.a},{seg.b}) not found on any edge.");
+                        continue;
                     }
 
                     double x = seg.circle.x;
@@ -444,6 +447,21 @@
             return triangle.circle.radiusSqr / minEdgeSq > 2;
         }
 
+        public bool Enchrouched(Segment segment)
+        {
+            Node a = segment.a;
+            Node b = segment.b;
+
+            foreach (var n in _mesh.Nodes)
+            {
+                if (n == a || n == b) continue;
+                if (segment.circle.Contains(n.X, n.Y))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public bool Enchrouched(QuadTree nodes, Segment segment)
         {

@@ -16,15 +16,19 @@ namespace CDTConsole
             CDTLineSegment cd = new CDTLineSegment(c, d);
             CDTLineSegment da = new CDTLineSegment(d, a);
 
+            CDTNode center = CDTNode.Between(a, c);
+            CDTArcSegment arc0 = new CDTArcSegment(a, c, center, true) { NumSegments = 18 };
+            CDTArcSegment arc1 = new CDTArcSegment(c, a, center, true) { NumSegments = 18 };
+
             CDTPolygon polygon = new CDTPolygon();
-            polygon.Contour = [ab, bc, cd, da];
+            polygon.Contour = [arc0, arc1];
 
             CDTInput input = new CDTInput()
             {
                 Polygons = [polygon],
                 Quality = new CDTQuality()
                 {
-                    MaxArea = 55
+                    MaxArea = double.MaxValue
                 }
             };
 

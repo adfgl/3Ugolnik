@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Text;
 
 namespace CDTlib
@@ -30,6 +31,23 @@ namespace CDTlib
 
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
+
+        public Mesh AddSuperStructure()
+        {
+            Node a = new Node(0, -1000, -1000, 0);
+            Node b = new Node(1, 0, 1000, 0);
+            Node c = new Node(2,1000, -1000, 0);
+
+            _nodes.Add(a);
+            _nodes.Add(b);
+            _nodes.Add(c);
+
+            Triangle triangle = new Triangle(0, a, b, c, Area(a, b, c), null);
+            _triangles.Add(triangle);
+
+            a.Triangle = b.Triangle = c.Triangle = triangle.index;
+            return this;
+        }
 
         public Mesh AddSuperStructure(Rectangle bounds, double scale)
         {
@@ -120,8 +138,8 @@ namespace CDTlib
             while (toLegalize.Count > 0)
             {
                 var (triangle, edge) = toLegalize.Pop();
-                affected.Add(triangle.index);
 
+                affected.Add(triangle.index);
                 if (!CanFlip(triangle, edge) || !ShouldFlip(triangle, edge))
                 {
                     continue;
@@ -350,23 +368,22 @@ namespace CDTlib
 
         public void FindEdge(int a, int b, out int triangle, out int edge)
         {
+            triangle = edge = -1;
+
             Node nodeA = _nodes[a];
             TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
             do
             {
-                Triangle current = _triangles[walker.Current];
-                int e = current.IndexOf(a, b);
+                int triIndex = walker.Current;
+                int e = _triangles[triIndex].IndexOf(a, b);
                 if (e != -1)
                 {
-                    triangle = current.index;
+                    triangle = triIndex;
                     edge = e;
-                    return;
+                    return; 
                 }
             }
             while (walker.MoveNextCW());
-
-            triangle = -1;
-            edge = -1;
         }
 
         public void Center(Triangle tri, out double x, out double y)

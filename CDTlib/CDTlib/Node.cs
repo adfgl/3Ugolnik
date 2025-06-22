@@ -43,6 +43,19 @@ namespace CDTlib
             return abx * apy - aby * apx;
         }
 
+        public static double Angle(Node a, Node b, Node c)
+        {
+            double bax = a.X - b.X;
+            double bay = a.Y - b.Y;
+            double bcx = c.X - b.X;
+            double bcy = c.Y - b.Y;
+
+            double dot = bax * bcx + bay * bcy;
+            double det = bax * bcy - bay * bcx;
+
+            return Math.Atan2(Math.Abs(det), dot);
+        }
+
         public static Node? Intersect(Node p1, Node p2, Node q1, Node q2)
         {
             // P(u) = p1 + u * (p2 - p1)
