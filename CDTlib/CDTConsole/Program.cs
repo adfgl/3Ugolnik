@@ -25,9 +25,10 @@ namespace CDTConsole
             };
 
             var cdt = new CDT(input);
+            var mesh = cdt.Mesh;
 
+            Console.WriteLine(mesh.ToSvg());
 
-            Console.WriteLine(cdt.Mesh.ToSvg());
         }
     }
 }

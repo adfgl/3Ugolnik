@@ -5,5 +5,6 @@
         public int Index { get; set; } = -1;
         public double Area { get; set; }    
         public CDTNode[] Points { get; set; } = Array.Empty<CDTNode>();
+        public List<CDTPolygon> Parents { get; set; } = new List<CDTPolygon>();
     }
 }

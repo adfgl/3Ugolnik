@@ -9,6 +9,81 @@ namespace CDTlib
 {
     public static class SvgEx
     {
+        public static string ToSvg(this CDTMesh mesh, int size = 1000, float padding = 10f, bool fill = true)
+        {
+            // https://www.svgviewer.dev/
+
+            if (mesh.Nodes.Count == 0 || mesh.Triangles.Count == 0)
+                return "<svg xmlns='http://www.w3.org/2000/svg'/>";
+
+            double minX = double.MaxValue, maxX = double.MinValue;
+            double minY = double.MaxValue, maxY = double.MinValue;
+
+            foreach (var v in mesh.Nodes)
+            {
+                double x = v.X;
+                double y = v.Y;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+
+            double scale = (size - 2 * padding) / Math.Max(maxX - minX, maxY - minY);
+
+            var sb = new StringBuilder();
+            sb.Append("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ");
+            sb.Append(size); sb.Append(' '); sb.Append(size); sb.Append("'>");
+
+            if (fill)
+            {
+                foreach (var tri in mesh.Triangles)
+                {
+                    var a = mesh.Nodes[0];
+                    var b = mesh.Nodes[1];
+                    var c = mesh.Nodes[2];
+                    var (x1, y1) = Project(a.X, a.Y);
+                    var (x2, y2) = Project(b.X, b.Y);
+                    var (x3, y3) = Project(c.X, c.Y);
+
+                    string color = BlendColorsFromIds(tri.Parents.Select(o => o.Index).ToList());
+                    sb.Append($"<polygon points='{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1}' fill='{color}' fill-opacity='0.5' stroke='#000' stroke-width='1'/>");
+                }
+            }
+            else
+            {
+                var drawn = new HashSet<(int, int)>();
+                sb.Append("<path d='");
+                foreach (var tri in mesh.Triangles)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        int a = tri.Points[i].Index;
+                        int b = tri.Points[(i + 1) % 3].Index;
+                        int lo = Math.Min(a, b), hi = Math.Max(a, b);
+                        if (!drawn.Add((lo, hi))) continue;
+
+                        var va = mesh.Nodes[a];
+                        var vb = mesh.Nodes[b];
+                        var (x1, y1) = Project(va.X, va.Y);
+                        var (x2, y2) = Project(vb.X, vb.Y);
+                        sb.Append($"M{x1:F1},{y1:F1}L{x2:F1},{y2:F1}");
+                    }
+                }
+                sb.Append("' fill='none' stroke='#000' stroke-width='1'/>");
+            }
+
+            sb.Append("</svg>");
+            return sb.ToString();
+
+            (double x, double y) Project(double x, double y)
+            {
+                double sx = (x - minX) * scale + padding;
+                double sy = (y - minY) * scale + padding;
+                return (sx, size - sy); // Y-flip
+            }
+        }
+
         public static string ToSvg(this Mesh mesh, int size = 1000, float padding = 10f, bool fill = true, bool drawConstraints = false, bool drawCircles = false)
         {
             // https://www.svgviewer.dev/

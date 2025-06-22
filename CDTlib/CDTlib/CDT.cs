@@ -7,6 +7,7 @@
 
         public CDT(CDTInput input)
         {
+            Input = input;
             CDTPreprocessor processed = new CDTPreprocessor(input);
             _quadTree = new QuadTree(processed.Rectangle);
 
@@ -32,6 +33,7 @@
             Mesh = FinalizeMesh();
         }
 
+        public CDTInput Input { get; }
         public CDTMesh Mesh { get; internal set; }
 
         CDTMesh FinalizeMesh()
@@ -58,10 +60,17 @@
                     continue;
                 }
 
+                List<CDTPolygon> parents = new List<CDTPolygon>();
+                foreach (var parentIndex in item.parents)
+                {
+                    parents.Add(Input.Polygons[parentIndex]);
+                }
+
                 triangles.Add(new CDTTriangle()
                 {
                     Index = triCount++,
                     Area = item.area,
+                    Parents = parents,
                     Points = [
                         nodes[item.indices[0] - 3],
                         nodes[item.indices[1] - 3],
