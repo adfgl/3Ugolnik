@@ -144,5 +144,22 @@ namespace CDTTests
                 }
             }
         }
+
+        [Fact]
+        public void FindContaining_CorrectlyFindsTriangleWhenPointIsOnNode()
+        {
+            var mesh = TestCase();
+
+            foreach (Triangle item in mesh.Triangles)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    var n = mesh.Nodes[item.indices[i]];
+                    mesh.FindContaining(n.X, n.Y, out int tri, out int edge, out int node);
+
+                    Assert.Equal(n.Index, node);
+                }
+            }
+        }
     }
 }
