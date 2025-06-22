@@ -22,6 +22,12 @@
             this.parents = parents != null ? new List<int>(parents) : new List<int>();
         }
 
+        public Triangle(int index, Node a, Node b, Node c)
+             : this(index, a, b, c, Node.Cross(a, b, c) * 0.5, null)
+        {
+            
+        }
+
         public void Edge(int edge, out int start, out int end)
         {
             start = indices[edge];

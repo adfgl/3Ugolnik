@@ -40,7 +40,7 @@
             }
 
             AssignParentsToTriangles(processed.Polygons);
-
+            Refine(25);
             Mesh = FinalizeMesh();
         }
 

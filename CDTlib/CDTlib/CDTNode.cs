@@ -17,6 +17,11 @@
         public double Y { get; set; }
         public double Z { get; set; }
 
+        public static CDTNode Between(CDTNode a, CDTNode b)
+        {
+            return new CDTNode((a.X + b.X) / 2, (a.Y + b.Y) / 2, (b.Z + a.Z) / 2);
+        }
+
         public bool Equals(CDTNode? other)
         {
             if (ReferenceEquals(this, other)) return true;

@@ -331,12 +331,12 @@ namespace CDTlib
 
         public void FindEdgeBrute(int a, int b, out int triangle, out int edge)
         {
-            for (int i = 0; i < _triangles.Count; i++)
+            foreach (var t in _triangles)
             {
-                int e = _triangles[i].IndexOf(a, b);
+                int e = t.IndexOf(a, b);
                 if (e != -1)
                 {
-                    triangle = i;
+                    triangle = t.index;
                     edge = e;
                     return;
                 }
@@ -490,24 +490,25 @@ namespace CDTlib
             int t2 = _triangles.Count;
             int t3 = _triangles.Count + 1;
 
-            int ac = edge;
-            int cd = NEXT[ac];
-            int da = PREV[ac];
-
-            int ca = cab.IndexOf(cd, ac);
-            int ab = NEXT[ca];
-            int bc = PREV[ca];
-
-            Node a = _nodes[acd.indices[ac]];
-            Node b = _nodes[cab.indices[bc]];
-            Node c = _nodes[acd.indices[cd]];
-            Node d = _nodes[acd.indices[da]];
+            int[] abcd = Quad(triangle, edge, out int twinEdge);
+            Node a = _nodes[abcd[0]];  
+            Node b = _nodes[abcd[1]];
+            Node c = _nodes[abcd[2]];
+            Node d = _nodes[abcd[3]];
             Node e = node;
 
             Triangle eda = new Triangle(t0, e, d, a, Area(e, d, a), acd.parents);
             Triangle ecd = new Triangle(t1, e, c, d, acd.area - eda.area, acd.parents);
             Triangle ebc = new Triangle(t2, e, b, c, Area(e, b, c), cab.parents);
             Triangle eab = new Triangle(t3, e, a, b, cab.area - ebc.area, cab.parents);
+
+            int ac = edge;
+            int cd = NEXT[ac];
+            int da = PREV[ac];
+
+            int ca = twinEdge;
+            int ab = NEXT[ca];
+            int bc = PREV[ca];
 
             eda.adjacent[0] = t1;
             eda.adjacent[1] = acd.adjacent[da];
@@ -518,20 +519,29 @@ namespace CDTlib
             ecd.adjacent[2] = t0;
 
             ebc.adjacent[0] = t3;
-            ebc.adjacent[1] = cab.adjacent[bc];
+            ebc.adjacent[1] = cab.adjacent[ab];
             ebc.adjacent[2] = t1;
 
             eab.adjacent[0] = t0;
-            eab.adjacent[1] = cab.adjacent[ab];
+            eab.adjacent[1] = cab.adjacent[bc];
             eab.adjacent[2] = t2;
 
             bool constrained = acd.constrained[ca];
-            eda.constrained[2] = ecd.constrained[0] = ebc.constrained[2] = eab.constrained[0] = constrained;
-
+            eda.constrained[0] = false;
             eda.constrained[1] = acd.constrained[da];
+            eda.constrained[2] = constrained;
+
+            ecd.constrained[0] = constrained;
             ecd.constrained[1] = acd.constrained[cd];
+            ecd.constrained[2] = false;
+
+            ebc.constrained[0] = false;
             ebc.constrained[1] = cab.constrained[bc];
+            ebc.constrained[2] = constrained;
+
+            eab.constrained[0] = constrained;
             eab.constrained[1] = cab.constrained[ab];
+            eab.constrained[2] = false;
 
             a.Triangle = d.Triangle = e.Triangle = t0;
             c.Triangle = t1;
