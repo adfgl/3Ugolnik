@@ -26,7 +26,7 @@
 
             var first = Nodes.First();
             var last = Nodes.Last();
-            if (first.X != last.X && first.Y != last.Y)
+            if (first.X != last.X || first.Y != last.Y)
             {
                 Nodes.Add(last);
             }

@@ -82,7 +82,7 @@
                     Index = triCount++,
                     Area = item.area,
                     Parents = parents,
-                    Points = [
+                    Nodes = [
                         nodes[item.indices[0] - 3],
                         nodes[item.indices[1] - 3],
                         nodes[item.indices[2] - 3]
@@ -117,14 +117,13 @@
                 double x = (a.X + b.X + c.X) / 3.0;
                 double y = (a.Y + b.Y + c.Y) / 3.0;
 
-                int count = 0;
-                foreach ((Polygon contour, List<Polygon> holes) in polygons)
+                for (int i = 0; i < polygons.Count; i++)
                 {
+                    (Polygon contour, List<Polygon> holes) = polygons[i];
                     if (Polygon.Contains(contour, holes, x, y))
                     {
-                        item.parents.Add(count);
+                        item.parents.Add(i);
                     }
-                    count++;
                 }
             }
         }

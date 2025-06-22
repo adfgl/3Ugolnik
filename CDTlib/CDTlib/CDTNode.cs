@@ -23,5 +23,10 @@
             if (other is null) return false;
             return X == other.X && Y == other.Y;
         }
+
+        public override string ToString()
+        {
+            return $"[{Index}] {X} {Y} {Z}";
+        }
     }
 }

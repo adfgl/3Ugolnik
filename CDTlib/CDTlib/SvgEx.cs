@@ -9,9 +9,10 @@ namespace CDTlib
 {
     public static class SvgEx
     {
+        // https://www.svgviewer.dev/
+
         public static string ToSvg(this CDTMesh mesh, int size = 1000, float padding = 10f, bool fill = true)
         {
-            // https://www.svgviewer.dev/
 
             if (mesh.Nodes.Count == 0 || mesh.Triangles.Count == 0)
                 return "<svg xmlns='http://www.w3.org/2000/svg'/>";
@@ -39,9 +40,9 @@ namespace CDTlib
             {
                 foreach (var tri in mesh.Triangles)
                 {
-                    var a = mesh.Nodes[0];
-                    var b = mesh.Nodes[1];
-                    var c = mesh.Nodes[2];
+                    var a = tri.Nodes[0];
+                    var b = tri.Nodes[1];
+                    var c = tri.Nodes[2];
                     var (x1, y1) = Project(a.X, a.Y);
                     var (x2, y2) = Project(b.X, b.Y);
                     var (x3, y3) = Project(c.X, c.Y);
@@ -58,8 +59,8 @@ namespace CDTlib
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        int a = tri.Points[i].Index;
-                        int b = tri.Points[(i + 1) % 3].Index;
+                        int a = tri.Nodes[i].Index;
+                        int b = tri.Nodes[(i + 1) % 3].Index;
                         int lo = Math.Min(a, b), hi = Math.Max(a, b);
                         if (!drawn.Add((lo, hi))) continue;
 
@@ -86,8 +87,6 @@ namespace CDTlib
 
         public static string ToSvg(this Mesh mesh, int size = 1000, float padding = 10f, bool fill = true, bool drawConstraints = false, bool drawCircles = false)
         {
-            // https://www.svgviewer.dev/
-
             if (mesh.Nodes.Count == 0 || mesh.Triangles.Count == 0)
                 return "<svg xmlns='http://www.w3.org/2000/svg'/>";
 

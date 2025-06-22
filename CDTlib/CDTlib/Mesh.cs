@@ -137,42 +137,55 @@ namespace CDTlib
             return affected;
         }
 
-        public int[] Quad(Triangle triangle, int edge)
+        public int[] Quad(Triangle triangle, int edge, out int twinEdge)
         {
             int adj = triangle.adjacent[edge];
             if (adj == -1)
             {
+                twinEdge = -1;
                 return [-1, -1, -1, -1];
             }
+            /*
+                     d             
+                     /\            
+                    /  \           
+                   /    \          
+                  /      \         
+                 /        \        
+                /          \       
+               /            \      
+            a +--------------+ c   
+               \            /      
+                \          /       
+                 \        /        
+                  \      /         
+                   \    /          
+                    \  /           
+                     \/            
+                     b             
+         */
 
             Triangle acd = triangle;
             Triangle cab = _triangles[adj];
 
-            int ac = edge;
-            int cd = NEXT[ac];
-            int da = PREV[ac];
+            int a = acd.indices[edge];
+            int c = acd.indices[NEXT[edge]];
+            int d = acd.indices[PREV[edge]];
 
-            int ca = cab.IndexOf(cd, ac);
-            int ab = NEXT[ca];
-            int bc = PREV[ca];
+            twinEdge = cab.IndexOf(c, a);
+            int b = cab.indices[PREV[twinEdge]];
 
-            return 
-            [
-                acd.indices[ac],
-                cab.indices[bc],
-                acd.indices[cd],
-                acd.indices[da]
-            ];
+            return [a, b, c, d];
         }
 
         public bool CanFlip(Triangle triangle, int edge)
         {
-            if (triangle.constrained[edge])
+            if (triangle.constrained[edge] || triangle.adjacent[edge] == -1)
             {
                 return false;
             }
 
-            int[] points = Quad(triangle, edge);
+            int[] points = Quad(triangle, edge, out _);
             Node a = _nodes[points[0]];
             Node b = _nodes[points[1]];
             Node c = _nodes[points[2]];
@@ -360,6 +373,11 @@ namespace CDTlib
             {
                 Triangle triangle = item.triangle;
                 int edge = item.edge;
+
+                if (triangle.area < 0)
+                {
+                    throw new Exception();
+                }
 
                 int index = triangle.index;
                 int adjIndex = triangle.adjacent[edge];
@@ -601,26 +619,19 @@ namespace CDTlib
              */
 
             Triangle acd = triangle;
-            Triangle cba = _triangles[adj];
+            Triangle cab = _triangles[adj];
 
-            int ac = edge;
-            int cd = NEXT[ac];
-            int da = PREV[ac];
-
-            int ca = cba.IndexOf(cd, ac);
-            int ab = NEXT[ca];
-            int bc = PREV[ca];
-
-            Node a = _nodes[acd.indices[ac]];
-            Node b = _nodes[cba.indices[bc]];
-            Node c = _nodes[acd.indices[cd]];
-            Node d = _nodes[acd.indices[da]];
+            int[] abcd = Quad(triangle, edge, out int edgeTwin);
+            Node a = _nodes[abcd[0]];
+            Node b = _nodes[abcd[1]];
+            Node c = _nodes[abcd[2]];
+            Node d = _nodes[abcd[3]];
 
             int t0 = acd.index;
-            int t1 = cba.index;
+            int t1 = cab.index;
 
             List<int> parents = new List<int>(acd.parents);
-            foreach (var item in cba.parents)
+            foreach (var item in cab.parents)
             {
                 if (!parents.Contains(item))
                 {
@@ -629,26 +640,29 @@ namespace CDTlib
             }
 
             Triangle bda = new Triangle(t0, b, d, a, Area(b, d, a), parents);
-            Triangle dbc = new Triangle(t1, d, b, c, acd.area + cba.area - bda.area, parents);
+            Triangle dbc = new Triangle(t1, d, b, c, acd.area + cab.area - bda.area, parents);
 
             bda.adjacent[0] = t1;
-            bda.adjacent[1] = acd.adjacent[da];
-            bda.adjacent[2] = cba.adjacent[ab];
+            bda.adjacent[1] = acd.adjacent[PREV[edge]];
+            bda.adjacent[2] = cab.adjacent[NEXT[edgeTwin]];
 
             dbc.adjacent[0] = t0;
-            dbc.adjacent[1] = cba.adjacent[bc];
-            dbc.adjacent[2] = acd.adjacent[cd];
+            dbc.adjacent[1] = cab.adjacent[PREV[edgeTwin]];
+            dbc.adjacent[2] = acd.adjacent[NEXT[edge]];
 
-            bool constrained = cba.constrained[ac];
-            bda.constrained[0] = dbc.constrained[1] = constrained;
+            bda.constrained[0] = acd.constrained[edge];
+            bda.constrained[1] = acd.constrained[PREV[edge]];
+            bda.constrained[2] = cab.constrained[NEXT[edgeTwin]];
 
-            a.Triangle = b.Triangle = c.Triangle = t0;
+            dbc.constrained[0] = acd.constrained[edge];
+            dbc.constrained[1] = cab.constrained[PREV[edgeTwin]];
+            dbc.constrained[2] = acd.constrained[NEXT[edge]];
+
+            a.Triangle = d.Triangle = b.Triangle = t0;
             c.Triangle = t1;
 
-            return [new Affected(bda, 2), new Affected(dbc, 1)];
+            return [new Affected(bda, 2), new Affected(dbc, 1), new Affected(bda, 1), new Affected(dbc, 2)];
         }
-
-      
     }
 
     public struct TriangleWalker
