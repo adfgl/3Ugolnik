@@ -4,7 +4,7 @@ namespace CDTlib
     public class CDTPreprocessor
     {
         readonly CDTInput _input;
-        readonly List<Node> _contourPoints, _constraintPoints;
+        readonly List<Node> _constraintPoints;
         readonly List<Constraint> _constraintSegments;
         readonly List<(Polygon, List<Polygon>)> _polygons;
         readonly Rectangle _rectangle;
@@ -15,7 +15,6 @@ namespace CDTlib
 
             _polygons = new List<(Polygon, List<Polygon>)>();
 
-            _contourPoints = new List<Node>();
             _constraintPoints = new List<Node>();
             _constraintSegments = new List<Constraint>();
 
@@ -70,7 +69,6 @@ namespace CDTlib
         public CDTInput Input => _input;
 
         public List<(Polygon, List<Polygon>)> Polygons => _polygons;
-        public List<Node> ContourPoints => _contourPoints;
         public List<Node > ConstraintPoints => _constraintPoints;
         public List<Constraint> ConstraintSegments => _constraintSegments;
         public Rectangle Rectangle => _rectangle;

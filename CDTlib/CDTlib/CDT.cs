@@ -13,9 +13,20 @@
 
             _mesh.AddSuperStructure(_quadTree.Bounds, 2);
 
-            foreach (Node item in processed.ContourPoints)
+            foreach ((Polygon contour, List<Polygon> holes) in processed.Polygons)
             {
-                AddPoint(item.X, item.Y, item.Z, out _);
+                foreach (var item in contour.Nodes)
+                {
+                    AddPoint(item.X, item.Y, item.Z, out _);
+                }
+
+                foreach (var hole in holes)
+                {
+                    foreach (var item in hole.Nodes)
+                    {
+                        AddPoint(item.X, item.Y, item.Z, out _);
+                    }
+                }
             }
 
             foreach (Constraint item in processed.ConstraintSegments)
@@ -23,7 +34,7 @@
                 AddConstraint(item.a.X, item.a.Y, item.a.Z, item.b.X, item.b.Y, item.b.Z);
             }
 
-            foreach (Node item in processed.ContourPoints)
+            foreach (Node item in processed.ConstraintPoints)
             {
                 AddPoint(item.X, item.Y, item.Z, out _);
             }
