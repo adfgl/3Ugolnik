@@ -9,6 +9,45 @@ namespace CDTTests
 {
     public class TopologyTests
     {
+        Node[] QuadConvexCW()
+        {
+            Node[] nodes = new Node[4];
+            double r = 5;
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                double angle = -Math.PI / 2 * i; 
+
+                double x = r * Math.Cos(angle);
+                double y = r * Math.Sin(angle);
+
+                nodes[i] = new Node(i, x, y, 0);
+            }
+
+            return nodes;
+        }
+
+        Node[] QuadConcaveCW()
+        {
+            Node[] nodes = new Node[4];
+            nodes[0] = new Node(0, -50, -50, 0);
+            nodes[1] = new Node(1, -50, +50, 0);
+            nodes[2] = new Node(0, +50, +50, 0);
+
+            double midX = (nodes[0].X + nodes[2].X) * 0.5;
+            double midY = (nodes[0].Y + nodes[2].Y) * 0.5;
+
+            double vx = nodes[1].X - midX;
+            double vy = nodes[1].Y - midY;
+
+            double scale = 0.3;
+            double concaveX = midX + vx * scale;
+            double concaveY = midY + vy * scale;
+
+            nodes[3] = new Node(3, concaveX, concaveY, 0);
+
+            return nodes;
+        }
+
         Mesh TestCase()
         {
             /*
@@ -160,6 +199,23 @@ namespace CDTTests
                     Assert.Equal(n.Index, node);
                 }
             }
+        }
+
+        [Fact]
+        public void QuadIsConvex_ReturnsTrueWhenTrulyConvex_CCW()
+        {
+            Node[] quad = QuadConvexCW();
+            Array.Reverse(quad);
+
+            Assert.True(Mesh.QuadConvex(quad[0], quad[1], quad[2], quad[3]));
+        }
+
+        [Fact]
+        public void QuadIsConvex_ReturnsFalseWhenConcave_CCW()
+        {
+            Node[] quad = QuadConcaveCW();
+            Array.Reverse(quad);
+            Assert.False(Mesh.QuadConvex(quad[0], quad[1], quad[2], quad[3]));
         }
     }
 }
