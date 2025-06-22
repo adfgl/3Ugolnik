@@ -22,12 +22,16 @@ namespace CDTConsole
             CDTInput input = new CDTInput()
             {
                 Polygons = [polygon],
+                Quality = new CDTQuality()
+                {
+                    MaxArea = double.MaxValue
+                }
             };
 
             var cdt = new CDT(input);
             var mesh = cdt.Mesh;
 
-            Console.WriteLine(mesh.ToSvg());
+            //Console.WriteLine(mesh.ToSvg(fill: false));
 
         }
     }

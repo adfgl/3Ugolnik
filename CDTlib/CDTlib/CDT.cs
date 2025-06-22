@@ -40,7 +40,10 @@
             }
 
             AssignParentsToTriangles(processed.Polygons);
-            Refine(25);
+            Refine(input.Quality.MaxArea);
+
+            Console.WriteLine(_mesh.ToSvg(fill: false, drawConstraints: true));
+
             Mesh = FinalizeMesh();
         }
 
@@ -174,7 +177,7 @@
 
             // do something before adding?
 
-            _mesh.Nodes.Add(newNode);   
+            _mesh.Nodes.Add(newNode);
             _quadTree.Add(newNode);
 
             _mesh.Add(affected);
@@ -194,7 +197,9 @@
             {
                 var (a, b) = toInsert.Dequeue();
                 if (a.Index == b.Index)
+                {
                     continue;
+                }
 
                 InsertConstraintSegment(a, b, toInsert);
             }
@@ -219,8 +224,6 @@
 
         private bool WalkAndInsert(Triangle current, Node start, Node end, Queue<(Node, Node)> toInsert)
         {
-            List<int> affected = new();
-
             while (true)
             {
                 for (int edge = 0; edge < 3; edge++)
@@ -300,14 +303,14 @@
         public void Refine(double maxArea)
         {
             HashSet<Segment> seen = new HashSet<Segment>();
-            Queue<Triangle> triangleQueue = new Queue<Triangle>();
+            Queue<int> triangleQueue = new Queue<int>();
             Queue<Segment> segmentQueue = new Queue<Segment>();
 
             foreach (Triangle triangle in _mesh.Triangles)
             {
                 if (IsBad(triangle, maxArea))
                 {
-                    triangleQueue.Enqueue(triangle);
+                    triangleQueue.Enqueue(triangle.index);
                 }
 
                 for (int i = 0; i < 3; i++)
@@ -364,13 +367,13 @@
                     List<int> affected = _mesh.SplitAndAdd(_mesh.Triangles[triangle], edge, newNode);
                     foreach (int item in affected)
                     {
-                        triangleQueue.Enqueue(_mesh.Triangles[item]);
+                        triangleQueue.Enqueue(item);
                     }
                 }
 
                 if (triangleQueue.Count > 0)
                 {
-                    Triangle tri = triangleQueue.Dequeue();
+                    Triangle tri = _mesh.Triangles[triangleQueue.Dequeue()];
                     if (!IsBad(tri, maxArea))
                     {
                         continue;
@@ -378,6 +381,11 @@
 
                     double x = tri.circle.x;
                     double y = tri.circle.y;
+
+                    if (!_quadTree.Bounds.Contains(x, y))
+                    {
+                        continue;
+                    }
 
                     bool encroaches = false;
                     foreach (Segment seg in seen)
@@ -397,7 +405,7 @@
                     Node inserted = AddPoint(x, y, null, out List<int> affected);
                     foreach (int item in affected)
                     {
-                        triangleQueue.Enqueue(_mesh.Triangles[item]);
+                        triangleQueue.Enqueue(item);
                     }
                 }
             }

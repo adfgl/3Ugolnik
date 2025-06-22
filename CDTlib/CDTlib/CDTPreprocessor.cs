@@ -128,7 +128,7 @@ namespace CDTlib
                             return false;
                         }
                     }
-                    break;
+                    return true;
 
                 case EConstraint.Hole:
                     return contour.Contains(x, y);
@@ -227,6 +227,11 @@ namespace CDTlib
             List<Constraint> segments = Split(inter);
             segments.AddRange(other.Split(inter));
             return segments;
+        }
+
+        public override string ToString()
+        {
+            return $"[{type}] {a.Index} {b.Index}";
         }
     }
 }

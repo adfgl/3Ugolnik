@@ -120,6 +120,8 @@ namespace CDTlib
             while (toLegalize.Count > 0)
             {
                 var (triangle, edge) = toLegalize.Pop();
+                affected.Add(triangle.index);
+
                 if (!CanFlip(triangle, edge) || !ShouldFlip(triangle, edge))
                 {
                     continue;
@@ -127,11 +129,11 @@ namespace CDTlib
 
                 Affected[] flipped = Flip(triangle, edge);
                 Add(flipped);
-                affected.Add(triangle.index);
 
                 foreach (Affected item in flipped)
                 {
                     toLegalize.Push(item);
+                    affected.Add(item.triangle.index);
                 }
             }
             return affected;
@@ -367,6 +369,20 @@ namespace CDTlib
             edge = -1;
         }
 
+        public void Center(Triangle tri, out double x, out double y)
+        {
+            x = 0;
+            y = 0;
+            for (int i = 0; i < 3; i++)
+            {
+                Node node = _nodes[tri.indices[i]];
+                x += node.X;
+                y += node.Y;
+            }
+            x /= 3.0;
+            y /= 3.0;
+        }
+
         public void Add(Affected[] tris)
         {
             foreach (Affected item in tris)
@@ -401,7 +417,6 @@ namespace CDTlib
 
         public List<int> SplitAndAdd(Triangle triangle, Node node)
         {
-            _nodes.Add(node);
             Affected[] affected = Split(triangle, node);
             Add(affected);
             return Legalize(new List<int>(), affected);
@@ -482,13 +497,14 @@ namespace CDTlib
                      b                            b            
          */
 
+            bool constrained = triangle.constrained[edge];
             Triangle acd = triangle;
             Triangle cab = _triangles[adj];
 
             int t0 = triangle.index;
-            int t1 = adj;
-            int t2 = _triangles.Count;
-            int t3 = _triangles.Count + 1;
+            int t1 = _triangles.Count;
+            int t2 = _triangles.Count + 1;
+            int t3 = adj;
 
             int[] abcd = Quad(triangle, edge, out int twinEdge);
             Node a = _nodes[abcd[0]];  
@@ -519,14 +535,13 @@ namespace CDTlib
             ecd.adjacent[2] = t0;
 
             ebc.adjacent[0] = t3;
-            ebc.adjacent[1] = cab.adjacent[ab];
+            ebc.adjacent[1] = cab.adjacent[bc];
             ebc.adjacent[2] = t1;
 
             eab.adjacent[0] = t0;
-            eab.adjacent[1] = cab.adjacent[bc];
+            eab.adjacent[1] = cab.adjacent[ab];
             eab.adjacent[2] = t2;
 
-            bool constrained = acd.constrained[ca];
             eda.constrained[0] = false;
             eda.constrained[1] = acd.constrained[da];
             eda.constrained[2] = constrained;

@@ -28,7 +28,7 @@
             var last = Nodes.Last();
             if (first.X != last.X || first.Y != last.Y)
             {
-                Nodes.Add(last);
+                Nodes.Add(first);
             }
 
             Rect = new Rectangle(minX, minY, maxX, maxY);
