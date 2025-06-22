@@ -85,7 +85,7 @@ namespace CDTlib
             }
         }
 
-        public static string ToSvg(this Mesh mesh, int size = 1000, float padding = 10f, bool fill = true, bool drawConstraints = false, bool drawCircles = false)
+        public static string ToSvg(this Mesh mesh, int size = 1000, float padding = 10f, bool fill = true, bool drawConstraints = true, bool drawCircles = false)
         {
             if (mesh.Nodes.Count == 0 || mesh.Triangles.Count == 0)
                 return "<svg xmlns='http://www.w3.org/2000/svg'/>";

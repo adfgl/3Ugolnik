@@ -24,14 +24,14 @@ namespace CDTConsole
                 Polygons = [polygon],
                 Quality = new CDTQuality()
                 {
-                    MaxArea = double.MaxValue
+                    MaxArea = 55
                 }
             };
 
             var cdt = new CDT(input);
             var mesh = cdt.Mesh;
 
-            //Console.WriteLine(mesh.ToSvg(fill: false));
+            Console.WriteLine(mesh.ToSvg(fill: false));
 
         }
     }

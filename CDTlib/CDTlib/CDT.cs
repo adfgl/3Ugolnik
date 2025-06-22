@@ -42,7 +42,7 @@
             AssignParentsToTriangles(processed.Polygons);
             Refine(input.Quality.MaxArea);
 
-            Console.WriteLine(_mesh.ToSvg(fill: false, drawConstraints: true));
+            //Console.WriteLine(_mesh.ToSvg(fill: false, drawConstraints: true));
 
             Mesh = FinalizeMesh();
         }
@@ -254,15 +254,15 @@
             if (intersection is null)
                 return false;
 
-            Affected[] tris;
+            Affected[] tris, legalize;
             if (_mesh.CanFlip(triangle, edge))
             {
-                tris = _mesh.Flip(triangle, edge);
+                tris = _mesh.Flip(triangle, edge, out legalize);
             }
             else
             {
                 Node newNode = new Node(_mesh.Nodes.Count, intersection.X, intersection.Y, intersection.Z);
-                tris = _mesh.Split(triangle, edge, newNode);
+                tris = legalize = _mesh.Split(triangle, edge, newNode);
 
                 toInsert.Enqueue((start, newNode));
                 toInsert.Enqueue((newNode, end));
@@ -272,7 +272,7 @@
             }
 
             _mesh.Add(tris);
-            _mesh.Legalize(new List<int>(), tris);
+            _mesh.Legalize(new List<int>(), legalize);
 
             return true;
         }
@@ -323,7 +323,7 @@
                     triangle.Edge(i, out int a, out int b);
 
                     Segment segment = new Segment(_mesh.Nodes[a], _mesh.Nodes[b]);
-                    if (seen.Add(segment) && Enchrouched(_quadTree, segment))
+                    if (Enchrouched(_quadTree, segment) && seen.Add(segment))
                     {
                         segmentQueue.Enqueue(segment);
                     }

@@ -127,10 +127,10 @@ namespace CDTlib
                     continue;
                 }
 
-                Affected[] flipped = Flip(triangle, edge);
+                Affected[] flipped = Flip(triangle, edge, out Affected[] legalize);
                 Add(flipped);
 
-                foreach (Affected item in flipped)
+                foreach (Affected item in legalize)
                 {
                     toLegalize.Push(item);
                     affected.Add(item.triangle.index);
@@ -613,7 +613,7 @@ namespace CDTlib
             return [new Affected(dca, 1), new Affected(cdb, 2)];
         }
 
-        public Affected[] Flip(Triangle triangle, int edge)
+        public Affected[] Flip(Triangle triangle, int edge, out Affected[] toLegalize)
         {
             int adj = triangle.adjacent[edge];
             if (adj == -1)
@@ -686,6 +686,7 @@ namespace CDTlib
             a.Triangle = d.Triangle = b.Triangle = t0;
             c.Triangle = t1;
 
+            toLegalize = [new Affected(bda, 2), new Affected(dbc, 1)];
             return [new Affected(bda, 2), new Affected(dbc, 1), new Affected(bda, 1), new Affected(dbc, 2)];
         }
     }
