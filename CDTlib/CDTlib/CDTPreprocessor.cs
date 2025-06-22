@@ -40,15 +40,15 @@ namespace CDTlib
                 {
                     foreach (CDTSegment seg in segment.Split())
                     {
-                        CDTPoint start = seg.Start;
-                        CDTPoint end = seg.End;
+                        CDTNode start = seg.Start;
+                        CDTNode end = seg.End;
 
                         Constraint constraint = new Constraint(new Node(-1, start.X, start.Y, 0), new Node(-1, end.X, end.Y, 0), EConstraint.User);
                         AddConstraint(polygonConstraints, constraint);
                     }
                 }
 
-                foreach (CDTPoint pt in input.Points)
+                foreach (CDTNode pt in input.Points)
                 {
                     if (Polygon.Contains(contour, holes, pt.X, pt.Y))
                     {

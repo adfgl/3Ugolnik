@@ -2,8 +2,8 @@
 {
     public abstract class CDTSegment
     {
-        public abstract CDTPoint Start { get; }
-        public abstract CDTPoint End { get; }
+        public abstract CDTNode Start { get; }
+        public abstract CDTNode End { get; }
 
         /// <summary>
         /// Splits this segment into smaller subsegments.
@@ -13,7 +13,7 @@
         /// <summary>
         /// Gets a point on the segment at t in [0,1]
         /// </summary>
-        public abstract CDTPoint PointAt(double t);
+        public abstract CDTNode PointAt(double t);
 
         public abstract double Length { get; }
 
@@ -21,7 +21,7 @@
 
         public IReadOnlyList<CDTSegment> Split() => Split(Math.Max(1, NumSegments));
 
-        protected static double Distance(CDTPoint a, CDTPoint b)
+        protected static double Distance(CDTNode a, CDTNode b)
         {
             double dx = b.X - a.X;
             double dy = b.Y - a.Y;

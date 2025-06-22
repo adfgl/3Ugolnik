@@ -339,16 +339,14 @@ namespace CDTlib
             TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
             do
             {
-                int current = walker.Current;
-
-                int e = _triangles[current].IndexOf(a, b);
+                Triangle current = _triangles[walker.Current];
+                int e = current.IndexOf(a, b);
                 if (e != -1)
                 {
-                    triangle = current;
+                    triangle = current.index;
                     edge = e;
                     return;
                 }
-                    
             }
             while (walker.MoveNextCW());
 

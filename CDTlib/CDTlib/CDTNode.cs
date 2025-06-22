@@ -1,28 +1,23 @@
 ﻿namespace CDTlib
 {
-    public class CDTPoint : IEquatable<CDTPoint>
+    public class CDTNode : IEquatable<CDTNode>
     {
-        public CDTPoint()
+        public CDTNode()
         {
 
         }
 
-        public CDTPoint(double x, double y, double z = 0)
+        public CDTNode(double x, double y, double z = 0)
         {
             X = x; Y = y; Z = z;
         }
 
-        public void Deconstruct(out double x, out double y)
-        {
-            x = X;
-            y = Y;
-        }
-
+        public int Index { get; set; } = -1;
         public double X { get; set; }
         public double Y { get; set; }
         public double Z { get; set; }
 
-        public bool Equals(CDTPoint? other)
+        public bool Equals(CDTNode? other)
         {
             if (ReferenceEquals(this, other)) return true;
             if (other is null) return false;

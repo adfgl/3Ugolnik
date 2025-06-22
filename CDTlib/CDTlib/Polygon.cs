@@ -2,7 +2,7 @@
 {
     public class Polygon
     {
-        public Polygon(List<CDTPoint> points)
+        public Polygon(List<CDTNode> points)
         {
             double minX, minY, maxX, maxY;
             minX = minY = double.MaxValue;
@@ -11,7 +11,7 @@
             Nodes = new List<Node>(points.Count);
 
             int count = 0;
-            foreach (CDTPoint point in points)
+            foreach (CDTNode point in points)
             {
                 double x = point.X;
                 double y = point.Y;

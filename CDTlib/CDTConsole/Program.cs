@@ -6,10 +6,10 @@ namespace CDTConsole
     {
         static void Main(string[] args)
         {
-            CDTPoint a = new CDTPoint(-50, -50);
-            CDTPoint b = new CDTPoint(+50, -50);
-            CDTPoint c = new CDTPoint(+50, +50);
-            CDTPoint d = new CDTPoint(-50, +50);
+            CDTNode a = new CDTNode(-50, -50);
+            CDTNode b = new CDTNode(+50, -50);
+            CDTNode c = new CDTNode(+50, +50);
+            CDTNode d = new CDTNode(-50, +50);
 
             CDTLineSegment ab = new CDTLineSegment(a, b);
             CDTLineSegment bc = new CDTLineSegment(b, c);

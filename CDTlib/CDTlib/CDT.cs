@@ -28,13 +28,56 @@
             }
 
             AssignParentsToTriangles(processed.Polygons);
+
+            Mesh = FinalizeMesh();
         }
 
-        public Mesh Mesh => _mesh;
+        public CDTMesh Mesh { get; internal set; }
 
-        void FinalizeMesh()
+        CDTMesh FinalizeMesh()
         {
+            List<CDTNode> nodes = new List<CDTNode>(_mesh.Nodes.Count);
+            foreach (Node item in _mesh.Nodes.Skip(3))
+            {
+                nodes.Add(new CDTNode()
+                {
+                    Index = item.Index - 3,
+                    X = item.X,
+                    Y = item.Y,
+                    Z = item.Z,
+                });
+            }
 
+            List<CDTTriangle> triangles = new List<CDTTriangle>(_mesh.Triangles.Count);
+
+            int triCount = 0;
+            foreach (Triangle item in _mesh.Triangles)
+            {
+                if (item.super || item.parents.Count == 0)
+                {
+                    continue;
+                }
+
+                triangles.Add(new CDTTriangle()
+                {
+                    Index = triCount++,
+                    Area = item.area,
+                    Points = [
+                        nodes[item.indices[0] - 3],
+                        nodes[item.indices[1] - 3],
+                        nodes[item.indices[2] - 3]
+                    ]
+                });
+            }
+
+            nodes.TrimExcess();
+            triangles.TrimExcess();
+
+            return new CDTMesh()
+            {
+                Nodes = nodes,
+                Triangles = triangles
+            };
         }
 
         void AssignParentsToTriangles(List<(Polygon, List<Polygon>)> polygons)

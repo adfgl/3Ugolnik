@@ -2,14 +2,15 @@
 {
     public class CDTPolygon
     {
+        public int Index { get; set; } = -1;
         public List<CDTSegment> Contour { get; set; } = new List<CDTSegment>();
         public List<CDTPolygon> Holes { get; set; } = new List<CDTPolygon>();
-        public List<CDTPoint> Points { get; set; } = new List<CDTPoint>();
+        public List<CDTNode> Points { get; set; } = new List<CDTNode>();
         public List<CDTSegment> Segments { get; set; } = new List<CDTSegment>();
 
-        public List<CDTPoint> GetPoints()
+        public List<CDTNode> GetPoints()
         {
-            List<CDTPoint> points = new List<CDTPoint>();
+            List<CDTNode> points = new List<CDTNode>();
             foreach (CDTSegment segment in Contour)
             {
                 foreach (CDTSegment s in segment.Split())

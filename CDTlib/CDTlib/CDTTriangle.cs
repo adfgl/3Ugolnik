@@ -1,0 +1,9 @@
+﻿namespace CDTlib
+{
+    public class CDTTriangle
+    {
+        public int Index { get; set; } = -1;
+        public double Area { get; set; }    
+        public CDTNode[] Points { get; set; } = Array.Empty<CDTNode>();
+    }
+}
