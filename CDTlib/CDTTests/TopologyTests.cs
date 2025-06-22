@@ -102,5 +102,47 @@ namespace CDTTests
                 Assert.Equal(item.index, tri);
             }
         }
+
+        [Fact]
+        public void FindContaining_CorrectlyFindsTriangleWhenPointIsOnEdge()
+        {
+            var mesh = TestCase();
+
+            foreach (Triangle item in mesh.Triangles)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    item.Edge(i, out int start, out int end);
+
+                    Node a = mesh.Nodes[start];
+                    Node b = mesh.Nodes[end];
+
+                    double x = (a.X + b.X) / 2.0;
+                    double y = (a.Y + b.Y) / 2.0;
+
+                    mesh.FindContaining(x, y, out int tri, out int edge, out int node);
+
+                    mesh.FindEdgeBrute(start, end, out int expectedTri0, out int expectedEdge0);
+                    mesh.FindEdgeBrute(end, start, out int expectedTri1, out int expectedEdge1);
+
+                    Assert.Equal(-1, node);
+
+                    if (expectedTri0 == tri)
+                    {
+                        Assert.Equal(expectedTri0, tri);
+                        Assert.Equal(expectedEdge0, edge);
+                    }
+                    else if (expectedTri1 == tri)
+                    {
+                        Assert.Equal(expectedTri1, tri);
+                        Assert.Equal(expectedEdge1, edge);
+                    }
+                    else
+                    {
+                        throw new Exception();
+                    }
+                }
+            }
+        }
     }
 }
