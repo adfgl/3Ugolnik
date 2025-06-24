@@ -68,9 +68,8 @@ namespace CDTSharp
 
             double x = p1.X + u * a;
             double y = p1.Y + u * c;
-            double z = p1.Z + u * (p2.Z - p1.Z);
 
-            return new Node(-1, x, y, z);
+            return new Node(-1, x, y);
         }
     }
 }

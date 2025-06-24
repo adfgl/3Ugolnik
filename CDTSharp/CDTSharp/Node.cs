@@ -9,12 +9,11 @@ namespace CDTSharp
 
         }
 
-        public Node(int index, double x, double y, double z)
+        public Node(int index, double x, double y)
         {
             Index = index;
             X = x;
             Y = y;
-            Z = z;
         }
 
         public int Index { get; set; } = -1;
@@ -22,15 +21,13 @@ namespace CDTSharp
 
         public double X { get; set; }
         public double Y { get; set; }
-        public double Z { get; set; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double DistanceSquared(Node a, Node b)
         {
             double dx = a.X - b.X;
             double dy = a.Y - b.Y;
-            double dz = a.Z - b.Z;
-            return dx * dx + dy * dy + dz * dz;
+            return dx * dx + dy * dy;
         }
 
         public static double Distance(Node a, Node b)
@@ -40,12 +37,12 @@ namespace CDTSharp
 
         public override string ToString()
         {
-            return $"[{Index}] {X} {Y} {Z}";
+            return $"[{Index}] {X} {Y}";
         }
 
         public object Clone()
         {
-            return new Node(Index, X, Y, Z);
+            return new Node(Index, X, Y);
         }
 
         public bool Equals(Node? other)

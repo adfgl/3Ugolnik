@@ -46,8 +46,7 @@ namespace CDTSharp
         {
             return new Node(-1,
                 _start.X + t * (_end.X - _start.X),
-                _start.Y + t * (_end.Y - _start.Y),
-                _start.Z + t * (_end.Z - _start.Z)
+                _start.Y + t * (_end.Y - _start.Y)
             );
         }
 
@@ -83,19 +82,9 @@ namespace CDTSharp
 
         public ArcSegment(double radius, double startAngle, double endAngle, Node center, bool clockwise)
        : base(
-           new Node(-1, center.X + radius * Math.Cos(startAngle), center.Y + radius * Math.Sin(startAngle), center.Z),
-           new Node(-1, center.X + radius * Math.Cos(endAngle), center.Y + radius * Math.Sin(endAngle), center.Z)
+           new Node(-1, center.X + radius * Math.Cos(startAngle), center.Y + radius * Math.Sin(startAngle)),
+           new Node(-1, center.X + radius * Math.Cos(endAngle), center.Y + radius * Math.Sin(endAngle))
          )
-        {
-            Center = center;
-            Clockwise = clockwise;
-        }
-
-        public ArcSegment(double radius, double startAngle, double endAngle, Node center, bool clockwise, double zStart, double zEnd)
-            : base(
-                new Node(-1, center.X + radius * Math.Cos(startAngle), center.Y + radius * Math.Sin(startAngle), zStart),
-                new Node(-1, center.X + radius * Math.Cos(endAngle), center.Y + radius * Math.Sin(endAngle), zEnd)
-              )
         {
             Center = center;
             Clockwise = clockwise;
@@ -144,8 +133,7 @@ namespace CDTSharp
             double angle = angleStart + (Clockwise ? -1 : 1) * angleDelta * t;
             double x = cx + radius * Math.Cos(angle);
             double y = cy + radius * Math.Sin(angle);
-            double z = _start.Z + t * (_end.Z - _start.Z);
-            return new Node(-1, x, y, z);
+            return new Node(-1, x, y);
         }
 
         public override double Length()
@@ -270,8 +258,7 @@ namespace CDTSharp
         {
             return new Node(-1,
                 a.X + t * (b.X - a.X),
-                a.Y + t * (b.Y - a.Y),
-                a.Z + t * (b.Z - a.Z));
+                a.Y + t * (b.Y - a.Y));
         }
 
         static List<Node> Subdivide(List<Node> controlPoints, double t0, double t1, int resolution)
