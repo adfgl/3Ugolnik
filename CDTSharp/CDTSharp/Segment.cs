@@ -236,8 +236,6 @@ namespace CDTSharp
             return points[0];
         }
 
-
-
         public override double Length()
         {
             const int resolution = 20;
