@@ -1,9 +1,11 @@
-﻿namespace CDTSharp
+﻿using System;
+
+namespace CDTSharp
 {
-    public class SplitResult
+    public class TopologyChange
     {
         public Triangle[] Triangles { get; set; } = Array.Empty<Triangle>();
-        public TriangleEdge[] ToLegalize {  get; set; } = Array.Empty<TriangleEdge>();
+        public TriangleEdge[] Edges {  get; set; } = Array.Empty<TriangleEdge>();
     }
 
     public class Mesh
@@ -18,22 +20,110 @@
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
 
-        public void SetAdjacent(int triangle, int edge, int adjacent)
+        public void FindContaining(double x, double y, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
         {
-            Triangle t = _triangles[triangle];
-            t.adjacent[edge] = adjacent;
-
-            if (adjacent != -1)
+            triangle = edge = node = -1;
+            if (_triangles.Count == 0)
             {
-                Triangle adj = _triangles[adjacent];
-                t.Edge(edge, out int a, out int b);
+                return;
+            }
 
-                int adjEdge = adj.IndexOf(b, a);
-                if (adjEdge == -1)
+            int maxSteps = _triangles.Count * 3;
+            int trianglesChecked = 0;
+
+            Node pt = new Node() { X = x, Y = y };
+
+            int skipEdge = -1;
+            int current = searchStart == -1 ? _triangles.Count - 1 : searchStart;
+
+            while (true)
+            {
+                if (trianglesChecked++ > maxSteps)
                 {
-                    throw new Exception($"{nameof(SetAdjacent)}: Broken topology!");
+                    throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
                 }
-                adj.adjacent[adjEdge] = triangle;
+
+                int bestExit = -1;
+                double worstCross = 0;
+                bool inside = true;
+
+                Triangle currentTriangle = _triangles[current];
+                for (int edgeIndex = 0; edgeIndex < 3; edgeIndex++)
+                {
+                    if (edgeIndex == skipEdge)
+                    {
+                        continue;
+                    }
+
+                    int aIndex = currentTriangle.indices[edgeIndex];
+                    Node a = _nodes[aIndex];
+                    double adx = x - a.X;
+                    double ady = y - a.Y;
+                    if (adx * adx + ady * ady < eps)
+                    {
+                        triangle = current;
+                        edge = edgeIndex;
+                        node = a.Index;
+                        return;
+                    }
+
+                    int bIndex = currentTriangle.indices[NEXT[edgeIndex]];
+                    Node b = _nodes[bIndex];
+                    double bdx = x - b.X;
+                    double bdy = y - b.Y;
+                    if (bdx * bdx + bdy * bdy < eps)
+                    {
+                        triangle = current;
+                        edge = NEXT[edgeIndex];
+                        node = b.Index;
+                        return;
+                    }
+
+                    double cross = GeometryHelper.Cross(a, b, pt);
+                    if (Math.Abs(cross) < eps)
+                    {
+                        double dx = b.X - a.X;
+                        double dy = b.Y - a.Y;
+                        double dot = adx * dx + ady * dy;
+                        double lenSq = dx * dx + dy * dy;
+
+                        if (dot >= -eps && dot <= lenSq + eps)
+                        {
+                            triangle = current;
+                            edge = edgeIndex;
+                            node = -1;
+                            return;
+                        }
+                    }
+
+                    if (cross < 0)
+                    {
+                        inside = false;
+                        if (bestExit == -1 || cross < worstCross)
+                        {
+                            worstCross = cross;
+                            bestExit = edgeIndex;
+                        }
+                    }
+                }
+
+                if (inside)
+                {
+                    triangle = current;
+                    edge = node = -1;
+                    return;
+                }
+
+                int next = currentTriangle.adjacent[bestExit];
+                if (next == -1)
+                {
+                    triangle = edge = node = -1;
+                    return;
+                }
+
+                currentTriangle.Edge(bestExit, out int aStart, out int bEnd);
+                skipEdge = _triangles[next].IndexOf(bEnd, aStart);
+                current = next;
             }
         }
 
@@ -48,9 +138,8 @@
                 return;
             }
 
-            t.Edge(edge, out int a, out int b);
-
             Triangle adj = _triangles[adjIndex];
+            t.Edge(edge, out int a, out int b);
             adj.constrained[adj.IndexOf(b, a)] = value;
         }
 
@@ -125,8 +214,132 @@
             return [a, b, c, d];
         }
 
+        public void AddOrUpdate(TopologyChange change)
+        {
+            foreach (Triangle t in change.Triangles)
+            {
+                int index = t.index;
+                if (index < _triangles.Count)
+                {
+                    _triangles[index] = t;
+                }
+                else
+                {
+                    _triangles.Add(t);
+                }
+            }
 
-        public SplitResult Split(Triangle triangle, int edge, Node node)
+            foreach (TriangleEdge te in change.Edges)
+            {
+                Triangle t = _triangles[te.triangle];
+
+                int adjIndex = t.adjacent[te.edge];
+                if (adjIndex == -1)
+                {
+                    continue;
+                }
+
+                Triangle adj = _triangles[adjIndex];
+                t.Edge(te.edge, out int a, out int b);
+                adj.adjacent[adj.IndexOf(b, a)] = t.index;
+            }
+        }
+
+        public TopologyChange Flip(Triangle triangle, int edge)
+        {
+            int adj = triangle.adjacent[edge];
+            if (adj == -1)
+            {
+                throw new Exception("Can't flip edge with not twin");
+            }
+
+            /*
+              b - is inserted point, we want to propagate flip away from it, otherwise we 
+              are risking ending up in flipping degeneracy
+                           d                          d
+                           /\                        /|\
+                          /  \                      / | \
+                         /    \                    /  |  \
+                        /      \                  /   |   \ 
+                       /   t0   \                /    |    \
+                      /          \              /     |     \ 
+                     /            \            /      |      \
+                  a +--------------+ c      a +   t0  |  t1   + c
+                     \            /            \      |      /
+                      \          /              \     |     /
+                       \   t1   /                \    |    /
+                        \      /                  \   |   / 
+                         \    /                    \  |  /
+                          \  /                      \ | /
+                           \/                        \|/
+                            b                         b
+             */
+
+            Triangle acd = triangle;
+            Triangle cab = _triangles[adj];
+
+            bool constrained = acd.constrained[edge];
+
+            int[] abcd = Quad(triangle, edge, out int edgeTwin);
+            Node a = _nodes[abcd[0]];
+            Node b = _nodes[abcd[1]];
+            Node c = _nodes[abcd[2]];
+            Node d = _nodes[abcd[3]];
+
+            int t0 = acd.index;
+            int t1 = cab.index;
+
+            List<int> parents = new List<int>(acd.parents);
+            foreach (int item in cab.parents)
+            {
+                if (!parents.Contains(item))
+                {
+                    parents.Add(item);
+                }
+            }
+
+
+            Triangle bda = new Triangle(t0, b, d, a, null, parents);
+            Triangle dbc = new Triangle(t1, d, b, c, acd.area + cab.area - bda.area, parents);
+
+            int cd = NEXT[edge];
+            int da = PREV[edge];
+            int ab = NEXT[edgeTwin];
+            int bc = PREV[edgeTwin];
+
+            bda.adjacent[0] = t1;
+            bda.adjacent[1] = acd.adjacent[da];
+            bda.adjacent[2] = cab.adjacent[ab];
+
+            dbc.adjacent[0] = t0;
+            dbc.adjacent[1] = cab.adjacent[bc];
+            dbc.adjacent[2] = acd.adjacent[cd];
+
+            // arguable by nature.. but in case of forced flip should do
+            bda.constrained[0] = dbc.constrained[0] = constrained; 
+
+            bda.constrained[1] = acd.constrained[da];
+            bda.constrained[2] = cab.constrained[ab];
+
+            dbc.constrained[1] = cab.constrained[bc];
+            dbc.constrained[2] = acd.constrained[cd];
+
+            a.Triangle = d.Triangle = b.Triangle = t0;
+            c.Triangle = t1;
+
+            return new TopologyChange()
+            {
+                Triangles = [bda, dbc],
+                Edges = [
+                    new TriangleEdge(t0, 1, false),
+                    new TriangleEdge(t0, 2, true),
+                    new TriangleEdge(t1, 1, true),
+                    new TriangleEdge(t1, 2, false)
+                ],
+            };
+        }
+
+        public TopologyChange Split(Triangle triangle, int edge, Node node)
         {
             int adj = triangle.adjacent[edge];
             if (adj == -1)
@@ -215,14 +428,19 @@
             c.Triangle = t1;
             b.Triangle = t2;
 
-            return new SplitResult()
+            return new TopologyChange()
             {
                 Triangles = [eda, ecd, ebc, eab],
-                ToLegalize = [new TriangleEdge(t0, 1), new TriangleEdge(t1, 1), new TriangleEdge(t2, 1), new TriangleEdge(t3, 1)]
+                Edges = [
+                    new TriangleEdge(t0, 1, true), 
+                    new TriangleEdge(t1, 1, true), 
+                    new TriangleEdge(t2, 1, true), 
+                    new TriangleEdge(t3, 1, true)
+                ],
             };
         }
 
-        public SplitResult SplitNoAdjacent(Triangle triangle, int edge, Node node)
+        public TopologyChange SplitNoAdjacent(Triangle triangle, int edge, Node node)
         {
             /*
                        c                            c        
@@ -268,14 +486,17 @@
             a.Triangle = c.Triangle = d.Triangle = t0;
             b.Triangle = t1;
 
-            return new SplitResult()
+            return new TopologyChange()
             {
                 Triangles = [dca, cdb],
-                ToLegalize = [new TriangleEdge(t0, 1), new TriangleEdge(t1, 2)]
+                Edges = [
+                    new TriangleEdge(t0, 1, true), 
+                    new TriangleEdge(t1, 2, true)
+                ],
             };
         }
 
-        public SplitResult Split(Triangle triangle, Node node)
+        public TopologyChange Split(Triangle triangle, Node node)
         {
             /*
                          *C
@@ -326,10 +547,14 @@
             b.Triangle = t1;
             c.Triangle = t2;
 
-            return new SplitResult()
+            return new TopologyChange()
             {
                 Triangles = [dab, dbc, dca],
-                ToLegalize = [new TriangleEdge(t0, 1), new TriangleEdge(t1, 1), new TriangleEdge(t2, 1)]
+                Edges = [
+                    new TriangleEdge(t0, 1, true),
+                    new TriangleEdge(t1, 1, true),
+                    new TriangleEdge(t2, 1, true)
+                ],
             };
         }
     }
