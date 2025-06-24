@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36109.1 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTSharp", "CDTSharp\CDTSharp.csproj", "{CA88D6BF-ECFE-4CB1-99BF-0EB9005FBBAD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTSharpTests", "CDTSharpTests\CDTSharpTests.csproj", "{F6A8A938-4960-4FB6-BCEA-98CEBC1FBE70}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{CA88D6BF-ECFE-4CB1-99BF-0EB9005FBBAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA88D6BF-ECFE-4CB1-99BF-0EB9005FBBAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA88D6BF-ECFE-4CB1-99BF-0EB9005FBBAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6A8A938-4960-4FB6-BCEA-98CEBC1FBE70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6A8A938-4960-4FB6-BCEA-98CEBC1FBE70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6A8A938-4960-4FB6-BCEA-98CEBC1FBE70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6A8A938-4960-4FB6-BCEA-98CEBC1FBE70}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
