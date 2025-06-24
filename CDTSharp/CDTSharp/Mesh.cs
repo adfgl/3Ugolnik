@@ -20,6 +20,34 @@ namespace CDTSharp
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
 
+        public bool CanFlip(Triangle triangle, int edge)
+        {
+            if (triangle.constrained[edge] || triangle.adjacent[edge] == -1)
+            {
+                return false;
+            }
+
+            int[] points = Quad(triangle, edge, out _);
+            return GeometryHelper.QuadConvex(
+                _nodes[points[0]], 
+                _nodes[points[1]], 
+                _nodes[points[2]],
+                _nodes[points[3]]);
+        }
+
+        public bool ShouldFlip(Triangle triangle, int edge)
+        {
+            triangle.Edge(edge, out int a, out int b);
+
+            Triangle adj = _triangles[triangle.adjacent[edge]];
+            int adjEdge = adj.IndexOf(b, a);
+
+            int oppositeIndex = adj.indices[PREV[adjEdge]];
+            Node opposite = _nodes[oppositeIndex];
+            return triangle.circle.Contains(opposite.X, opposite.Y);
+        }
+
+
         public void FindContaining(double x, double y, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
         {
             triangle = edge = node = -1;

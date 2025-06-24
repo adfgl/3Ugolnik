@@ -139,5 +139,14 @@ namespace CDTSharp
 
             return inside;
         }
+
+        public static bool QuadConvex(Node a, Node b, Node c, Node d)
+        {
+            double ab_bc = Cross(a, b, c);
+            double bc_cd = Cross(b, c, d);
+            double cd_da = Cross(c, d, a);
+            double da_ab = Cross(d, a, b);
+            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
+        }
     }
 }
