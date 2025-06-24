@@ -52,7 +52,7 @@ namespace CDTSharp
 
         public override double Length()
         {
-            return Node.Distance(_start, _end);
+            return GeometryHelper.Distance(_start, _end);
         }
 
         public override Segment[] Split(int parts)
@@ -233,7 +233,7 @@ namespace CDTSharp
             {
                 double t = (double)i / resolution;
                 Node curr = PointAt(t);
-                length += Node.Distance(prev, curr);
+                length += GeometryHelper.Distance(prev, curr);
                 prev = curr;
             }
             return length;

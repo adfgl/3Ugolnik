@@ -71,5 +71,73 @@ namespace CDTSharp
 
             return new Node(-1, x, y);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double DistanceSquared(Node a, Node b)
+        {
+            double dx = a.X - b.X;
+            double dy = a.Y - b.Y;
+            return dx * dx + dy * dy;
+        }
+
+        public static double Distance(Node a, Node b)
+        {
+            return Math.Sqrt(DistanceSquared(a, b));
+        }
+
+        public static bool PointOnSegment(Node a, Node b, Node p, double tolerance = 1e-9)
+        {
+            if (p.X < Math.Min(a.X, b.X) - tolerance || p.X > Math.Max(a.X, b.X) + tolerance ||
+                p.Y < Math.Min(a.Y, b.Y) - tolerance || p.Y > Math.Max(a.Y, b.Y) + tolerance)
+                return false;
+
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+
+            double dxp = p.X - a.X;
+            double dyp = p.Y - a.Y;
+
+            double cross = dx * dyp - dy * dxp;
+            if (Math.Abs(cross) > tolerance)
+                return false;
+
+            double dot = dx * dx + dy * dy;
+            if (dot < tolerance)
+                return Distance(a, p) <= tolerance;
+
+            double t = (dxp * dx + dyp * dy) / dot;
+            return t >= -tolerance && t <= 1 + tolerance;
+        }
+
+        public static bool Contains(List<Node> closedPolygon, double x, double y, double tolerance = 0)
+        {
+            int count = closedPolygon.Count - 1;
+            bool inside = false;
+
+            Node pt = new Node(-1, x, y);
+            for (int i = 0, j = count - 1; i < count; j = i++)
+            {
+                Node a = closedPolygon[i];
+                Node b = closedPolygon[j];
+                if (PointOnSegment(a, b, pt, tolerance))
+                {
+                    return true;
+                }
+
+                double xi = a.X, yi = a.Y;
+                double xj = b.X, yj = b.Y;
+
+                bool crosses = (yi > y + tolerance) != (yj > y + tolerance);
+                if (!crosses) continue;
+
+                double t = (y - yi) / (yj - yi + double.Epsilon);
+                double xCross = xi + t * (xj - xi);
+
+                if (x < xCross - tolerance)
+                    inside = !inside;
+            }
+
+            return inside;
+        }
     }
 }
