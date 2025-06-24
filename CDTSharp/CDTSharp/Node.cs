@@ -22,19 +22,6 @@ namespace CDTSharp
         public double X { get; set; }
         public double Y { get; set; }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double DistanceSquared(Node a, Node b)
-        {
-            double dx = a.X - b.X;
-            double dy = a.Y - b.Y;
-            return dx * dx + dy * dy;
-        }
-
-        public static double Distance(Node a, Node b)
-        {
-            return Math.Sqrt(DistanceSquared(a, b));
-        }
-
         public override string ToString()
         {
             return $"[{Index}] {X} {Y}";
