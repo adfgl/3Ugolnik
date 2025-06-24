@@ -35,6 +35,29 @@ namespace CDTSharp
                 _nodes[points[3]]);
         }
 
+        public void Legalize(List<int> affected, TopologyChange change)
+        {
+            Stack<TriangleEdge> toLegalize = new Stack<TriangleEdge>(change.Edges);
+
+            while (toLegalize.Count > 0)
+            {
+                TriangleEdge te = toLegalize.Pop();
+                if (!te.shouldLegalize)
+                {
+                    continue;
+                }
+
+                Triangle t = _triangles[te.triangle];
+                TopologyChange flipped = Flip(t, te.edge);
+
+                affected.Add(t.index);
+                foreach (TriangleEdge item in flipped.Edges)
+                {
+                    toLegalize.Push(item);
+                }
+            }
+        }
+
         public bool ShouldFlip(Triangle triangle, int edge)
         {
             triangle.Edge(edge, out int a, out int b);
