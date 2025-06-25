@@ -19,6 +19,29 @@ namespace CDTSharp
         public static double Cross(Node start, Node end, Node pt) => Cross(start.X, start.Y, end.X, end.Y, pt.X, pt.Y);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double Cross(HeNode start, HeNode end, HeNode pt) => Cross(start.X, start.Y, end.X, end.Y, pt.X, pt.Y);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool QuadConvex(Node a, Node b, Node c, Node d)
+        {
+            double ab_bc = Cross(a, b, c);
+            double bc_cd = Cross(b, c, d);
+            double cd_da = Cross(c, d, a);
+            double da_ab = Cross(d, a, b);
+            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool QuadConvex(HeNode a, HeNode b, HeNode c, HeNode d)
+        {
+            double ab_bc = Cross(a, b, c);
+            double bc_cd = Cross(b, c, d);
+            double cd_da = Cross(c, d, a);
+            double da_ab = Cross(d, a, b);
+            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Angle(Node a, Node b, Node c)
         {
             double bax = a.X - b.X;
@@ -139,13 +162,6 @@ namespace CDTSharp
             return inside;
         }
 
-        public static bool QuadConvex(Node a, Node b, Node c, Node d)
-        {
-            double ab_bc = Cross(a, b, c);
-            double bc_cd = Cross(b, c, d);
-            double cd_da = Cross(c, d, a);
-            double da_ab = Cross(d, a, b);
-            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
-        }
+ 
     }
 }
