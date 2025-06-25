@@ -10,14 +10,13 @@ namespace CDTSharp
     public static class GeometryHelper
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Cross(Node start, Node end, Node point)
+        public static double Cross(double startX, double startY, double endX, double endY, double x, double y)
         {
-            double abx = end.X - start.X;
-            double aby = end.Y - start.Y;
-            double apx = point.X - start.X;
-            double apy = point.Y - start.Y;
-            return abx * apy - aby * apx;
+            return endX * (y - startY) - endY * (x - startX);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double Cross(Node start, Node end, Node pt) => Cross(start.X, start.Y, end.X, end.Y, pt.X, pt.Y);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Angle(Node a, Node b, Node c)

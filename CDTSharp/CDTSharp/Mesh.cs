@@ -8,15 +8,25 @@ namespace CDTSharp
         public TriangleEdge[] Edges {  get; set; } = Array.Empty<TriangleEdge>();
     }
 
+    public enum ESuperStructure
+    {
+        Triangle, Rectangle, Circle
+    }
+
     public class Mesh
     {
-        public const int SUPER_INDEX = 3;
-        
         public readonly static int[] NEXT = [1, 2, 0], PREV = [2, 0, 1];
 
+        readonly ESuperStructure _superStructure;
         readonly List<Node> _nodes = new List<Node>();
         readonly List<Triangle> _triangles = new List<Triangle>();
 
+        public Mesh(List<Node> allNodes, ESuperStructure superStructure = ESuperStructure.Triangle)
+        {
+            _superStructure = superStructure;
+        }
+
+        public ESuperStructure SuperStructure => _superStructure;
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
 
@@ -82,8 +92,6 @@ namespace CDTSharp
             int maxSteps = _triangles.Count * 3;
             int trianglesChecked = 0;
 
-            Node pt = new Node() { X = x, Y = y };
-
             int skipEdge = -1;
             int current = searchStart == -1 ? _triangles.Count - 1 : searchStart;
 
@@ -130,7 +138,7 @@ namespace CDTSharp
                         return;
                     }
 
-                    double cross = GeometryHelper.Cross(a, b, pt);
+                    double cross = GeometryHelper.Cross(a.X, a.Y, b.X, b.Y, x, y);
                     if (Math.Abs(cross) < eps)
                     {
                         double dx = b.X - a.X;
@@ -209,7 +217,7 @@ namespace CDTSharp
             }
             while (walker.MoveNextCW());
 
-            return new TriangleEdge();
+            return TriangleEdge.None;
         }
 
         public TriangleEdge FindEdgeBrute(int a, int b)
@@ -222,7 +230,7 @@ namespace CDTSharp
                     return new TriangleEdge(t.index, e);
                 }
             }
-            return new TriangleEdge();
+            return TriangleEdge.None;
         }
 
         public int[] Quad(Triangle triangle, int edge, out int twinEdge)

@@ -25,16 +25,16 @@
         {
             // https://stackoverflow.com/questions/62488827/solving-equation-to-find-center-point-of-circle-from-3-points
             var x12 = x1 - x2;
-            var x13 = x1 - x3;
-
             var y12 = y1 - y2;
+
+            var x13 = x1 - x3;
             var y13 = y1 - y3;
 
-            var y31 = y3 - y1;
-            var y21 = y2 - y1;
-
             var x31 = x3 - x1;
+            var y31 = y3 - y1;
+            
             var x21 = x2 - x1;
+            var y21 = y2 - y1;
 
             var sx13 = x1 * x1 - x3 * x3;
             var sy13 = y1 * y1 - y3 * y3;

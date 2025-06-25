@@ -12,6 +12,8 @@
             this.shouldLegalize = shouldLegalize;
         }
 
+        public static TriangleEdge None => new TriangleEdge(-1, -1, false);
+
         public void Deconstruct(out int triangle, out int edge)
         {
             triangle = this.triangle;

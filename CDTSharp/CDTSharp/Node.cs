@@ -2,7 +2,7 @@
 
 namespace CDTSharp
 {
-    public class Node : ICloneable, IEquatable<Node>
+    public class Node : IEquatable<Node>
     {
         public Node()
         {
@@ -25,11 +25,6 @@ namespace CDTSharp
         public override string ToString()
         {
             return $"[{Index}] {X} {Y}";
-        }
-
-        public object Clone()
-        {
-            return new Node(Index, X, Y);
         }
 
         public bool Equals(Node? other)
