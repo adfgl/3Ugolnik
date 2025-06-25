@@ -138,7 +138,7 @@ namespace CDTSharp
                     {
                         double dx = b.X - a.X;
                         double dy = b.Y - a.Y;
-                        double dot = adx * dx + ady * dy;
+                        double dot = (x - a.X) * dx + (y - a.Y) * dy;
                         double lenSq = dx * dx + dy * dy;
 
                         if (dot >= -eps && dot <= lenSq + eps)

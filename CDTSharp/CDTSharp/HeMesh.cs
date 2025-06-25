@@ -1,13 +1,187 @@
-﻿using System.Runtime.Intrinsics.X86;
-using System.Xml.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-
+﻿
 namespace CDTSharp
 {
     public class HeMesh
     {
         readonly List<HeTriangle> _triangles;
         readonly List<HeNode> _nodes;
+        readonly QuadTree _qt;
+
+        public HeNode Add(double x, double y)
+        {
+            object? element = FindContaining(x, y);
+            if (element == null)
+            {
+                throw new Exception($"Point [{x} {y}] is outside of domain.");
+            }
+
+            if (element is HeNode)
+            {
+                return (HeNode)element;
+            }
+
+            HeNode node = new HeNode(_nodes.Count, x, y);
+
+            HeTriangle[] newTriangles = element switch
+            {
+                HeEdge edge => Split(edge, node),
+                HeTriangle tri => Split(tri, node),
+                _ => throw new Exception("Invalid mesh element returned.")
+            };
+
+            // do something before adding?
+
+            Add(node, newTriangles);
+            return node;
+        }
+
+        public List<HeEdge> Add(double x0, double y0, double x1, double y1)
+        {
+            Queue<(HeNode, HeNode)> toInsert = new Queue<(HeNode, HeNode)>();
+            toInsert.Enqueue((Add(x0, y0), Add(x1, y1)));
+
+            List<HeEdge> segments = new List<HeEdge>();
+            while (toInsert.Count > 0)
+            {
+                var (a, b) = toInsert.Dequeue();
+                if (a.Index == b.Index)
+                {
+                    continue;
+                }
+
+                HeEdge segment = InsertConstraintSegment(a, b, toInsert);
+                segments.Add(segment);
+            }
+            return segments;
+        }
+
+        HeEdge InsertConstraintSegment(HeNode start, HeNode end, Queue<(HeNode, HeNode)> toInsert)
+        {
+            while (true)
+            {
+                HeEdge? existing = FindEdge(start, end, true);
+                if (existing is not null)
+                {
+                    existing.SetConstraint(true);
+                    return existing;
+                }
+
+                HeTriangle entrance = Entrance(start, end);
+                while (true)
+                {
+                  
+                }
+            }
+        }
+
+        bool WalkAndInsert(HeTriangle triangle, HeNode start, HeNode end, Queue<(HeNode, HeNode)> toInsert)
+        {
+            HeTriangle current = triangle;
+            while (true)
+            {
+                foreach (HeEdge edge in current.Forward())
+                {
+                    if (TrySplitOrFlip(edge, start, end, toInsert))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        bool TrySplitOrFlip(HeEdge edge, HeNode start, HeNode end, Queue<(HeNode, HeNode)> toInsert)
+        {
+            var (a, b) = edge;
+            if (a == start || b == start || a == end || b == end)
+            {
+                return false;
+            }
+
+            if (!GeometryHelper.Intersect(
+                a.X, a.Y, b.X, b.Y, 
+                start.X, start.Y, end.X, end.Y, 
+                out double x, out double y))
+            {
+                return false;
+            }
+
+            if (CanFlip(edge))
+            {
+                HeTriangle[] tris = Flip(edge);
+                Add(tris);
+            }
+            else
+            {
+                HeNode node = new HeNode(_nodes.Count, x, y);
+                HeTriangle[] tris = Split(edge, node);
+                Add(node, tris);
+            }
+            return true;
+        }
+
+        public HeTriangle Entrance(HeNode a, HeNode b)
+        {
+            foreach (HeEdge aEdge in a.Around())
+            {
+                int count = 0;
+                foreach (HeEdge edge in aEdge.Triangle.Forward())
+                {
+                    var (start, end) = edge;
+
+                    if (a == start || b == end)
+                    {
+                        double cross = GeometryHelper.Cross(start.X, start.Y, end.X, end.Y, b.X, b.Y);
+                        if (cross >= 0)
+                        {
+                            count++;
+                        }
+                    }
+
+                    if (count == 2)
+                    {
+                        return aEdge.Triangle;
+                    }
+                }
+            }
+
+            throw new Exception("Could not find entrance triangle.");
+        }
+
+        public void Add(HeNode node, HeTriangle[] triangles)
+        {
+            _nodes.Add(node);
+            _qt.Add(node);
+
+            Add(triangles);
+        }
+
+        public List<HeTriangle> Legalize(HeTriangle[] triangles)
+        {
+            List<HeTriangle> affected = new List<HeTriangle>();
+
+            Stack<HeTriangle> toLegalize = new Stack<HeTriangle>(triangles);
+            while (toLegalize.Count > 0)
+            {
+                HeTriangle triangle = toLegalize.Pop();
+                HeEdge edge = triangle.Edge;
+
+                affected.Add(triangle);
+
+                if (!CanFlip(edge) || !CanFlip(edge))
+                {
+                    continue;
+                }
+
+                HeTriangle[] flipped = Flip(edge);
+                Add(flipped);
+
+                foreach (HeTriangle t in flipped)
+                {
+                    toLegalize.Push(t);
+                }
+            }
+            return affected;
+        }
 
         public object? FindContaining(double x, double y, double eps = 1e-6, int searchStart = -1)
         {
@@ -91,7 +265,7 @@ namespace CDTSharp
             }
         }
 
-        public HeEdge? FindEdge(HeNode a, HeNode b)
+        public HeEdge? FindEdge(HeNode a, HeNode b, bool invariant)
         {
             foreach (HeEdge e in a.Around())
             {
@@ -99,6 +273,11 @@ namespace CDTSharp
                 if (start == a && end == b)
                 {
                     return e;
+                }
+
+                if (invariant && start == b && end == a)
+                {
+                    return e.Twin;
                 }
             }
             return null;
@@ -173,6 +352,8 @@ namespace CDTSharp
                     twin.Twin = t.Edge;
                 }
             }
+
+            Legalize(triangles);
         }
 
         public bool CanFlip(HeEdge edge)
@@ -187,6 +368,12 @@ namespace CDTSharp
             HeNode b = edge.Twin.Prev.Origin;
 
             return GeometryHelper.QuadConvex(a, b, c, d);
+        }
+
+        public bool ShouldFlip(HeEdge edge)
+        {
+            HeNode opposite = edge.Twin!.Prev.Origin;
+            return edge.Triangle.Circle.Contains(opposite.X, opposite.Y);
         }
 
         public HeTriangle[] Flip(HeEdge edge)
@@ -392,10 +579,11 @@ namespace CDTSharp
         }
     }
 
-    public class HeNode
+    public class HeNode : INode
     {
-        public HeNode(double x, double y)
+        public HeNode(int index, double x, double y)
         {
+            Index = index;
             X = x;
             Y = y;
             Edge = null!;
@@ -406,6 +594,7 @@ namespace CDTSharp
             x = X; y = Y;
         }
 
+        public int Index { get; }
         public HeEdge Edge { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
@@ -424,8 +613,6 @@ namespace CDTSharp
             do
             {
                 yield return current;
-                yield return current.Twin!;
-
                 current = current.Prev.Twin!;
             } while (current != null && current != start);
         }

@@ -55,7 +55,7 @@ namespace CDTSharp
             return Math.Atan2(Math.Abs(det), dot);
         }
 
-        public static Node? Intersect(Node p1, Node p2, Node q1, Node q2)
+        public static bool Intersect(double p1x, double p1y, double p2x, double p2y, double q1x, double q1y, double q2x, double q2y, out double x, out double y)
         {
             // P(u) = p1 + u * (p2 - p1)
             // Q(v) = q1 + v * (q2 - q1)
@@ -72,26 +72,29 @@ namespace CDTSharp
             // | a  b | * | u | = | e |
             // | c  d |   | v |   | f |
 
-            double a = p2.X - p1.X, b = q1.X - q2.X;
-            double c = p2.Y - p1.Y, d = q1.Y - q2.Y;
+            x = y = Double.NaN;
 
-            double e = q1.X - p1.X, f = q1.Y - p1.Y;
+            double a = p2x - p1x, b = q1x - q2x;
+            double c = p2y - p1y, d = q1y - q2y;
+            double e = q1x - p1x, f = q1y - p1y;
 
-            // Determinant
             double det = a * d - b * c;
             if (Math.Abs(det) < 1e-12)
-                return null; // Lines are parallel or coincident
+            {
+                return false;
+            }
 
             double u = (e * d - b * f) / det;
             double v = (a * f - e * c) / det;
 
             if (u < 0 || u > 1 || v < 0 || v > 1)
-                return null;
+            {
+                return false;
+            }
 
-            double x = p1.X + u * a;
-            double y = p1.Y + u * c;
-
-            return new Node(-1, x, y);
+            x = p1x + u * a;
+            y = p1y + u * c;
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

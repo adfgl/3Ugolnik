@@ -3,7 +3,7 @@
     public class QuadTree
     {
         readonly QuadNode root;
-        readonly List<Node> _items;
+        readonly List<INode> _items;
 
         public QuadTree(Rectangle bounds, int numPoints)
         {
@@ -15,7 +15,7 @@
 
             root = new QuadNode(bounds, 0, maxDepth, maxItems);
             Bounds = bounds;
-            _items = new List<Node>(numPoints);
+            _items = new List<INode>(numPoints);
         }
 
         public QuadTree(Rectangle bounds, int maxDepth = 10, int maxItems = 8)
@@ -23,14 +23,14 @@
             bounds = ExpandedBounds(bounds);
             root = new QuadNode(bounds, 0, maxDepth, maxItems);
             Bounds = bounds;
-            _items = new List<Node>();
+            _items = new List<INode>();
         }
 
         public Rectangle Bounds { get; }
-        public IReadOnlyList<Node> Items => _items;
+        public IReadOnlyList<INode> Items => _items;
         public int Count => _items.Count;
 
-        public void Add(Node node)
+        public void Add(INode node)
         {
             if (!Bounds.Contains(node.X, node.Y))
             {
@@ -40,9 +40,9 @@
             _items.Add(node);
         }
 
-        public List<Node> Query(Rectangle area)
+        public List<INode> Query(Rectangle area)
         {
-            List<Node> results = new List<Node>();
+            List<INode> results = new List<INode>();
             root.Query(area, results);
             return results;
         }
@@ -56,7 +56,7 @@
             return rect.Expand(dm);
         }
 
-        public Node? TryGet(double x, double y, double precision = 1e-10)
+        public INode? TryGet(double x, double y, double precision = 1e-10)
         {
             return root.TryGet(x, y, precision);
         }
@@ -68,7 +68,7 @@
             readonly Rectangle _bounds;
             readonly double _cx, _cy;
             readonly int _depth, _maxDepth, _maxItems;
-            readonly List<Node> _items;
+            readonly List<INode> _items;
             QuadNode[]? _children;
 
             public QuadNode(Rectangle bounds, int depth, int maxDepth, int maxItems)
@@ -77,13 +77,13 @@
                 _depth = depth;
                 _maxDepth = maxDepth;
                 _maxItems = maxItems;
-                _items = new List<Node>();
+                _items = new List<INode>();
 
                 _cx = (bounds.minX + bounds.maxX) * 0.5;
                 _cy = (bounds.minY + bounds.maxY) * 0.5;
             }
 
-            public void Insert(Node node)
+            public void Insert(INode node)
             {
                 if (_children is not null)
                 {
@@ -95,7 +95,7 @@
                 if (_items.Count > _maxItems && _depth < _maxDepth)
                 {
                     Subdivide();
-                    foreach (Node item in _items)
+                    foreach (INode item in _items)
                     {
                         GetChild(item.X, item.Y)._items.Add(item);
                     }
@@ -103,12 +103,12 @@
                 }
             }
 
-            public Node? TryGet(double x, double y, double eps = 1e-10)
+            public INode? TryGet(double x, double y, double eps = 1e-10)
             {
                 if (_children is null)
                 {
                     double epsSqr = eps * eps;
-                    foreach (Node item in _items)
+                    foreach (INode item in _items)
                     {
                         double dx = item.X - x;
                         double dy = item.Y - y;
@@ -124,7 +124,7 @@
                 {
                     if (_children[i]._bounds.IntersectsCircle(x, y, eps))
                     {
-                        Node? result = _children[i].TryGet(x, y, eps);
+                        INode? result = _children[i].TryGet(x, y, eps);
                         if (result is not null)
                         {
                             return result;
@@ -134,14 +134,14 @@
                 return null;
             }
 
-            public void Query(Rectangle area, List<Node> results)
+            public void Query(Rectangle area, List<INode> results)
             {
                 if (!_bounds.Intersects(area))
                     return;
 
                 if (_children is null)
                 {
-                    foreach (Node item in _items)
+                    foreach (INode item in _items)
                     {
                         if (area.Contains(item.X, item.Y))
                         {
