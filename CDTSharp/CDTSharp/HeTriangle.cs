@@ -2,8 +2,10 @@
 {
     public class HeTriangle
     {
-        public HeTriangle(HeNode a, HeNode b, HeNode c, double? area = null, IEnumerable<int>? parents = null)
+        public HeTriangle(int index, HeNode a, HeNode b, HeNode c, double? area = null)
         {
+            Index = index;
+
             HeEdge ab = new HeEdge(a);
             HeEdge bc = new HeEdge(b);
             HeEdge ca = new HeEdge(c);
@@ -19,19 +21,14 @@
             bc.Next = ca;
             ca.Next = ab;
 
-            Edges[0] = ab;
-            Edges[1] = bc;
-            Edges[2] = ca;
-
             Circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
             Area = area.HasValue ? area.Value : GeometryHelper.Cross(a.X, a.Y, b.X, b.Y, c.X, c.Y) * 0.5;
-            Parents = parents != null ? new List<int>(parents) : new List<int>();
         }
 
+        public int Index { get; }
         public HeEdge Edge { get; set; }
-        public HeEdge[] Edges { get; set; } = new HeEdge[3];
         public Circle Circle { get; }
         public double Area { get; }
-        public List<int> Parents { get; }
+  
     }
 }
