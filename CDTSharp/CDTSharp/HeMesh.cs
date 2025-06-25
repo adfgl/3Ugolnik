@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.Intrinsics.X86;
 using System.Xml.Linq;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CDTSharp
 {
@@ -11,6 +8,117 @@ namespace CDTSharp
     {
         readonly List<HeTriangle> _triangles;
         readonly List<HeNode> _nodes;
+
+        public object? FindContaining(double x, double y, double eps = 1e-6, int searchStart = -1)
+        {
+            if (_triangles.Count == 0) return null;
+
+            int maxSteps = _triangles.Count * 3;
+            int trianglesChecked = 0;
+
+            HeTriangle current = _triangles.Last();
+            if (searchStart < 0 || searchStart >= _triangles.Count)
+            {
+                current = _triangles[searchStart];
+            }
+
+            HeEdge? skipEdge = null;
+            while (true)
+            {
+                if (trianglesChecked++ > maxSteps)
+                {
+                    throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
+                }
+
+                HeEdge? bestExit = null;
+                double worstCross = 0;
+                bool inside = true;
+                foreach (HeEdge edge in current.Forward())
+                {
+                    if (edge == skipEdge)
+                    {
+                        continue;
+                    }
+
+                    var (a, b) = edge;
+                    if (a.Close(x, y, eps))
+                    {
+                        return a;
+                    }
+
+                    if (b.Close(x, y, eps))
+                    {
+                        return b;
+                    }
+
+                    double cross = GeometryHelper.Cross(a.X, a.Y, b.X, b.Y, x, y);
+                    if (Math.Abs(cross) <= eps)
+                    {
+                        double dx = b.X - a.X;
+                        double dy = b.Y - a.Y;
+                        double dot = (x - a.X) * dx + (y - a.Y) * dy;
+                        double lenSq = dx * dx + dy * dy;
+
+                        if (dot >= -eps && dot <= lenSq + eps)
+                        {
+                            return edge;
+                        }
+                    }
+
+                    if (cross < 0)
+                    {
+                        inside = false;
+                        if (bestExit is null || cross < worstCross)
+                        {
+                            worstCross = cross;
+                            bestExit = edge;
+                        }
+                    }
+                }
+
+                if (inside)
+                {
+                    return current;
+                }
+
+                if (bestExit is null || bestExit.Twin is null)
+                {
+                    return null;
+                }
+
+                skipEdge = bestExit.Twin;
+                current = bestExit.Triangle;
+            }
+        }
+
+        public HeEdge? FindEdge(HeNode a, HeNode b)
+        {
+            foreach (HeEdge e in a.Around())
+            {
+                var (start, end) = e;
+                if (start == a && end == b)
+                {
+                    return e;
+                }
+            }
+            return null;
+        }
+
+        public HeEdge? FindEdgeBrute(HeNode a, HeNode b)
+        {
+            foreach (HeTriangle t in _triangles)
+            {
+                foreach (HeEdge e in t.Forward())
+                {
+                    var (start, end) = e;
+                    if (start == a && end == b)
+                    {
+                        return e;
+                    }
+                }
+            }
+            return null;
+        }
 
         public void Add(HeTriangle[] triangles)
         {
@@ -301,6 +409,26 @@ namespace CDTSharp
         public HeEdge Edge { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
+
+        public bool Close(double x, double y, double eps = 1e-6)
+        {
+            double dx = x - X;
+            double dy = y - Y;
+            return dx * dx + dy * dy < eps;
+        }
+
+        public IEnumerable<HeEdge> Around()
+        {
+            HeEdge start = Edge;
+            HeEdge current = Edge;
+            do
+            {
+                yield return current;
+                yield return current.Twin!;
+
+                current = current.Prev.Twin!;
+            } while (current != null && current != start);
+        }
     }
 
     public class HeEdge
@@ -407,5 +535,27 @@ namespace CDTSharp
         public HeEdge Edge { get; set; }
         public Circle Circle { get; set; }
         public double Area { get; set; }
+
+        public IEnumerable<HeEdge> Forward()
+        {
+            HeEdge he = Edge;
+            HeEdge current = he;
+            do
+            {
+                yield return current;
+                current = current.Next;
+            } while (current != he);
+        }
+
+        public IEnumerable<HeEdge> Backward()
+        {
+            HeEdge he = Edge;
+            HeEdge current = he;
+            do
+            {
+                yield return current;
+                current = current.Prev;
+            } while (current != he);
+        }
     }
 }
