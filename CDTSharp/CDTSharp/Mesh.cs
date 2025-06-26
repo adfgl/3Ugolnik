@@ -1,13 +1,10 @@
 ﻿using CDTGeometryLib;
-using System.Xml.Linq;
 
 namespace CDTSharp
 {
     public class Mesh
     {
-        int _superIndex = 3;
         readonly List<HeTriangle> _triangles;
-        readonly List<HeNode> _nodes;
         readonly QuadTree _qt;
         readonly Rectangle _bounds;
 
@@ -72,8 +69,9 @@ namespace CDTSharp
 
             _bounds = new Rectangle(minX, minY, maxX, maxY);
             _qt = new QuadTree(_bounds);
-            _nodes = new List<HeNode>();
             _triangles = new List<HeTriangle>();
+
+            AddSuperStructure(_bounds, 5);
 
             foreach ((Node a, Node b) in conEdges)
             {
@@ -84,9 +82,95 @@ namespace CDTSharp
             {
                 HeNode added = Add(node.X, node.Y, out _);
             }
+
+            if (polygon is not null)
+            {
+                foreach (HeTriangle item in _triangles)
+                {
+                    item.Center(out double x, out double y);
+                    item.Hole = !polygon.Contains(x, y);
+                }
+            }
         }
 
-        public void Refine(Quality quality)
+        Mesh AddSuperStructure(Rectangle bounds, double scale)
+        {
+            double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+            double midx = (bounds.maxX + bounds.minX) * 0.5;
+            double midy = (bounds.maxY + bounds.minY) * 0.5;
+            double size = Math.Max(scale, 2) * dmax;
+
+            HeNode a = new HeNode(-3, midx - size, midy - size);
+            HeNode b = new HeNode(-2, midx + size, midy - size);
+            HeNode c = new HeNode(-1, midx, midy + size);
+
+            HeTriangle triangle = new HeTriangle(0, a, b, c);
+            _triangles.Add(triangle);
+
+            return this;
+        }
+
+        public Mesh RemoveSuperStructure()
+        {
+            int count = 0;
+            int write = 0;
+
+            foreach (HeTriangle tri in _triangles)
+            {
+                bool discard = tri.Hole || tri.ContainsSuper();
+                if (!discard) continue;
+
+                tri.Dead = true;
+                foreach (HeEdge edge in tri.Forward())
+                {
+                    HeNode origin = edge.Origin;
+                    if (origin.Edge != edge)
+                    {
+                        continue;
+                    }
+
+                    foreach (HeEdge item in origin.Around())
+                    {
+                        if (item.Triangle.Dead) continue;
+
+                        origin.Edge = item;
+                        break;
+                    }
+                }
+            }
+
+            for (int read = 0; read < _triangles.Count; read++)
+            {
+                HeTriangle tri = _triangles[read];
+
+                if (tri.Dead)
+                {
+                    foreach (HeEdge edge in tri.Forward())
+                    {
+                        if (edge.Twin is not null)
+                        {
+                            edge.Twin.Twin = null;
+                            edge.Twin = null;
+                        }
+                        edge.Triangle = null!;
+                    }
+                }
+                else
+                {
+                    tri.Index = count++;
+                    _triangles[write++] = tri;
+                }
+            }
+
+            if (write < _triangles.Count)
+            {
+                _triangles.RemoveRange(write, _triangles.Count - write);
+            }
+
+            return this;
+        }
+
+        public Mesh Refine(Quality quality)
         {
             HashSet<Constraint> seen = new HashSet<Constraint>();
 
@@ -125,7 +209,7 @@ namespace CDTSharp
                         continue;
                     }
 
-                    HeNode node = new HeNode(_nodes.Count, seg.circle.x, seg.circle.y);
+                    HeNode node = new HeNode(_qt.Count, seg.circle.x, seg.circle.y);
                     HeTriangle[] tris = Split(edge, node);
                     List<HeTriangle> affected = Add(node, tris);
                     foreach (HeTriangle t in affected)
@@ -179,6 +263,7 @@ namespace CDTSharp
                     }
                 }
             }
+            return this;
         }
 
         public bool Bad(HeTriangle t, Quality q)
@@ -194,7 +279,7 @@ namespace CDTSharp
             double minEdgeSqr = double.MaxValue;
             foreach (HeEdge e in t.Forward())
             {
-                if (e.Origin.Index < _superIndex)
+                if (e.Origin.Index < 0)
                 {
                     return false;
                 }
@@ -238,7 +323,7 @@ namespace CDTSharp
                 return (HeNode)element;
             }
 
-            HeNode node = new HeNode(_nodes.Count, x, y);
+            HeNode node = new HeNode(_qt.Count, x, y);
 
             HeTriangle[] newTriangles = element switch
             {
@@ -349,7 +434,7 @@ namespace CDTSharp
             }
             else
             {
-                HeNode node = new HeNode(_nodes.Count, x, y);
+                HeNode node = new HeNode(_qt.Count, x, y);
                 HeTriangle[] tris = Split(edge, node);
 
                 toInsert.Enqueue((start, node));
@@ -389,7 +474,6 @@ namespace CDTSharp
 
         public List<HeTriangle> Add(HeNode node, HeTriangle[] triangles)
         {
-            _nodes.Add(node);
             _qt.Add(node);
             return Add(triangles);
         }
@@ -665,7 +749,6 @@ namespace CDTSharp
             new1.Edge.Next.CopyProperties(cd);
 
             new0.Edge.Next.SetTwin(new1.Edge.Prev);
-
             return [new0, new1];
         }
 
@@ -772,7 +855,6 @@ namespace CDTSharp
             {
                 new0.Edge.Next.Constrained = new1.Edge.Prev.Constrained = true;
             }
-
             return [new0, new1];
         }
 

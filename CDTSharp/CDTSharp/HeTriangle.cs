@@ -45,16 +45,31 @@ namespace CDTSharp
             ca = bc.Next;
         }
 
-        public int Index { get; }
+        public int Index { get; set; }
         public HeEdge Edge { get; set; }
         public Circle Circle { get; set; }
+
         public bool Dead { get; set; } = false;
+        public bool Hole { get; set; } = false;
+
+
+        public bool ContainsSuper()
+        {
+            return Edge.Origin.Index < 0 || Edge.Next.Origin.Index < 0 || Edge.Next.Next.Origin.Index < 0;
+        }
 
         public double Area()
         {
             Nodes(out HeNode a, out HeNode b, out HeNode c);
             double area = GeometryHelper.Cross(a, b, c.X, c.Y) * 0.5;
             return area;
+        }
+
+        public void Center(out double x, out double y)
+        {
+            Nodes(out HeNode a, out HeNode b, out HeNode c);
+            x = (a.X + b.X + c.X) / 3.0;
+            y = (a.Y + b.Y + c.Y) / 3.0;
         }
 
         public IEnumerable<HeEdge> Forward()
