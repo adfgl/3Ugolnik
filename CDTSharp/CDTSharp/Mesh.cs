@@ -1,6 +1,4 @@
-﻿
-using CDTGeometryLib;
-using System;
+﻿using CDTGeometryLib;
 using System.Xml.Linq;
 
 namespace CDTSharp
@@ -13,14 +11,85 @@ namespace CDTSharp
         readonly QuadTree _qt;
         readonly Rectangle _bounds;
 
-        public Mesh(List<Polygon> polygons)
+        public Mesh(ClosedPolygon? polygon, List<(Node a, Node b)>? constraintEdges = null, List<Node>? costraintPoints = null)
         {
-            
+            List<(Node a, Node b)> conEdges = new List<(Node a, Node b)>();
+            List<Node> conPoints = new List<Node>();
+
+            double minX, minY, maxX, maxY;
+            minX = minY = double.MaxValue;
+            maxX = maxY = double.MinValue;
+
+            void process(Node node)
+            {
+                double x = node.X;
+                double y = node.Y;
+                if (minX > x) minX = x;
+                if (minY > y) minY = y;
+                if (maxX < x) maxX = x;
+                if (maxY < y) maxY = y;
+            }
+
+            void processPoly(ClosedPolygon polygon)
+            {
+                for (int i = 0; i < polygon.Points.Count - 1; i++)
+                {
+                    Node a = polygon.Points[i];
+                    Node b = polygon.Points[i + 1];
+
+                    process(a);
+                    conEdges.Add((a, b));
+                }
+            }
+
+            if (polygon is not null)
+            {
+                processPoly(polygon);
+                foreach (ClosedPolygon hole in polygon.Holes)
+                {
+                    processPoly(hole);
+                }
+            }
+
+            if (constraintEdges is not null)
+            {
+                foreach ((Node a, Node b) in constraintEdges)
+                {
+                    process(a);
+                    process(b);
+                    conEdges.Add((a, b));
+                }
+            }
+
+            if (costraintPoints is not null)
+            {
+                foreach (Node node in costraintPoints)
+                {
+                    process(node);
+                    conPoints.Add(node);
+                }
+            }
+
+            _bounds = new Rectangle(minX, minY, maxX, maxY);
+            _qt = new QuadTree(_bounds);
+            _nodes = new List<HeNode>();
+            _triangles = new List<HeTriangle>();
+
+            foreach ((Node a, Node b) in conEdges)
+            {
+                List<HeEdge> added = Add(a.X, a.Y, b.X, b.Y);
+            }
+
+            foreach (Node node in conPoints)
+            {
+                HeNode added = Add(node.X, node.Y, out _);
+            }
         }
 
         public void Refine(Quality quality)
         {
             HashSet<Constraint> seen = new HashSet<Constraint>();
+
             Queue<HeTriangle> triangleQueue = new Queue<HeTriangle>();
             Queue<Constraint> segmentQueue = new Queue<Constraint>();
             foreach (HeTriangle t in _triangles)

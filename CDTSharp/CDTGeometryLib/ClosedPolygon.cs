@@ -1,8 +1,8 @@
 ﻿namespace CDTGeometryLib
 {
-    public class Polygon
+    public class ClosedPolygon
     {
-        public Polygon(List<Node> points, List<Polygon>? holes = null)
+        public ClosedPolygon(List<Node> points, List<ClosedPolygon>? holes = null)
         {
             double minX, minY, maxX, maxY;
             minX = minY = double.MaxValue;
@@ -28,12 +28,12 @@
                 Points.Add(first);
             }
             Bounds = new Rectangle(minX, minY, maxX, maxY);
-            Holes = holes is null ? new List<Polygon>() : holes;
+            Holes = holes is null ? new List<ClosedPolygon>() : holes;
         }
 
         public List<Node> Points { get; set; }
         public Rectangle Bounds { get; set; }
-        public List<Polygon> Holes { get; set; }
+        public List<ClosedPolygon> Holes { get; set; }
 
         public bool Contains(double x, double y, double tolernace = 0)
         {
@@ -44,7 +44,7 @@
 
             if (GeometryHelper.Contains(Points, x, y, tolernace))
             {
-                foreach (Polygon hole in Holes)
+                foreach (ClosedPolygon hole in Holes)
                 {
                     if (hole.Bounds.Contains(x, y) && GeometryHelper.Contains(hole.Points, x, y, tolernace))
                     {
@@ -55,7 +55,7 @@
             return true;
         }
 
-        public bool Contains(Polygon other, double tolernace = 0)
+        public bool Contains(ClosedPolygon other, double tolernace = 0)
         {
             if (!Bounds.Contains(other.Bounds))
             {
@@ -74,7 +74,7 @@
             return true;
         }
 
-        public bool Intersects(Polygon other, double tolernace = 0)
+        public bool Intersects(ClosedPolygon other, double tolernace = 0)
         {
             if (!Bounds.Intersects(other.Bounds))
             {
