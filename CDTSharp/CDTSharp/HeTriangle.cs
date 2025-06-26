@@ -49,7 +49,7 @@ namespace CDTSharp
         public HeEdge Edge { get; set; }
         public Circle Circle { get; set; }
 
-        public bool Dead { get; set; } = false;
+        public bool Removed { get; set; } = false;
         public bool Hole { get; set; } = false;
 
 

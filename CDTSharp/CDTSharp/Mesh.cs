@@ -112,15 +112,12 @@ namespace CDTSharp
 
         public Mesh RemoveSuperStructure()
         {
-            int count = 0;
-            int write = 0;
-
             foreach (HeTriangle tri in _triangles)
             {
                 bool discard = tri.Hole || tri.ContainsSuper();
                 if (!discard) continue;
 
-                tri.Dead = true;
+                tri.Removed = true;
                 foreach (HeEdge edge in tri.Forward())
                 {
                     HeNode origin = edge.Origin;
@@ -131,7 +128,7 @@ namespace CDTSharp
 
                     foreach (HeEdge item in origin.Around())
                     {
-                        if (item.Triangle.Dead) continue;
+                        if (item.Triangle.Removed) continue;
 
                         origin.Edge = item;
                         break;
@@ -139,11 +136,13 @@ namespace CDTSharp
                 }
             }
 
+            int write = 0;
+            int count = 0;
             for (int read = 0; read < _triangles.Count; read++)
             {
                 HeTriangle tri = _triangles[read];
 
-                if (tri.Dead)
+                if (tri.Removed)
                 {
                     foreach (HeEdge edge in tri.Forward())
                     {
@@ -268,7 +267,7 @@ namespace CDTSharp
 
         public bool Bad(HeTriangle t, Quality q)
         {
-            if (t.Dead)
+            if (t.Removed)
             {
                 return false;
             }
@@ -630,7 +629,7 @@ namespace CDTSharp
                 if (index < _triangles.Count)
                 {
                     HeTriangle old = _triangles[index];
-                    old.Dead = true;
+                    old.Removed = true;
                     old.Edges(out HeEdge ab, out HeEdge bc, out HeEdge ca);
 
                     HeNode a = ab.Origin;
