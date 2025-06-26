@@ -8,6 +8,8 @@ namespace CDTSharp
         readonly QuadTree _qt;
         readonly Rectangle _bounds;
 
+        public List<HeTriangle> Triangles => _triangles;
+
         public Mesh(ClosedPolygon? polygon, List<(Node a, Node b)>? constraintEdges = null, List<Node>? costraintPoints = null)
         {
             List<(Node a, Node b)> conEdges = new List<(Node a, Node b)>();
@@ -189,7 +191,7 @@ namespace CDTSharp
                         continue;
                     }
 
-                    Constraint segment = new Constraint(e.Origin, e.Next.Origin, EConstraint.Undefined);
+                    Constraint segment = new Constraint(e.Origin, e.Next.Origin);
                     if (seen.Add(segment) && segment.Enchrouched(_qt))
                     {
                         segmentQueue.Enqueue(segment);

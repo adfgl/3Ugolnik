@@ -34,7 +34,7 @@ namespace CDTGeometryLib
         }
 
         public Rectangle Bounds { get; }
-        public IReadOnlyList<Node> Items => _items;
+        public List<Node> Items => _items;
         public int Count => _items.Count;
 
         public void Add(Node node)
