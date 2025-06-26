@@ -5,39 +5,38 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CDTSharp
+namespace CDTGeometryLib
 {
     public static class GeometryHelper
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Cross(double startX, double startY, double endX, double endY, double x, double y)
+        public static bool CloseOrEqual(Node a, Node b, double eps)
         {
-            return endX * (y - startY) - endY * (x - startX);
+            if (a == b) return true;
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            return dx * dx + dy * dy < eps;
+        }
+
+        public static double Distance(Node a, Node b)
+        {
+            double dx = a.X - b.X;
+            double dy = a.Y - b.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Cross(Node start, Node end, Node pt) => Cross(start.X, start.Y, end.X, end.Y, pt.X, pt.Y);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double Cross(HeNode start, HeNode end, HeNode pt) => Cross(start.X, start.Y, end.X, end.Y, pt.X, pt.Y);
+        public static double Cross(Node start, Node end, double x, double y)
+        {
+            return end.X * (y - start.Y) - end.Y * (x - start.X);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool QuadConvex(Node a, Node b, Node c, Node d)
         {
-            double ab_bc = Cross(a, b, c);
-            double bc_cd = Cross(b, c, d);
-            double cd_da = Cross(c, d, a);
-            double da_ab = Cross(d, a, b);
-            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool QuadConvex(HeNode a, HeNode b, HeNode c, HeNode d)
-        {
-            double ab_bc = Cross(a, b, c);
-            double bc_cd = Cross(b, c, d);
-            double cd_da = Cross(c, d, a);
-            double da_ab = Cross(d, a, b);
+            double ab_bc = Cross(a, b, c.X, c.Y);
+            double bc_cd = Cross(b, c, d.X, d.Y);
+            double cd_da = Cross(c, d, a.X, a.Y);
+            double da_ab = Cross(d, a, b.X, b.Y);
             return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
         }
 
@@ -73,7 +72,6 @@ namespace CDTSharp
             // | c  d |   | v |   | f |
 
             x = y = Double.NaN;
-
             double a = p2x - p1x, b = q1x - q2x;
             double c = p2y - p1y, d = q1y - q2y;
             double e = q1x - p1x, f = q1y - p1y;
@@ -97,54 +95,16 @@ namespace CDTSharp
             return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double DistanceSquared(Node a, Node b)
-        {
-            double dx = a.X - b.X;
-            double dy = a.Y - b.Y;
-            return dx * dx + dy * dy;
-        }
-
-        public static double Distance(Node a, Node b)
-        {
-            return Math.Sqrt(DistanceSquared(a, b));
-        }
-
-        public static bool PointOnSegment(Node a, Node b, Node p, double tolerance = 1e-9)
-        {
-            if (p.X < Math.Min(a.X, b.X) - tolerance || p.X > Math.Max(a.X, b.X) + tolerance ||
-                p.Y < Math.Min(a.Y, b.Y) - tolerance || p.Y > Math.Max(a.Y, b.Y) + tolerance)
-                return false;
-
-            double dx = b.X - a.X;
-            double dy = b.Y - a.Y;
-
-            double dxp = p.X - a.X;
-            double dyp = p.Y - a.Y;
-
-            double cross = dx * dyp - dy * dxp;
-            if (Math.Abs(cross) > tolerance)
-                return false;
-
-            double dot = dx * dx + dy * dy;
-            if (dot < tolerance)
-                return Distance(a, p) <= tolerance;
-
-            double t = (dxp * dx + dyp * dy) / dot;
-            return t >= -tolerance && t <= 1 + tolerance;
-        }
-
         public static bool Contains(List<Node> closedPolygon, double x, double y, double tolerance = 0)
         {
             int count = closedPolygon.Count - 1;
             bool inside = false;
 
-            Node pt = new Node(-1, x, y);
             for (int i = 0, j = count - 1; i < count; j = i++)
             {
                 Node a = closedPolygon[i];
                 Node b = closedPolygon[j];
-                if (PointOnSegment(a, b, pt, tolerance))
+                if (PointOnSegment(a, b, x, y, tolerance))
                 {
                     return true;
                 }
@@ -165,6 +125,37 @@ namespace CDTSharp
             return inside;
         }
 
- 
+        public static bool PointOnSegment(Node a, Node b, double x, double y, double tolerance = 1e-9)
+        {
+            if (x < Math.Min(a.X, b.X) - tolerance || x > Math.Max(a.X, b.X) + tolerance ||
+                y < Math.Min(a.Y, b.Y) - tolerance || y > Math.Max(a.Y, b.Y) + tolerance)
+                return false;
+
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+
+            double dxp = x - a.X;
+            double dyp = y - a.Y;
+
+            double cross = dx * dyp - dy * dxp;
+            if (Math.Abs(cross) > tolerance)
+                return false;
+
+            double dot = dx * dx + dy * dy;
+            if (dot < tolerance)
+            {
+                double ddx = a.X - x;
+                double ddy = a.Y - y;
+                return ddx * ddx + ddy * ddy <= tolerance;
+            }
+
+            double t = (dxp * dx + dyp * dy) / dot;
+            return t >= -tolerance && t <= 1 + tolerance;
+        }
+
+        public static bool Intersect(Node p1, Node p2, Node q1, Node q2, out double x, out double y)
+        {
+            return Intersect(p1.X, p1.Y, p2.X, p2.Y, q1.X, q1.Y, q2.X, q2.Y, out x, out y);
+        }
     }
 }

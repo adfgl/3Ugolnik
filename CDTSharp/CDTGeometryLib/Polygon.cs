@@ -1,4 +1,4 @@
-﻿namespace CDTSharp
+﻿namespace CDTGeometryLib
 {
     public class Polygon
     {

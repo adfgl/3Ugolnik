@@ -1,4 +1,4 @@
-﻿namespace CDTSharp
+﻿namespace CDTGeometryLib
 {
     public readonly struct Circle
     {
@@ -32,7 +32,7 @@
 
             var x31 = x3 - x1;
             var y31 = y3 - y1;
-            
+
             var x21 = x2 - x1;
             var y21 = y2 - y1;
 
