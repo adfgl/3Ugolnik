@@ -43,35 +43,30 @@ namespace CDTSharp
             List<HeEdge> segments = new List<HeEdge>();
             while (toInsert.Count > 0)
             {
-                var (a, b) = toInsert.Dequeue();
-                if (a.Index == b.Index)
+                var (start, end) = toInsert.Dequeue();
+                if (start.Index == end.Index)
                 {
                     continue;
                 }
 
-                HeEdge segment = InsertConstraintSegment(a, b, toInsert);
-                segments.Add(segment);
-            }
-            return segments;
-        }
-
-        HeEdge InsertConstraintSegment(HeNode start, HeNode end, Queue<(HeNode, HeNode)> toInsert)
-        {
-            while (true)
-            {
                 HeEdge? existing = FindEdge(start, end, true);
                 if (existing is not null)
                 {
                     existing.SetConstraint(true);
-                    return existing;
+                    segments.Add(existing);
+                    continue;
                 }
 
-                HeTriangle entrance = Entrance(start, end);
                 while (true)
                 {
-                  
+                    HeTriangle entrance = Entrance(start, end);
+                    if (WalkAndInsert(entrance, start, end, toInsert))
+                    {
+                        break;
+                    }
                 }
             }
+            return segments;
         }
 
         bool WalkAndInsert(HeTriangle triangle, HeNode start, HeNode end, Queue<(HeNode, HeNode)> toInsert)
@@ -86,7 +81,31 @@ namespace CDTSharp
                         return true;
                     }
                 }
+
+                HeEdge exit = FindExitEdge(current, end);
+                if (exit.Twin is null)
+                {
+                    throw new Exception("Constraint insertion failed: no adjacent triangle during walk.");
+                }
+                current = exit.Twin.Triangle;
             }
+        }
+
+        HeEdge FindExitEdge(HeTriangle triangle, HeNode target)
+        {
+            var (x, y) = target;
+            HeEdge exit = null!;
+            double bestCross = 0;
+            foreach (HeEdge edge in triangle.Forward())
+            {
+                double cross = edge.Orientation(x, y);
+                if (exit is null || cross < bestCross)
+                {
+                    bestCross = cross;
+                    exit = edge;
+                }
+            }
+            return exit;
         }
 
         bool TrySplitOrFlip(HeEdge edge, HeNode start, HeNode end, Queue<(HeNode, HeNode)> toInsert)
@@ -114,6 +133,9 @@ namespace CDTSharp
             {
                 HeNode node = new HeNode(_nodes.Count, x, y);
                 HeTriangle[] tris = Split(edge, node);
+
+                toInsert.Enqueue((start, node));
+                toInsert.Enqueue((node, end));
                 Add(node, tris);
             }
             return true;
@@ -130,7 +152,7 @@ namespace CDTSharp
 
                     if (a == start || b == end)
                     {
-                        double cross = GeometryHelper.Cross(start.X, start.Y, end.X, end.Y, b.X, b.Y);
+                        double cross = edge.Orientation(b.X, b.Y);
                         if (cross >= 0)
                         {
                             count++;
@@ -151,7 +173,6 @@ namespace CDTSharp
         {
             _nodes.Add(node);
             _qt.Add(node);
-
             Add(triangles);
         }
 
@@ -225,7 +246,7 @@ namespace CDTSharp
                         return b;
                     }
 
-                    double cross = GeometryHelper.Cross(a.X, a.Y, b.X, b.Y, x, y);
+                    double cross = edge.Orientation(x, y);
                     if (Math.Abs(cross) <= eps)
                     {
                         double dx = b.X - a.X;
@@ -638,17 +659,11 @@ namespace CDTSharp
         public HeTriangle Triangle { get; set; } = null!;
         public bool Constrained { get; set; } = false;
 
-        public EOrientation Orientation(double x, double y, double eps = 0)
+        public double Orientation(double x, double y)
         {
             var (sx, sy) = Origin;
             var (ex, ey) = Next.Origin;
-
-            double cross = GeometryHelper.Cross(sx, sy, ex, ey, x, y);
-            if (Math.Abs(cross) <= eps)
-            {
-                return EOrientation.Colinear;
-            }
-            return cross > 0 ? EOrientation.Left : EOrientation.Right;
+            return GeometryHelper.Cross(sx, sy, ex, ey, x, y);
         }
 
         public void CopyProperties(HeEdge? twin)

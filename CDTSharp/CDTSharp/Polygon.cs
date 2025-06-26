@@ -91,7 +91,7 @@
                 {
                     Node q1 = ab[j];
                     Node q2 = ab[j + 1];
-                    if (GeometryHelper.Intersect(p1, p2, q1, q2) is not null)
+                    if (GeometryHelper.Intersect(p1.X, p1.Y, p2.X, p2.Y, q1.X, q1.Y, q2.X, q2.Y, out _, out _))
                     {
                         return true;
                     }
