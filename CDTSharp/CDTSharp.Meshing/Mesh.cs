@@ -712,6 +712,26 @@ namespace CDTSharp.Meshing
                 return false;
             }
 
+            /*
+                           d           
+                           /\          
+                          /  \         
+                         /    \        
+                        /      \       
+                       /   t0   \      
+                      /          \     
+                     /            \    
+                  a +--------------+ c 
+                     \            /    
+                      \          /     
+                       \   t1   /      
+                        \      /       
+                         \    /        
+                          \  /         
+                           \/          
+                            b          
+             */
+
             var (a, c) = edge;
             Node d = edge.Prev.Origin;
             Node b = edge.Twin.Prev.Origin;

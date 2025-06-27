@@ -7,6 +7,8 @@ namespace CDTSharp.Meshing
     {
         public static string ToSvg(this Mesh mesh, int size = 1000, float padding = 10)
         {
+            // https://www.svgviewer.dev/
+
             List<Triangle> triangles = mesh.Triangles;
             if (triangles.Count == 0)
             {
