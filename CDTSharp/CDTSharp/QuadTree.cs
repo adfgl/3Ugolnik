@@ -1,4 +1,11 @@
-﻿namespace CDTlib
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace CDTSharp
 {
     public class QuadTree
     {
@@ -27,7 +34,7 @@
         }
 
         public Rectangle Bounds { get; }
-        public IReadOnlyList<Node> Items => _items;
+        public List<Node> Items => _items;
         public int Count => _items.Count;
 
         public void Add(Node node)
@@ -52,7 +59,7 @@
             double dx = rect.maxX - rect.minX;
             double dy = rect.maxY - rect.minY;
             double dm = Math.Max(dx, dy);
-            double exp = Math.Max(10, dm * 1.01);
+            double exp = Math.Max(10, dm * 1.1);
             return rect.Expand(dm);
         }
 

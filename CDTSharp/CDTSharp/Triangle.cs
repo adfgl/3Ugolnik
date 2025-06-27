@@ -1,21 +1,14 @@
-﻿using CDTGeometryLib;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace CDTSharp
+﻿namespace CDTSharp
 {
-    public class HeTriangle
+    public class Triangle
     {
-        public HeTriangle(int index, HeNode a, HeNode b, HeNode c)
+        public Triangle(int index, Node a, Node b, Node c)
         {
             Index = index;
 
-            HeEdge ab = new HeEdge(a);
-            HeEdge bc = new HeEdge(b);
-            HeEdge ca = new HeEdge(c);
+            Edge ab = new Edge(a);
+            Edge bc = new Edge(b);
+            Edge ca = new Edge(c);
 
             a.Edge = ab;
             b.Edge = bc;
@@ -31,14 +24,14 @@ namespace CDTSharp
             Circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
         }
 
-        public void Nodes(out HeNode a, out HeNode b, out HeNode c)
+        public void Nodes(out Node a, out Node b, out Node c)
         {
             a = Edge.Origin;
             b = Edge.Next.Origin;
             c = Edge.Next.Next.Origin;
         }
 
-        public void Edges(out HeEdge ab, out HeEdge bc, out HeEdge ca)
+        public void Edges(out Edge ab, out Edge bc, out Edge ca)
         {
             ab = Edge;
             bc = ab.Next;
@@ -46,12 +39,11 @@ namespace CDTSharp
         }
 
         public int Index { get; set; }
-        public HeEdge Edge { get; set; }
+        public Edge Edge { get; set; }
         public Circle Circle { get; set; }
 
         public bool Removed { get; set; } = false;
         public bool Hole { get; set; } = false;
-
 
         public bool ContainsSuper()
         {
@@ -60,22 +52,22 @@ namespace CDTSharp
 
         public double Area()
         {
-            Nodes(out HeNode a, out HeNode b, out HeNode c);
+            Nodes(out Node a, out Node b, out Node c);
             double area = GeometryHelper.Cross(a, b, c.X, c.Y) * 0.5;
             return area;
         }
 
         public void Center(out double x, out double y)
         {
-            Nodes(out HeNode a, out HeNode b, out HeNode c);
+            Nodes(out Node a, out Node b, out Node c);
             x = (a.X + b.X + c.X) / 3.0;
             y = (a.Y + b.Y + c.Y) / 3.0;
         }
 
-        public IEnumerable<HeEdge> Forward()
+        public IEnumerable<Edge> Forward()
         {
-            HeEdge he = Edge;
-            HeEdge current = he;
+            Edge he = Edge;
+            Edge current = he;
             do
             {
                 yield return current;
@@ -83,10 +75,10 @@ namespace CDTSharp
             } while (current != he);
         }
 
-        public IEnumerable<HeEdge> Backward()
+        public IEnumerable<Edge> Backward()
         {
-            HeEdge he = Edge;
-            HeEdge current = he;
+            Edge he = Edge;
+            Edge current = he;
             do
             {
                 yield return current;

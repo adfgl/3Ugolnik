@@ -1,4 +1,4 @@
-﻿namespace CDTGeometryLib
+﻿namespace CDTSharp
 {
     public readonly struct Constraint : IEquatable<Constraint>
     {

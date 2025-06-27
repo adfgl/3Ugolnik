@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTSharpTests", "CDTSharpTe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTio", "CDTio\CDTio.csproj", "{6115C558-9064-4618-9DE8-E10D7BCA05D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTGeometryLib", "CDTGeometryLib\CDTGeometryLib.csproj", "{7988DA35-BBE5-4B6E-A0A5-30CBB420F04C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DebugConsole", "DebugConsole\DebugConsole.csproj", "{06647311-0ACD-492E-B8E9-63FE77559B38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +29,10 @@ Global
 		{6115C558-9064-4618-9DE8-E10D7BCA05D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6115C558-9064-4618-9DE8-E10D7BCA05D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6115C558-9064-4618-9DE8-E10D7BCA05D0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7988DA35-BBE5-4B6E-A0A5-30CBB420F04C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7988DA35-BBE5-4B6E-A0A5-30CBB420F04C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7988DA35-BBE5-4B6E-A0A5-30CBB420F04C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7988DA35-BBE5-4B6E-A0A5-30CBB420F04C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06647311-0ACD-492E-B8E9-63FE77559B38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06647311-0ACD-492E-B8E9-63FE77559B38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06647311-0ACD-492E-B8E9-63FE77559B38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06647311-0ACD-492E-B8E9-63FE77559B38}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

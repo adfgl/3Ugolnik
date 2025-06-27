@@ -1,20 +1,27 @@
-﻿using CDTGeometryLib;
-
-namespace CDTSharp
+﻿namespace CDTSharp
 {
-    public class HeNode : Node
+    public class Node
     {
-        public HeNode(int index, double x, double y) : base(index, x, y)
+        public Node()
         {
-
+            
         }
+
+        public Node(int index, double x, double y)
+        {
+            Index = index;
+            X = x; Y = y;
+        }
+
+        public int Index { get; set; } = -1;
+        public double X { get; set; }
+        public double Y { get; set; }
+        public Edge Edge { get; set; } = null!;
 
         public void Deconstruct(out double x, out double y)
         {
             x = X; y = Y;
         }
-
-        public HeEdge Edge { get; set; } = null!;
 
         public bool Close(double x, double y, double eps = 1e-6)
         {
@@ -23,10 +30,10 @@ namespace CDTSharp
             return dx * dx + dy * dy < eps;
         }
 
-        public IEnumerable<HeEdge> Around()
+        public IEnumerable<Edge> Around()
         {
-            HeEdge start = Edge;
-            HeEdge current = Edge;
+            Edge start = Edge;
+            Edge current = Edge;
             do
             {
                 yield return current;

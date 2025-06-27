@@ -1,5 +1,4 @@
-﻿using CDTGeometryLib;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,24 +6,24 @@ using System.Threading.Tasks;
 
 namespace CDTSharp
 {
-    public class HeEdge
+    public class Edge
     {
-        public HeEdge(HeNode origin)
+        public Edge(Node origin)
         {
             Origin = origin;
         }
 
-        public void Deconstruct(out HeNode start, out HeNode end)
+        public void Deconstruct(out Node start, out Node end)
         {
             start = Origin;
             end = Next.Origin;
         }
 
-        public HeNode Origin { get; }
-        public HeEdge Next { get; set; } = null!;
-        public HeEdge Prev => Next.Next;
-        public HeEdge? Twin { get; set; } = null;
-        public HeTriangle Triangle { get; set; } = null!;
+        public Node Origin { get; }
+        public Edge Next { get; set; } = null!;
+        public Edge Prev => Next.Next;
+        public Edge? Twin { get; set; } = null;
+        public Triangle Triangle { get; set; } = null!;
         public bool Constrained { get; set; } = false;
 
         public double SquareLength()
@@ -36,7 +35,7 @@ namespace CDTSharp
             return dx * dx + dy * dy;
         }
 
-        public bool Contains(HeNode node)
+        public bool Contains(Node node)
         {
             return Origin == node || Next.Origin == node;
         }
@@ -46,7 +45,7 @@ namespace CDTSharp
             return GeometryHelper.Cross(Origin, Next.Origin, x, y);
         }
 
-        public void CopyProperties(HeEdge? twin)
+        public void CopyProperties(Edge? twin)
         {
             Twin = twin;
             if (twin is not null)
@@ -55,7 +54,7 @@ namespace CDTSharp
             }
         }
 
-        public void SetTwin(HeEdge? twin)
+        public void SetTwin(Edge? twin)
         {
             Twin = twin;
             if (twin is not null)
