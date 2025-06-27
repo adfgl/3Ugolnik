@@ -17,6 +17,7 @@
         public CDTSegmentType Type { get; set; }
         public CDTNode Start { get; set; }
         public CDTNode End { get; set; }
+        public int Segments { get; set; } = 1;
     }
 
     public class CDTLineSegment : CDTSegment

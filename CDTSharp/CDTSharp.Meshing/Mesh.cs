@@ -9,10 +9,11 @@ namespace CDTSharp.Meshing
         readonly Rectangle _bounds;
 
         public List<Triangle> Triangles => _triangles;
+        public List<Node> Nodes => _qt.Items;
 
         public Mesh(ClosedPolygon? polygon, List<(Node a, Node b)>? constraintEdges = null, List<Node>? costraintPoints = null)
         {
-            List<(Node a, Node b)> conEdges = new List<(Node a, Node b)>();
+            List<Constraint> conEdges = new List<Constraint>();
             List<Node> conPoints = new List<Node>();
 
             double minX, minY, maxX, maxY;
@@ -29,7 +30,7 @@ namespace CDTSharp.Meshing
                 if (maxY < y) maxY = y;
             }
 
-            void processPoly(ClosedPolygon polygon)
+            void processPoly(ClosedPolygon polygon, EConstraint type)
             {
                 for (int i = 0; i < polygon.Points.Count - 1; i++)
                 {
@@ -37,16 +38,16 @@ namespace CDTSharp.Meshing
                     Node b = polygon.Points[i + 1];
 
                     process(a);
-                    conEdges.Add((a, b));
+                    conEdges.Add(new Constraint(a, b, type));
                 }
             }
 
             if (polygon is not null)
             {
-                processPoly(polygon);
+                processPoly(polygon, EConstraint.Contour);
                 foreach (ClosedPolygon hole in polygon.Holes)
                 {
-                    processPoly(hole);
+                    processPoly(hole, EConstraint.Hole);
                 }
             }
 
@@ -56,7 +57,7 @@ namespace CDTSharp.Meshing
                 {
                     process(a);
                     process(b);
-                    conEdges.Add((a, b));
+                    conEdges.Add(new Constraint(a, b, EConstraint.User));
                 }
             }
 
@@ -75,8 +76,10 @@ namespace CDTSharp.Meshing
 
             AddSuperStructure(_bounds, 5);
 
-            foreach ((Node a, Node b) in conEdges)
+            foreach (Constraint edge in conEdges)
             {
+                Node a = edge.a;
+                Node b = edge.b;
                 List<Edge> added = Add(a.X, a.Y, b.X, b.Y);
             }
 

@@ -2,8 +2,8 @@
 {
     public class CDTMesh
     {
-        public List<CDTTriangle> Triangles { get; set; } = new List<CDTTriangle>();
-        public List<CDTNode> Nodes { get; set; } = new List<CDTNode>();
+        public CDTTriangle[] Triangles { get; set; } = Array.Empty<CDTTriangle>();
+        public CDTNode[] Nodes { get; set; } = Array.Empty<CDTNode>();
         public CDTSummary? Summary {  get; set; } = null;
     }
 }

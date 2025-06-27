@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CDTSharp.IO\CDTSharp.IO.csproj" />
+    <ProjectReference Include="..\CDTSharp.Meshing\CDTSharp.Meshing.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -2,13 +2,21 @@
 {
     public class CDTSummary
     {
-        public int TriangleCount { get; }
-        public int VertexCount { get; }
-        public double MinArea { get; }
-        public double MaxArea { get; }
-        public double AvgArea { get; }
-        public double MinAngle { get; }
-        public double MaxAngle { get; }
-        public double AvgAngle { get; }
+        public long Execution { get; set; }
+
+        public int TriangleCount { get; set; }
+        public int NodeCount { get; set; }
+        
+        public double MinEdge { get; set; }
+        public double MaxEdge { get; set; }
+        public double AvgEdge { get; set; }
+
+        public double MinArea { get; set; }
+        public double MaxArea { get; set; }
+        public double AvgArea { get; set; }
+
+        public double MinAngle { get; set; }
+        public double MaxAngle { get; set; }
+        public double AvgAngle { get; set; }
     }
 }
