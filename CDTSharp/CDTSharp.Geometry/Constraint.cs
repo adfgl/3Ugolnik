@@ -1,6 +1,6 @@
 ﻿using CDTSharp.Geometry;
 
-namespace CDTSharp.Meshing
+namespace CDTSharp.Geometry
 {
     public readonly struct Constraint : IEquatable<Constraint>
     {

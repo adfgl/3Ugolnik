@@ -129,10 +129,12 @@ namespace CDTSharp
 
                     edges[edgeCount++] = new CDTEdge()
                     {
+                        Triangle = t.Index,
                         Adjacent = e.Twin is null ? -1 : e.Twin.Triangle.Index,
                         Origin = e.Origin.Index,
                         Length = len,
-                        Angle = ang
+                        Angle = ang,
+                        Constraint = (CDTConstraintType)e.Constrained
                     };
                 }
                 curAvgAngle /= 3.0;

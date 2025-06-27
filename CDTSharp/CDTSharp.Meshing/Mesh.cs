@@ -80,7 +80,7 @@ namespace CDTSharp.Meshing
             {
                 Node a = edge.a;
                 Node b = edge.b;
-                List<Edge> added = Add(a.X, a.Y, b.X, b.Y);
+                List<Edge> added = Add(a.X, a.Y, b.X, b.Y, edge.type);
             }
 
             foreach (Node node in conPoints)
@@ -189,7 +189,7 @@ namespace CDTSharp.Meshing
 
                 foreach (Edge e in t.Forward())
                 {
-                    if (!e.Constrained)
+                    if (e.Constrained == EConstraint.None)
                     {
                         continue;
                     }
@@ -342,7 +342,7 @@ namespace CDTSharp.Meshing
             return node;
         }
 
-        public List<Edge> Add(double x0, double y0, double x1, double y1)
+        public List<Edge> Add(double x0, double y0, double x1, double y1, EConstraint type)
         {
             Queue<(Node, Node)> toInsert = new Queue<(Node, Node)>();
             toInsert.Enqueue((Add(x0, y0, out _), Add(x1, y1, out _)));
@@ -359,7 +359,7 @@ namespace CDTSharp.Meshing
                 Edge? existing = FindEdge(start, end, true);
                 if (existing is not null)
                 {
-                    existing.SetConstraint(true);
+                    existing.SetConstraint(type);
                     segments.Add(existing);
                     continue;
                 }
@@ -686,7 +686,7 @@ namespace CDTSharp.Meshing
 
         public bool CanFlip(Edge edge)
         {
-            if (edge.Constrained || edge.Twin is null)
+            if (edge.Constrained != EConstraint.None || edge.Twin is null)
             {
                 return false;
             }
@@ -707,7 +707,7 @@ namespace CDTSharp.Meshing
         public Triangle[] Flip(Edge edge)
         {
             Edge? twin = edge.Twin;
-            if (twin is null || edge.Constrained)
+            if (twin is null || edge.Constrained != EConstraint.None)
             {
                 return [];
             }
@@ -815,10 +815,11 @@ namespace CDTSharp.Meshing
             new2.Edge.Next.SetTwin(new3.Edge.Next);
             new3.Edge.Next.SetTwin(new0.Edge.Next);
 
-            if (edge.Constrained)
+            EConstraint constrained = edge.Constrained;
+            if (constrained != EConstraint.None)
             {
-                new0.Edge.Next.SetConstraint(true);
-                new1.Edge.Prev.SetConstraint(true);
+                new0.Edge.Next.SetConstraint(constrained);
+                new1.Edge.Prev.SetConstraint(constrained);
             }
             return [new0, new1, new2, new3];
         }
@@ -857,9 +858,10 @@ namespace CDTSharp.Meshing
             new0.Edge.CopyProperties(ca.Twin);
             new1.Edge.CopyProperties(bc.Twin);
 
-            if (edge.Constrained)
+            EConstraint constrained = edge.Constrained;
+            if (constrained != EConstraint.None)
             {
-                new0.Edge.Next.Constrained = new1.Edge.Prev.Constrained = true;
+                new0.Edge.Next.Constrained = new1.Edge.Prev.Constrained = constrained;
             }
             return [new0, new1];
         }

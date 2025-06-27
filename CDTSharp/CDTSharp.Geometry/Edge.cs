@@ -18,7 +18,7 @@
         public Edge Prev => Next.Next;
         public Edge? Twin { get; set; } = null;
         public Triangle Triangle { get; set; } = null!;
-        public bool Constrained { get; set; } = false;
+        public EConstraint Constrained { get; set; } = EConstraint.None;
 
         public double SquareLength()
         {
@@ -57,7 +57,7 @@
             }
         }
 
-        public void SetConstraint(bool value)
+        public void SetConstraint(EConstraint value)
         {
             Constrained = value;
             if (Twin is not null)
