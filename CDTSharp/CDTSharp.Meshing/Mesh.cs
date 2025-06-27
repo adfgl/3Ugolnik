@@ -10,6 +10,7 @@ namespace CDTSharp.Meshing
 
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _qt.Items;
+        public Rectangle Bounds => _bounds;
 
         public Mesh(ClosedPolygon? polygon, List<(Node a, Node b)>? constraintEdges = null, List<Node>? costraintPoints = null)
         {
@@ -194,7 +195,7 @@ namespace CDTSharp.Meshing
                         continue;
                     }
 
-                    Constraint segment = new Constraint(e.Origin, e.Next.Origin);
+                    Constraint segment = new Constraint(e.Origin, e.Next.Origin, e.Constrained);
                     if (seen.Add(segment) && segment.Enchrouched(_qt))
                     {
                         segmentQueue.Enqueue(segment);

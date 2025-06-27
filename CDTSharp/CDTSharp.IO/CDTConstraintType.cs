@@ -2,6 +2,6 @@
 {
     public enum CDTConstraintType
     {
-        None, User, Contour, Hole, Undefined
+        None, User, Contour, Hole
     }
 }

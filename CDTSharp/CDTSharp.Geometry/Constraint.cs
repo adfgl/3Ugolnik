@@ -8,7 +8,7 @@ namespace CDTSharp.Geometry
         public readonly EConstraint type;
         public readonly Circle circle;
 
-        public Constraint(Node a, Node b, EConstraint type = EConstraint.Undefined)
+        public Constraint(Node a, Node b, EConstraint type)
         {
             this.circle = new Circle(a.X, a.Y, b.X, b.Y);
             if (a.Index < b.Index)

@@ -27,6 +27,9 @@
             this.maxY = y + radius;
         }
 
+        public double Width() => this.maxX - this.minX;
+        public double Height() => this.maxY - this.minY;
+
         public static Rectangle Build(double minX, double minY, double maxX, double maxY)
         {
             return new Rectangle(
