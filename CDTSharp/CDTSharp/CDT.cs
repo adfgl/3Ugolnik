@@ -7,6 +7,7 @@ namespace CDTSharp
 {
     public static class CDT
     {
+        const bool VALIDATE_HOLES = true;
         const double TO_DEG = 180.0 / Math.PI;
 
         public static CDTMesh Triangulate(CDTInput input)
@@ -20,24 +21,23 @@ namespace CDTSharp
             {
                 ClosedPolygon candidate = ToPolygon(cdtHole);
              
-                bool addHole = true;
-                if (!contour.Contains(candidate) && contour.Intersects(candidate))
+                bool addHole = false;
+                if (VALIDATE_HOLES && (contour.Contains(candidate) || contour.Intersects(candidate)))
                 {
-                    continue;
-                }
-
-                for (int i = holes.Count - 1; i >= 0; i--)
-                {
-                    ClosedPolygon existing = holes[i];
-                    if (existing.Contains(candidate))
+                    addHole = true;
+                    for (int i = holes.Count - 1; i >= 0; i--)
                     {
-                        addHole = false;
-                        break;
-                    }
+                        ClosedPolygon existing = holes[i];
+                        if (existing.Contains(candidate))
+                        {
+                            addHole = false;
+                            break;
+                        }
 
-                    if (candidate.Contains(existing))
-                    {
-                        holes.RemoveAt(i);
+                        if (candidate.Contains(existing))
+                        {
+                            holes.RemoveAt(i);
+                        }
                     }
                 }
 
