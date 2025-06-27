@@ -8,14 +8,22 @@ namespace CDTSharp.Meshing
         public static string ToSvg(this Mesh mesh, int size = 1000, float padding = 10)
         {
             List<Triangle> triangles = mesh.Triangles;
-            List<Node> nodes = mesh.Nodes;
-            if (triangles.Count == 0 || nodes.Count == 0)
+            if (triangles.Count == 0)
             {
                 return "<svg xmlns='http://www.w3.org/2000/svg'/>";
             }
-            
-            Rectangle rect = mesh.Bounds;
-            double scale = (size - 2 * padding) / Math.Max(rect.Width(), rect.Height());
+
+            double minX = double.MaxValue, maxX = double.MinValue;
+            double minY = double.MaxValue, maxY = double.MinValue;
+            foreach (Triangle triangle in triangles)
+            {
+                triangle.Nodes(out Node a, out Node b, out Node c);
+                process(a);
+                process(b);
+                process(c);
+            }
+
+            double scale = (size - 2 * padding) / Math.Max(maxX - minX, maxY - minY);
 
             StringBuilder sb = new StringBuilder();
             sb.Append("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ");
@@ -78,17 +86,25 @@ namespace CDTSharp.Meshing
 
                     sb.Append($"<line x1='{ex1:F1}' y1='{ey1:F1}' x2='{ex2:F1}' y2='{ey2:F1}' stroke='{edgeColor}' stroke-width='{thickness}'/>");
                 }
-
             }
-
 
             sb.Append("</svg>");
             return sb.ToString();
 
+            void process(Node v)
+            {
+                double x = v.X;
+                double y = v.Y;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+
             (double x, double y) project(double x, double y)
             {
-                double sx = (x - rect.minX) * scale + padding;
-                double sy = (y - rect.minY) * scale + padding;
+                double sx = (x - minX) * scale + padding;
+                double sy = (y - minY) * scale + padding;
                 return (sx, size - sy); // Y-flip
             }
         }

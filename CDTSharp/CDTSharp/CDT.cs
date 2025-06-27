@@ -67,7 +67,7 @@ namespace CDTSharp
             }
 
             Mesh mesh = new Mesh(contour, userEdgeConstraints, userNodeConstraints);
-            CDTQuality quality = input.Quality;
+            CDTQuality? quality = input.Quality;
             if (quality is not null)
             {
                 mesh = mesh.Refine(new Quality()
@@ -78,6 +78,11 @@ namespace CDTSharp
                 });
             }
             mesh = mesh.RemoveSuperStructure();
+
+#if DEBUG
+            Console.WriteLine(mesh.ToSvg());
+#endif
+
 
             CDTNode[] nodes = new CDTNode[mesh.Nodes.Count];
             for (int i = 0; i < nodes.Length; i++)
@@ -161,25 +166,32 @@ namespace CDTSharp
             sw.Stop();
             long execution = sw.ElapsedMilliseconds;
 
+            CDTSummary summary = new CDTSummary()
+            {
+                AvgAngle = avgAngle,
+                AvgEdge = avgEdge,
+                AvgArea = avgArea,
+                MaxAngle = maxAngle,
+                MaxArea = maxArea,
+                MinAngle = minAngle,
+                MinArea = minArea,
+                Execution = execution,
+                MaxEdge = maxEdge,
+                MinEdge = minEdge,
+                TriangleCount = triangles.Length,
+                NodeCount = triangles.Length
+            };
+
+#if DEBUG
+            Console.WriteLine();
+            Console.WriteLine(summary);
+#endif
+
             return new CDTMesh()
             {
                 Nodes = nodes,
                 Triangles = triangles,
-                Summary = new CDTSummary()
-                {
-                    AvgAngle = avgAngle,
-                    AvgEdge = avgEdge,
-                    AvgArea = avgArea,
-                    MaxAngle = maxAngle,
-                    MaxArea = maxArea,
-                    MinAngle = minAngle,
-                    MinArea = minArea,
-                    Execution = execution,
-                    MaxEdge = maxEdge,
-                    MinEdge = minEdge,
-                    TriangleCount = triangles.Length,
-                    NodeCount = triangles.Length
-                }
+                Summary = summary
             };
         }
 

@@ -40,5 +40,10 @@
                 current = current.Prev.Twin!;
             } while (current != null && current != start);
         }
+
+        public override string ToString()
+        {
+            return $"[{Index}] {X} {Y}";
+        }
     }
 }

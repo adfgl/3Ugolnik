@@ -15,7 +15,7 @@
 
         public Node Origin { get; }
         public Edge Next { get; set; } = null!;
-        public Edge Prev => Next.Next;
+        public Edge Prev { get; set; } = null!;
         public Edge? Twin { get; set; } = null;
         public Triangle Triangle { get; set; } = null!;
         public EConstraint Constrained { get; set; } = EConstraint.None;
@@ -39,15 +39,6 @@
             return GeometryHelper.Cross(Origin, Next.Origin, x, y);
         }
 
-        public void CopyProperties(Edge? twin)
-        {
-            Twin = twin;
-            if (twin is not null)
-            {
-                Constrained = twin.Constrained;
-            }
-        }
-
         public void SetTwin(Edge? twin)
         {
             Twin = twin;
@@ -64,6 +55,11 @@
             {
                 Twin.Constrained = value;
             }
+        }
+
+        public override string ToString()
+        {
+            return $"t{Triangle.Index} [{Origin.Index}, {Next.Origin.Index}]";
         }
     }
 }

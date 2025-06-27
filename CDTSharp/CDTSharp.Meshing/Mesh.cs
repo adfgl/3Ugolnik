@@ -1,4 +1,5 @@
 ﻿using CDTSharp.Geometry;
+using System.Diagnostics;
 
 namespace CDTSharp.Meshing
 {
@@ -343,16 +344,25 @@ namespace CDTSharp.Meshing
             return node;
         }
 
+        void Panic()
+        {
+            Console.WriteLine();
+            Console.WriteLine(this.ToSvg());
+        }
+
         public List<Edge> Add(double x0, double y0, double x1, double y1, EConstraint type)
         {
             Queue<(Node, Node)> toInsert = new Queue<(Node, Node)>();
-            toInsert.Enqueue((Add(x0, y0, out _), Add(x1, y1, out _)));
+            var added0 = Add(x0, y0, out _);
+            var added1 = Add(x1, y1, out _);
+
+            toInsert.Enqueue((added0, added1));
 
             List<Edge> segments = new List<Edge>();
             while (toInsert.Count > 0)
             {
                 var (start, end) = toInsert.Dequeue();
-                if (start.Index == end.Index)
+                if (start == end)
                 {
                     continue;
                 }
@@ -521,7 +531,7 @@ namespace CDTSharp.Meshing
             int trianglesChecked = 0;
 
             Triangle current = _triangles.Last();
-            if (searchStart < 0 || searchStart >= _triangles.Count)
+            if (searchStart >= 0 && searchStart < _triangles.Count)
             {
                 current = _triangles[searchStart];
             }
@@ -591,7 +601,7 @@ namespace CDTSharp.Meshing
                 }
 
                 skipEdge = bestExit.Twin;
-                current = bestExit.Triangle;
+                current = skipEdge.Triangle;
             }
         }
 
@@ -629,6 +639,16 @@ namespace CDTSharp.Meshing
             return null;
         }
 
+        void UnlinkTwin(Edge edge)
+        {
+            if (edge.Twin is not null)
+            {
+                Debug.Assert(edge.Twin.Twin == edge);
+                edge.Twin.Twin = null;
+                edge.Twin = null;
+            }
+        }
+
         public List<Triangle> Add(Triangle[] triangles)
         {
             foreach (Triangle t in triangles)
@@ -638,22 +658,24 @@ namespace CDTSharp.Meshing
                 {
                     Triangle old = _triangles[index];
                     old.Removed = true;
-                    old.Edges(out Edge ab, out Edge bc, out Edge ca);
 
-                    Node a = ab.Origin;
-                    Node b = bc.Origin;
-                    Node c = ca.Origin;
+                    Edge[] edges = old.Forward().ToArray();
+                    foreach (Edge edge in edges)
+                    {
+                        UnlinkTwin(edge);
+                        edge.Triangle = null!;
+                        Node origin = edge.Origin;
+                        if (origin.Edge == edge)
+                        {
+                            origin.Edge = null!;
+                        }
+                    }
 
-                    if (ab.Twin is not null && ab.Twin.Twin == ab) ab.Twin.Twin = null;
-                    if (bc.Twin is not null && bc.Twin.Twin == bc) bc.Twin.Twin = null;
-                    if (ca.Twin is not null && ca.Twin.Twin == ca) ca.Twin.Twin = null;
-
+                    foreach (Edge edge in edges)
+                    {
+                        edge.Next = edge.Prev = null!;
+                    }
                     old.Edge = null!;
-                    ab.Triangle = bc.Triangle = ca.Triangle = null!;
-
-                    if (a.Edge == ab) a.Edge = null!;
-                    if (b.Edge == bc) b.Edge = null!;
-                    if (c.Edge == ca) c.Edge = null!;
 
                     _triangles[index] = t;
                 }
@@ -665,23 +687,21 @@ namespace CDTSharp.Meshing
 
             foreach (Triangle t in triangles)
             {
-                t.Edges(out Edge ab, out Edge bc, out Edge ca);
-
-                Node a = ab.Origin;
-                Node b = bc.Origin;
-                Node c = ca.Origin;
-
-                a.Edge = ab;
-                b.Edge = bc;
-                c.Edge = ca;
-
-                Edge? twin = t.Edge.Twin;
-                if (twin is not null)
+                foreach (Edge edge in t.Forward())
                 {
-                    twin.Twin = t.Edge;
+                    Node origin = edge.Origin;
+                    if (origin.Edge is null)
+                    {
+                        origin.Edge = edge;
+                    }
+
+                    Edge? twin = edge.Twin;
+                    if (twin is not null)
+                    {
+                        twin.Twin = edge;
+                    }
                 }
             }
-
             return Legalize(triangles);
         }
 
@@ -743,17 +763,23 @@ namespace CDTSharp.Meshing
             Edge ab = twin.Next;
             Edge bc = ab.Next;
 
-            var (a, c) = edge;
-            Node d = da.Origin;
+            Node a = ab.Origin;
             Node b = bc.Origin;
+            Node c = cd.Origin;
+            Node d = da.Origin;
 
             Triangle new0 = new Triangle(old0.Index, a, b, d);
             Triangle new1 = new Triangle(old1.Index, b, c, d);
 
-            new0.Edge.CopyProperties(ab);
-            new0.Edge.Prev.CopyProperties(da);
-            new1.Edge.CopyProperties(bc);
-            new1.Edge.Next.CopyProperties(cd);
+            new0.Edge.Constrained = ab.Constrained;
+            new0.Edge.Prev.Constrained = da.Constrained;
+            new1.Edge.Constrained = bc.Constrained;
+            new1.Edge.Next.Constrained = cd.Constrained;
+
+            new0.Edge.Twin = ab;
+            new0.Edge.Prev.Twin = da;
+            new1.Edge.Twin = bc;
+            new1.Edge.Next.Twin = cd;
 
             new0.Edge.Next.SetTwin(new1.Edge.Prev);
             return [new0, new1];
@@ -806,10 +832,15 @@ namespace CDTSharp.Meshing
             Triangle new2 = new Triangle(baseIndex, b, c, e);
             Triangle new3 = new Triangle(baseIndex + 1, a, b, e);
 
-            new0.Edge.CopyProperties(da);
-            new1.Edge.CopyProperties(cd);
-            new2.Edge.CopyProperties(bc);
-            new3.Edge.CopyProperties(ab);
+            new0.Edge.Constrained = da.Constrained;
+            new1.Edge.Constrained = cd.Constrained;
+            new2.Edge.Constrained = bc.Constrained;
+            new3.Edge.Constrained = ab.Constrained;
+
+            new0.Edge.Twin = da;
+            new1.Edge.Twin = cd;
+            new2.Edge.Twin = bc;
+            new3.Edge.Twin = ab;
 
             new0.Edge.Next.SetTwin(new1.Edge.Next);
             new1.Edge.Next.SetTwin(new2.Edge.Next);
@@ -842,10 +873,7 @@ namespace CDTSharp.Meshing
 
             Triangle old0 = edge.Triangle;
 
-            Edge ab = old0.Edge;
-            Edge bc = ab.Next;
-            Edge ca = bc.Next;
-
+            old0.Edges(out Edge ab, out Edge bc, out Edge ca);
             Node a = ab.Origin;
             Node b = bc.Origin;
             Node c = ca.Origin;
@@ -854,10 +882,13 @@ namespace CDTSharp.Meshing
             Triangle new0 = new Triangle(old0.Index, c, a, d);
             Triangle new1 = new Triangle(_triangles.Count, b, c, d);
 
+            new0.Edge.Constrained = ca.Constrained;
+            new1.Edge.Constrained = bc.Constrained;
+
+            new0.Edge.Twin = ca;
+            new1.Edge.Twin = bc;
+
             new0.Edge.Prev.SetTwin(new1.Edge.Next);
-            
-            new0.Edge.CopyProperties(ca.Twin);
-            new1.Edge.CopyProperties(bc.Twin);
 
             EConstraint constrained = edge.Constrained;
             if (constrained != EConstraint.None)
@@ -883,10 +914,7 @@ namespace CDTSharp.Meshing
 
             */
 
-            Edge ab = triangle.Edge;
-            Edge bc = ab.Next;
-            Edge ca = bc.Next;
-
+            triangle.Edges(out Edge ab, out Edge bc, out Edge ca);
             Node a = ab.Origin;
             Node b = bc.Origin;
             Node c = ca.Origin;
@@ -896,9 +924,13 @@ namespace CDTSharp.Meshing
             Triangle new1 = new Triangle(_triangles.Count, b, c, d);
             Triangle new2 = new Triangle(_triangles.Count + 1, c, a, d);
 
-            new0.Edge.CopyProperties(ab);
-            new1.Edge.CopyProperties(bc);
-            new2.Edge.CopyProperties(ca);
+            new0.Edge.Constrained = ab.Constrained;
+            new1.Edge.Constrained = bc.Constrained;
+            new2.Edge.Constrained = ca.Constrained;
+
+            new0.Edge.Twin = ab;
+            new1.Edge.Twin = bc;
+            new2.Edge.Twin = ca;
 
             new0.Edge.Next.SetTwin(new1.Edge.Prev);
             new1.Edge.Next.SetTwin(new2.Edge.Prev);

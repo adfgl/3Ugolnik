@@ -10,9 +10,9 @@
             Edge bc = new Edge(b);
             Edge ca = new Edge(c);
 
-            a.Edge = ab;
-            b.Edge = bc;
-            c.Edge = ca;
+            if (a.Edge == null) a.Edge = ab;
+            if (b.Edge == null) b.Edge = bc;
+            if (c.Edge == null) c.Edge = ca;
 
             Edge = ab;
             ab.Triangle = bc.Triangle = ca.Triangle = this;
@@ -21,6 +21,10 @@
             bc.Next = ca;
             ca.Next = ab;
 
+            ab.Prev = ca;
+            bc.Prev = ab;
+            ca.Prev = bc;
+
             Circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
         }
 
@@ -28,7 +32,7 @@
         {
             a = Edge.Origin;
             b = Edge.Next.Origin;
-            c = Edge.Next.Next.Origin;
+            c = Edge.Prev.Origin;
         }
 
         public void Edges(out Edge ab, out Edge bc, out Edge ca)
@@ -84,6 +88,12 @@
                 yield return current;
                 current = current.Prev;
             } while (current != he);
+        }
+
+        public override string ToString()
+        {
+            Nodes(out var a, out var b, out var c);
+            return $"[{Index}] ({a}), ({b}), ({c})";
         }
     }
 }
