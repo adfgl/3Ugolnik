@@ -1,4 +1,6 @@
-﻿namespace CDTSharp
+﻿using CDTSharp.Geometry;
+
+namespace CDTSharp.Meshing
 {
     public class Mesh
     {

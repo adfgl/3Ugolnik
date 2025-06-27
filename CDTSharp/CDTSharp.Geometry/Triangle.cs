@@ -1,4 +1,4 @@
-﻿namespace CDTSharp
+﻿namespace CDTSharp.Geometry
 {
     public class Triangle
     {

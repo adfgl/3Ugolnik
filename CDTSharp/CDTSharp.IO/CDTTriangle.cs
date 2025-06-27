@@ -1,4 +1,4 @@
-﻿namespace CDTio
+﻿namespace CDTSharp.IO
 {
     public class CDTTriangle
     {
