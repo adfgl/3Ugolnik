@@ -49,8 +49,8 @@
                 double y = getY(point);
 
                 if (x < minX) minX = x;
-                if (x < minX) minX = x;
                 if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
                 if (y > maxY) maxY = y;
             }
             return new Rectangle(minX, minY, maxX, maxY);

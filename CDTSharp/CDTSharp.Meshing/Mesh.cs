@@ -1,5 +1,6 @@
 ﻿using CDTSharp.Geometry;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace CDTSharp.Meshing
 {
@@ -12,6 +13,19 @@ namespace CDTSharp.Meshing
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _qt.Items;
         public Rectangle Bounds => _bounds;
+
+        public Mesh(List<Triangle> tris, List<Node> nodes)
+        {
+            _bounds = Rectangle.FromPoints(nodes, o => o.X, o => o.Y);
+            _triangles = tris;
+            _qt = new QuadTree(_bounds);
+            foreach (Node tri in nodes)
+            {
+                _qt.Add(tri);
+            }
+        }
+
+        
 
         public Mesh(ClosedPolygon? polygon, List<(Node a, Node b)>? constraintEdges = null, List<Node>? costraintPoints = null)
         {
@@ -639,13 +653,35 @@ namespace CDTSharp.Meshing
             return null;
         }
 
-        void UnlinkTwin(Edge edge)
+        static void Dispose(Edge edge)
+        {
+            edge.Triangle = null!;
+            edge.Next = edge.Prev = null!;
+
+            if (edge.Twin is not null)
+            {
+                edge.Twin.Twin = null;
+                edge.Twin = null;
+            }
+
+            Node origin = edge.Origin;
+            if (origin.Edge == edge)
+            {
+                origin.Edge = null!;
+            }
+        }
+
+        static void Link(Edge edge)
         {
             if (edge.Twin is not null)
             {
-                Debug.Assert(edge.Twin.Twin == edge);
-                edge.Twin.Twin = null;
-                edge.Twin = null;
+                edge.Twin.Twin = edge;
+            }
+
+            Node origin = edge.Origin;
+            if (origin.Edge is null)
+            {
+                origin.Edge = edge;
             }
         }
 
@@ -657,24 +693,12 @@ namespace CDTSharp.Meshing
                 if (index < _triangles.Count)
                 {
                     Triangle old = _triangles[index];
+                    old.Edges(out Edge ab, out Edge bc, out Edge ca);
+                    Dispose(ab);
+                    Dispose(bc);
+                    Dispose(ca);
+
                     old.Removed = true;
-
-                    Edge[] edges = old.Forward().ToArray();
-                    foreach (Edge edge in edges)
-                    {
-                        UnlinkTwin(edge);
-                        edge.Triangle = null!;
-                        Node origin = edge.Origin;
-                        if (origin.Edge == edge)
-                        {
-                            origin.Edge = null!;
-                        }
-                    }
-
-                    foreach (Edge edge in edges)
-                    {
-                        edge.Next = edge.Prev = null!;
-                    }
                     old.Edge = null!;
 
                     _triangles[index] = t;
@@ -687,20 +711,12 @@ namespace CDTSharp.Meshing
 
             foreach (Triangle t in triangles)
             {
-                foreach (Edge edge in t.Forward())
-                {
-                    Node origin = edge.Origin;
-                    if (origin.Edge is null)
-                    {
-                        origin.Edge = edge;
-                    }
+                t.Edges(out Edge ab, out Edge bc, out Edge ca);
+                Debug.Assert(ab.Twin?.Twin is null);
 
-                    Edge? twin = edge.Twin;
-                    if (twin is not null)
-                    {
-                        twin.Twin = edge;
-                    }
-                }
+                Link(ab);
+                Link(bc);
+                Link(ca);
             }
             return Legalize(triangles);
         }

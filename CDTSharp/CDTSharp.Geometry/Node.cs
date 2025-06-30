@@ -23,6 +23,25 @@
             x = X; y = Y;
         }
 
+        public static Node Average(params Node[] nodes)
+        {
+            double x = 0;
+            double y = 0;
+            foreach (Node node in nodes)
+            {
+                x += node.X;
+                y += node.Y;
+            }
+            x /= nodes.Length;
+            y /= nodes.Length;
+
+            return new Node()
+            {
+                X = x,
+                Y = y,
+            };
+        }
+
         public bool Close(double x, double y, double eps = 1e-6)
         {
             double dx = x - X;
