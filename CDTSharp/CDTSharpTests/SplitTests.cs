@@ -52,12 +52,22 @@ namespace CDTSharpTests
             Edge[] oldEdges = t3.Forward().ToArray();
             for (int i = 0; i < 3; i++)
             {
-                Triangle t = tris[i];
-                Assert.Equal(oldEdges[i].Twin, t.Edge.Twin);
-                Assert.Equal(oldEdges[i].Constrained, t.Edge.Constrained);
+                Edge expectedTwin = oldEdges[i];
+
+                Triangle curr = tris[i];
+                Triangle next = tris[(i + 1) % 3];
+                Triangle prev = tris[(i + 2) % 3];
+
+                Assert.NotEqual(expectedTwin.Twin, curr.Edge);
+
+                Assert.Equal(expectedTwin.Twin, curr.Edge.Twin);
+                Assert.Equal(next.Edge.Prev, curr.Edge.Next.Twin);
+                Assert.Equal(prev.Edge.Next, curr.Edge.Prev.Twin);
+
+                Assert.Equal(expectedTwin.Constrained, curr.Edge.Constrained);
+                Assert.Equal(next.Edge.Prev.Constrained, curr.Edge.Next.Constrained);
+                Assert.Equal(prev.Edge.Next.Constrained, curr.Edge.Prev.Constrained);
             }
-
-
         }
     }
 }

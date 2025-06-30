@@ -13,7 +13,8 @@ namespace CDTSharpTests
 
             Triangle t = new Triangle(0, a, b, c);
 
-            t.Edges(out Edge ab, out Edge bc, out Edge ca);
+            Assert.False(t.Hole);
+            Assert.False(t.Removed);
 
             Edge[] edges = t.Forward().ToArray();
             Node[] nodes = [a, b, c];
