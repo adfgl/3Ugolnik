@@ -2,13 +2,13 @@
 
 namespace CDTSharp.Geometry
 {
-    public readonly struct Constraint : IEquatable<Constraint>
+    public readonly struct EdgeConstraint : IEquatable<EdgeConstraint>
     {
         public readonly Node a, b;
         public readonly EConstraint type;
         public readonly Circle circle;
 
-        public Constraint(Node a, Node b, EConstraint type)
+        public EdgeConstraint(Node a, Node b, EConstraint type)
         {
             this.circle = new Circle(a.X, a.Y, b.X, b.Y);
             if (a.Index < b.Index)
@@ -23,11 +23,11 @@ namespace CDTSharp.Geometry
             }
         }
 
-        public bool VisibleFromInterior(IEnumerable<Constraint> segments, double x, double y)
+        public bool VisibleFromInterior(IEnumerable<EdgeConstraint> segments, double x, double y)
         {
             double cx = circle.x;
             double cy = circle.y;
-            foreach (Constraint s in segments)
+            foreach (EdgeConstraint s in segments)
             {
                 if (!this.Equals(s) && GeometryHelper.Intersect(cx, cy, x, y, s.a.X, s.a.Y, s.b.X, s.b.Y, out _, out _))
                 {
@@ -61,16 +61,16 @@ namespace CDTSharp.Geometry
             return GeometryHelper.CloseOrEqual(a, node, eps) || GeometryHelper.CloseOrEqual(b, node, eps);
         }
 
-        public List<Constraint> Split(Node node, double eps = 1e-6)
+        public List<EdgeConstraint> Split(Node node, double eps = 1e-6)
         {
             if (Contains(node, eps))
             {
                 return [this];
             }
-            return [new Constraint(this.a, node, type), new Constraint(node, this.b, type)];
+            return [new EdgeConstraint(this.a, node, type), new EdgeConstraint(node, this.b, type)];
         }
 
-        public List<Constraint> Split(Constraint other, double eps = 1e-6)
+        public List<EdgeConstraint> Split(EdgeConstraint other, double eps = 1e-6)
         {
             if (this.Contains(other.a, eps) || this.Contains(other.b, eps) || other.Contains(a, eps) || other.Contains(b, eps))
             {
@@ -80,21 +80,21 @@ namespace CDTSharp.Geometry
             if (GeometryHelper.Intersect(a, b, other.a, other.b, out double x, out double y))
             {
                 Node node = new Node() { X = x, Y = y };
-                List<Constraint> result = Split(node, eps);
+                List<EdgeConstraint> result = Split(node, eps);
                 result.AddRange(other.Split(node, eps));
                 return result;
             }
             return [this];
         }
 
-        public bool Equals(Constraint other)
+        public bool Equals(EdgeConstraint other)
         {
             return a.Index == other.a.Index && b.Index == other.b.Index;
         }
 
         public override bool Equals(object? obj)
         {
-            return obj is Constraint other && Equals(other);
+            return obj is EdgeConstraint other && Equals(other);
         }
 
         public override int GetHashCode() => HashCode.Combine(a.Index, b.Index);

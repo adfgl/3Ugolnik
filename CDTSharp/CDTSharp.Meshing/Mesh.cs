@@ -15,7 +15,7 @@ namespace CDTSharp.Meshing
 
         public Mesh(ClosedPolygon? polygon, List<(Node a, Node b)>? constraintEdges = null, List<Node>? costraintPoints = null)
         {
-            List<Constraint> conEdges = new List<Constraint>();
+            List<EdgeConstraint> conEdges = new List<EdgeConstraint>();
             List<Node> conPoints = new List<Node>();
 
             double minX, minY, maxX, maxY;
@@ -40,7 +40,7 @@ namespace CDTSharp.Meshing
                     Node b = polygon.Points[i + 1];
 
                     process(a);
-                    conEdges.Add(new Constraint(a, b, type));
+                    conEdges.Add(new EdgeConstraint(a, b, type));
                 }
             }
 
@@ -59,7 +59,7 @@ namespace CDTSharp.Meshing
                 {
                     process(a);
                     process(b);
-                    conEdges.Add(new Constraint(a, b, EConstraint.User));
+                    conEdges.Add(new EdgeConstraint(a, b, EConstraint.User));
                 }
             }
 
@@ -78,7 +78,7 @@ namespace CDTSharp.Meshing
 
             AddSuperStructure(_bounds, 5);
 
-            foreach (Constraint edge in conEdges)
+            foreach (EdgeConstraint edge in conEdges)
             {
                 Node a = edge.a;
                 Node b = edge.b;
@@ -178,10 +178,10 @@ namespace CDTSharp.Meshing
 
         public Mesh Refine(Quality quality)
         {
-            HashSet<Constraint> seen = new HashSet<Constraint>();
+            HashSet<EdgeConstraint> seen = new HashSet<EdgeConstraint>();
 
             Queue<Triangle> triangleQueue = new Queue<Triangle>();
-            Queue<Constraint> segmentQueue = new Queue<Constraint>();
+            Queue<EdgeConstraint> segmentQueue = new Queue<EdgeConstraint>();
             foreach (Triangle t in _triangles)
             {
                 if (Bad(t, quality))
@@ -196,7 +196,7 @@ namespace CDTSharp.Meshing
                         continue;
                     }
 
-                    Constraint segment = new Constraint(e.Origin, e.Next.Origin, e.Constrained);
+                    EdgeConstraint segment = new EdgeConstraint(e.Origin, e.Next.Origin, e.Constrained);
                     if (seen.Add(segment) && segment.Enchrouched(_qt))
                     {
                         segmentQueue.Enqueue(segment);
@@ -208,7 +208,7 @@ namespace CDTSharp.Meshing
             {
                 if (segmentQueue.Count > 0)
                 {
-                    Constraint seg = segmentQueue.Dequeue();
+                    EdgeConstraint seg = segmentQueue.Dequeue();
                     Edge? edge = FindEdge(seg.a, seg.b, true);
                     if (edge is null)
                     {
@@ -224,7 +224,7 @@ namespace CDTSharp.Meshing
                     }
 
                     seen.Remove(seg);
-                    foreach (Constraint e in seg.Split(node))
+                    foreach (EdgeConstraint e in seg.Split(node))
                     {
                         seen.Add(e);
                         if (e.Enchrouched(_qt) && e.VisibleFromInterior(seen, node.X, node.Y))
@@ -250,7 +250,7 @@ namespace CDTSharp.Meshing
                     }
 
                     bool encroaches = false;
-                    foreach (Constraint seg in seen)
+                    foreach (EdgeConstraint seg in seen)
                     {
                         if (seg.circle.Contains(x, y) && seg.VisibleFromInterior(seen, x, y))
                         {
@@ -851,21 +851,29 @@ namespace CDTSharp.Meshing
             Triangle new1 = new Triangle(old1.Index, c, d, e);
             Triangle new2 = new Triangle(baseIndex, b, c, e);
             Triangle new3 = new Triangle(baseIndex + 1, a, b, e);
+      
+            // twins
+            new0.Edge.Twin = da.Twin;
+            new0.Edge.Next.Twin = new3.Edge.Prev;
+            new0.Edge.Prev.Twin = new1.Edge.Next;
 
+            new1.Edge.Twin = cd.Twin;
+            new1.Edge.Next.Twin = new0.Edge.Prev;
+            new1.Edge.Prev.Twin = new2.Edge.Next;
+
+            new2.Edge.Twin = bc.Twin;
+            new2.Edge.Next.Twin = new1.Edge.Prev;
+            new2.Edge.Prev.Twin = new3.Edge.Next;
+
+            new3.Edge.Twin = ab.Twin;
+            new3.Edge.Next.Twin = new2.Edge.Prev;
+            new3.Edge.Prev.Twin = new0.Edge.Next;
+
+            // constraints
             new0.Edge.Constrained = da.Constrained;
             new1.Edge.Constrained = cd.Constrained;
             new2.Edge.Constrained = bc.Constrained;
             new3.Edge.Constrained = ab.Constrained;
-
-            new0.Edge.Twin = da;
-            new1.Edge.Twin = cd;
-            new2.Edge.Twin = bc;
-            new3.Edge.Twin = ab;
-
-            new0.Edge.Next.SetTwin(new1.Edge.Next);
-            new1.Edge.Next.SetTwin(new2.Edge.Next);
-            new2.Edge.Next.SetTwin(new3.Edge.Next);
-            new3.Edge.Next.SetTwin(new0.Edge.Next);
 
             EConstraint constrained = edge.Constrained;
             if (constrained != EConstraint.None)
@@ -873,6 +881,8 @@ namespace CDTSharp.Meshing
                 new0.Edge.Next.SetConstraint(constrained);
                 new1.Edge.Prev.SetConstraint(constrained);
             }
+
+
             return [new0, new1, new2, new3];
         }
 
@@ -902,19 +912,20 @@ namespace CDTSharp.Meshing
             Triangle new0 = new Triangle(old0.Index, c, a, d);
             Triangle new1 = new Triangle(_triangles.Count, b, c, d);
 
+            // twins
+            new0.Edge.Twin = ca.Twin;
+            new0.Edge.Next.Twin = null;
+            new0.Edge.Prev.Twin = new1.Edge.Next;
+
+            new1.Edge.Twin = bc.Twin;
+            new1.Edge.Next.Twin = new0.Edge.Prev;
+            new1.Edge.Prev.Twin = null;
+
+            // constraints
             new0.Edge.Constrained = ca.Constrained;
             new1.Edge.Constrained = bc.Constrained;
+            new0.Edge.Next.Constrained = new1.Edge.Prev.Constrained = edge.Constrained;
 
-            new0.Edge.Twin = ca;
-            new1.Edge.Twin = bc;
-
-            new0.Edge.Prev.SetTwin(new1.Edge.Next);
-
-            EConstraint constrained = edge.Constrained;
-            if (constrained != EConstraint.None)
-            {
-                new0.Edge.Next.Constrained = new1.Edge.Prev.Constrained = constrained;
-            }
             return [new0, new1];
         }
 
@@ -944,17 +955,23 @@ namespace CDTSharp.Meshing
             Triangle new1 = new Triangle(_triangles.Count, b, c, d);
             Triangle new2 = new Triangle(_triangles.Count + 1, c, a, d);
 
+            // twins
+            new0.Edge.Twin = ab.Twin;
+            new0.Edge.Next.Twin = new1.Edge.Prev;
+            new0.Edge.Prev.Twin = new2.Edge.Next;
+
+            new1.Edge.Twin = bc.Twin;
+            new1.Edge.Next.Twin = new2.Edge.Prev;
+            new1.Edge.Prev.Twin = new0.Edge.Next;
+
+            new2.Edge.Twin = ca.Twin;
+            new2.Edge.Next.Twin = new0.Edge.Prev;
+            new2.Edge.Prev.Twin = new1.Edge.Next;
+
+            // constraints
             new0.Edge.Constrained = ab.Constrained;
             new1.Edge.Constrained = bc.Constrained;
             new2.Edge.Constrained = ca.Constrained;
-
-            new0.Edge.Twin = ab;
-            new1.Edge.Twin = bc;
-            new2.Edge.Twin = ca;
-
-            new0.Edge.Next.SetTwin(new1.Edge.Prev);
-            new1.Edge.Next.SetTwin(new2.Edge.Prev);
-            new2.Edge.Next.SetTwin(new0.Edge.Prev);
 
             return [new0, new1, new2];
         }
