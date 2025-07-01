@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Data;
+using System.Reflection;
 using System.Runtime.Intrinsics.X86;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -30,14 +31,18 @@ namespace CDTISharp.Meshing
         public Node? Add(Node point)
         {
             FindContaining(point, out int trianlge, out int edge, out int node);
-            if (trianlge == -1)
-            {
-                return null;
-            }
-
             if (node != -1)
             {
                 return Nodes[node];
+            }
+            return Add(trianlge, edge, point);
+        }
+
+        public Node? Add(int triangle, int edge, Node point)
+        {
+            if (triangle == -1)
+            {
+                return null;
             }
 
             point.Index = _qt.Items.Count;
@@ -45,11 +50,11 @@ namespace CDTISharp.Meshing
             Triangle[] triangles;
             if (edge != -1)
             {
-                triangles = Split(trianlge, edge, point);
+                triangles = Split(triangle, edge, point);
             }
             else
             {
-                triangles = Split(trianlge, point);
+                triangles = Split(triangle, point);
             }
 
             // do something before adding?
@@ -60,18 +65,134 @@ namespace CDTISharp.Meshing
             return point;
         }
 
-        public void Add(Node start, Node end)
+        public void Add(Node start, Node end, int type, bool alwaysSplit = false)
         {
             Node? a = Add(start);
             Node? b = Add(end);
-
-            if (a is null || b is null || a == b)
+            if (a is null || b is null)
             {
                 return;
             }
 
-            Queue<(Node, Node)> toInsert = new Queue<(Node, Node)>();
-            
+            Queue<Constraint> toInsert = new Queue<Constraint>();
+            toInsert.Enqueue(new Constraint(a, b, type));
+            while (toInsert.Count > 0)
+            {
+                Constraint constraint = toInsert.Dequeue();
+                if (constraint.Degenerate())
+                {
+                    continue;
+                }
+
+                FindEdge(constraint.start.Index, constraint.end.Index, out int triangle, out int edge);
+                if (edge != -1)
+                {
+                    SetConstraint(triangle, edge, type);
+                }
+                else
+                {
+                    Triangle entrance = EntranceTriangle(constraint.start.Index, constraint.end.Index);
+                    if (WalkAndInsert(entrance, constraint, toInsert))
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        bool WalkAndInsert(Triangle current, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false)
+        {
+            while (true)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    if (TrySplitOrFlip(current, i, constraint, toInsert, alwaysSplit))
+                    {
+                        return true;
+                    }
+                }
+
+                int exitEdge = FindExitEdge(current, constraint.end);
+                int adjIndex = current.adjacent[exitEdge];
+                if (adjIndex == -1)
+                    throw new Exception("Constraint insertion failed: no adjacent triangle during walk.");
+            }
+        }
+
+        bool TrySplitOrFlip(Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false, double eps = 1e-6)
+        {
+            Node a = Nodes[triangle.indices[edge]];
+            Node b = Nodes[triangle.indices[NEXT[edge]]];
+            if (constraint.Contains(a, eps) || constraint.Contains(b, eps))
+            {
+                return false;
+            }
+
+            if (!GeometryHelper.Intersect(a.X, a.Y, b.X, b.Y, constraint.start.X, constraint.start.Y, constraint.end.X, constraint.end.Y, out double x, out double y))
+            {
+                return false;
+            }
+
+            if (alwaysSplit || !CanFlip(triangle.index, edge))
+            {
+                Node newNode = new Node() { Index = -1, X = x, Y = y };
+                Node? inserted = Add(triangle.index, edge, newNode);
+                if (newNode != inserted)
+                {
+                    return false;
+                }
+
+                foreach (Constraint c in constraint.Split(inserted, eps))
+                {
+                    toInsert.Enqueue(c);
+                }
+            }
+            else
+            {
+                Triangle[] flipped = Flip(triangle.index, edge);
+                Add(flipped);
+                Legalize(flipped);
+            }
+            return true;
+        }
+
+        public int FindExitEdge(Triangle triangle, Node node)
+        {
+            List<Node> nodes = Nodes;
+            int bestEdge = -1;
+            double bestCross = 0;
+            for (int edge = 0; edge < 3; edge++)
+            {
+                Node a = nodes[triangle.indices[edge]];
+                Node b = nodes[triangle.indices[NEXT[edge]]];
+
+                double cross = GeometryHelper.Cross(a, b, node.X, node.Y);
+                if (bestEdge == -1 || cross < bestCross)
+                {
+                    bestCross = cross;
+                    bestEdge = edge;
+                }
+            }
+
+            return bestEdge;
+        }
+
+        public void SetConstraint(int triangle, int edge, int value)
+        {
+            Triangle tri = _triangles[triangle];
+            tri.constraints[edge] = value;
+
+            int adjIndex = tri.adjacent[edge];
+            if (adjIndex == -1)
+            {
+                return;
+            }
+
+            int a = tri.indices[edge];
+            int b = tri.indices[NEXT[edge]];
+
+            Triangle adj = _triangles[adjIndex];
+            adj.constraints[adj.IndexOf(b, a)] = value;
         }
 
         public Triangle EntranceTriangle(int start, int end)

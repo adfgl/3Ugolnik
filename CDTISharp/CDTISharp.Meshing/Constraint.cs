@@ -4,7 +4,7 @@ namespace CDTISharp.Meshing
 {
     public readonly struct Constraint : IEquatable<Constraint>
     {
-        public readonly Node a, b;
+        public readonly Node start, end;
         public readonly int type;
         public readonly Circle circle;
 
@@ -14,19 +14,21 @@ namespace CDTISharp.Meshing
             this.type = type;
             if (a.Index < b.Index)
             {
-                this.a = a;
-                this.b = b;
+                this.start = a;
+                this.end = b;
             }
             else
             {
-                this.a = b;
-                this.b = a;
+                this.start = b;
+                this.end = a;
             }
         }
 
+        public bool Degenerate(double eps = 1e-6) => GeometryHelper.CloseOrEqual(start, end, eps);
+
         public bool Contains(Node node, double eps = 1e-6)
         {
-            return GeometryHelper.CloseOrEqual(a, node, eps) || GeometryHelper.CloseOrEqual(b, node, eps);
+            return GeometryHelper.CloseOrEqual(start, node, eps) || GeometryHelper.CloseOrEqual(end, node, eps);
         }
 
         public bool Enchrouched(List<Node> nodes, double eps = 1e-6)
@@ -54,29 +56,12 @@ namespace CDTISharp.Meshing
             {
                 return [this];
             }
-            return [new Constraint(this.a, node, type), new Constraint(node, this.b, type)];
-        }
-
-        public List<Constraint> Split(Constraint other, double eps = 1e-6)
-        {
-            if (this.Contains(other.a, eps) || this.Contains(other.b, eps) || other.Contains(a, eps) || other.Contains(b, eps))
-            {
-                return [this];
-            }
-
-            if (GeometryHelper.Intersect(a.X, a.Y, b.X, b.Y, other.a.X, other.a.Y, other.b.X, other.b.Y, out double x, out double y))
-            {
-                Node node = new Node() { X = x, Y = y };
-                List<Constraint> result = Split(node, eps);
-                result.AddRange(other.Split(node, eps));
-                return result;
-            }
-            return [this];
+            return [new Constraint(this.start, node, type), new Constraint(node, this.end, type)];
         }
 
         public bool Equals(Constraint other)
         {
-            return a.Index == other.a.Index && b.Index == other.b.Index;
+            return start.Index == other.start.Index && end.Index == other.end.Index;
         }
 
         public override bool Equals(object? obj)
@@ -84,11 +69,11 @@ namespace CDTISharp.Meshing
             return obj is Constraint other && Equals(other);
         }
 
-        public override int GetHashCode() => HashCode.Combine(a.Index, b.Index);
+        public override int GetHashCode() => HashCode.Combine(start.Index, end.Index);
 
         public override string ToString()
         {
-            return $"[{type}] {a.Index} {b.Index}";
+            return $"[{type}] {start.Index} {end.Index}";
         }
     }
 }
