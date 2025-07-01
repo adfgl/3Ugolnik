@@ -8,10 +8,6 @@ namespace CDTISharp.Meshing
 {
     public class Mesh
     {
-        public const int CONTOUR = 0;
-        public const int HOLE = 1;
-        public const int USER = 2;
-
         public readonly static int[] NEXT = [1, 2, 0];
         public readonly static int[] PREV = [2, 0, 1];
 
@@ -30,7 +26,113 @@ namespace CDTISharp.Meshing
             _qt = new QuadTree(rectangle);
         }
 
-        public void FindContaining(double x, double y, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
+
+        public Node? Add(Node point)
+        {
+            FindContaining(point, out int trianlge, out int edge, out int node);
+            if (trianlge == -1)
+            {
+                return null;
+            }
+
+            if (node != -1)
+            {
+                return Nodes[node];
+            }
+
+            point.Index = _qt.Items.Count;
+
+            Triangle[] triangles;
+            if (edge != -1)
+            {
+                triangles = Split(trianlge, edge, point);
+            }
+            else
+            {
+                triangles = Split(trianlge, point);
+            }
+
+            // do something before adding?
+
+            _qt.Add(point);
+            Add(triangles);
+            Legalize(triangles);
+            return point;
+        }
+
+        public void Add(Node start, Node end)
+        {
+            Node? a = Add(start);
+            Node? b = Add(end);
+
+            if (a is null || b is null || a == b)
+            {
+                return;
+            }
+
+            Queue<(Node, Node)> toInsert = new Queue<(Node, Node)>();
+            
+        }
+
+        public Triangle EntranceTriangle(int start, int end)
+        {
+            Node nodeA = Nodes[start];
+            Node nodeB = Nodes[end];
+
+            double x = nodeB.X;
+            double y = nodeB.Y;
+
+            TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
+            do
+            {
+                Triangle current = _triangles[walker.Current];
+                int e0 = walker.Edge0;
+                Node a0 = Nodes[current.indices[e0]];
+                Node b0 = Nodes[current.indices[NEXT[e0]]];
+                if (GeometryHelper.Cross(a0, b0, x, y) < 0)
+                {
+                    continue;
+                }
+
+                int e1 = walker.Edge1;
+                Node a1 = Nodes[current.indices[e1]];
+                Node b1 = Nodes[current.indices[NEXT[e1]]];
+                if (GeometryHelper.Cross(a1, b1, x, y) < 0)
+                {
+                    continue;
+                }
+                return current;
+            }
+            while (walker.MoveNext());
+
+            throw new Exception("Could not find entrance triangle.");
+        }
+
+        public List<int> Legalize(Triangle[] triangles)
+        {
+            List<int> affected = new List<int>();
+            Stack<Triangle> toLegalize = new Stack<Triangle>(triangles);
+            while (toLegalize.Count > 0)
+            {
+                Triangle t = toLegalize.Pop();
+                if (!CanFlip(t.index, 0) || !ShouldFlip(t.index, 0))
+                {
+                    continue;
+                }
+
+                Triangle[] flipped = Flip(t.index, 0);
+                Add(flipped);
+
+                foreach (Triangle f in flipped)
+                {
+                    affected.Add(f.index);
+                    toLegalize.Push(f);
+                }
+            }
+            return affected;
+        }
+
+        public void FindContaining(Node pt, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
         {
             triangle = edge = node = -1;
             if (_triangles.Count == 0)
@@ -38,7 +140,8 @@ namespace CDTISharp.Meshing
                 return;
             }
 
-            Node pt = new Node() { X = x, Y = y };
+            double x = pt.X;
+            double y = pt.Y;
 
             int maxSteps = _triangles.Count * 3;
             int trianglesChecked = 0;
@@ -379,7 +482,7 @@ namespace CDTISharp.Meshing
             return [new0, new1];
         }
 
-        public Triangle[] Split(int triangle, int edge, int node)
+        public Triangle[] Split(int triangle, int edge, Node node)
         {
             Triangle old0 = _triangles[triangle];
             int constraint = old0.constraints[edge];
@@ -387,7 +490,7 @@ namespace CDTISharp.Meshing
             Node a = Nodes[old0.indices[0]];
             Node b = Nodes[old0.indices[1]];
             Node c = Nodes[old0.indices[2]];
-            Node e = Nodes[node];
+            Node e = node;
 
             int bc = NEXT[edge];
             int ca = PREV[edge];
@@ -510,7 +613,7 @@ namespace CDTISharp.Meshing
             return triangles;
         }
 
-        public Triangle[] Split(int triangle, int node)
+        public Triangle[] Split(int triangle, Node node)
         {
             /*
                          *C
@@ -530,7 +633,7 @@ namespace CDTISharp.Meshing
             Node a = Nodes[old.indices[0]];
             Node b = Nodes[old.indices[1]];
             Node c = Nodes[old.indices[2]];
-            Node d = Nodes[node];
+            Node d = node;
 
             int t0 = triangle;
             int t1 = _triangles.Count;
