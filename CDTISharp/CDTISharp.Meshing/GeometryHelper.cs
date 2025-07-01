@@ -13,7 +13,6 @@ namespace CDTISharp.Meshing
             return dx * dx + dy * dy < eps;
         }
 
-
         public static double SquareLength(Node start, Node end)
         {
             double dx = end.X - start.X;
@@ -92,7 +91,7 @@ namespace CDTISharp.Meshing
             return true;
         }
 
-        public static bool Contains(List<Node> closedPolygon, double x, double y, double tolerance = 0)
+        public static bool Contains(List<Node> closedPolygon, double x, double y, double tolerance)
         {
             int count = closedPolygon.Count - 1;
             bool inside = false;
@@ -122,7 +121,7 @@ namespace CDTISharp.Meshing
             return inside;
         }
 
-        public static bool PointOnSegment(Node a, Node b, double x, double y, double tolerance = 1e-9)
+        public static bool PointOnSegment(Node a, Node b, double x, double y, double tolerance)
         {
             if (x < Math.Min(a.X, b.X) - tolerance || x > Math.Max(a.X, b.X) + tolerance ||
                 y < Math.Min(a.Y, b.Y) - tolerance || y > Math.Max(a.Y, b.Y) + tolerance)

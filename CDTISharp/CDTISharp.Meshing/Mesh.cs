@@ -1,7 +1,4 @@
-﻿using System;
-using System.Data;
-using System.Runtime.CompilerServices;
-
+﻿
 namespace CDTISharp.Meshing
 {
     public class Mesh
@@ -24,7 +21,29 @@ namespace CDTISharp.Meshing
             _qt = new QuadTree(rectangle);
         }
 
-        public void Refine(Quality quality)
+        public Mesh AddSuperStructure(Rectangle bounds, double scale)
+        {
+            double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+            double midx = (bounds.maxX + bounds.minX) * 0.5;
+            double midy = (bounds.maxY + bounds.minY) * 0.5;
+            double size = Math.Max(scale, 2) * dmax;
+
+            Node a = new Node(0, midx - size, midy - size);
+            Node b = new Node(1, midx + size, midy - size);
+            Node c = new Node(2, midx, midy + size);
+
+            _qt.Add(a);
+            _qt.Add(b);
+            _qt.Add(c);
+
+            Triangle triangle = new Triangle(0, a, b, c);
+            _triangles.Add(triangle);
+
+            a.Triangle = b.Triangle = c.Triangle = triangle.index;
+            return this;
+        }
+
+        public void Refine(Quality quality, double eps)
         {
             Stack<int> affected = new Stack<int>();
 
@@ -118,7 +137,7 @@ namespace CDTISharp.Meshing
                     }
 
                     Node node = new Node() { X = x, Y = y };
-                    Node? inserted = Add(affected, node);
+                    Node? inserted = Add(affected, node, eps);
                     if (inserted == node)
                     {
                         while (affected.Count > 0)
@@ -186,9 +205,9 @@ namespace CDTISharp.Meshing
             return t.circle.radiusSqr / minEdgeSqr > 2;
         }
 
-        public Node? Add(Stack<int> affected, Node point)
+        public Node? Add(Stack<int> affected, Node point, double eps)
         {
-            FindContaining(point, out int trianlge, out int edge, out int node);
+            FindContaining(point, out int trianlge, out int edge, out int node, eps);
             if (node != -1)
             {
                 return Nodes[node];
@@ -223,10 +242,10 @@ namespace CDTISharp.Meshing
             return point;
         }
 
-        public void Add(Stack<int> affected, Node start, Node end, int type, bool alwaysSplit = false)
+        public void Add(Stack<int> affected, Node start, Node end, int type, bool alwaysSplit, double eps)
         {
-            Node? a = Add(affected, start);
-            Node? b = Add(affected, end);
+            Node? a = Add(affected, start, eps);
+            Node? b = Add(affected, end, eps);
             if (a is null || b is null)
             {
                 return;
@@ -250,7 +269,7 @@ namespace CDTISharp.Meshing
                 else
                 {
                     Triangle entrance = EntranceTriangle(constraint.start.Index, constraint.end.Index);
-                    if (WalkAndInsert(affected, entrance, constraint, toInsert))
+                    if (WalkAndInsert(affected, entrance, constraint, toInsert, alwaysSplit, eps))
                     {
                         continue;
                     }
@@ -258,13 +277,13 @@ namespace CDTISharp.Meshing
             }
         }
 
-        bool WalkAndInsert(Stack<int> affected, Triangle current, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false)
+        bool WalkAndInsert(Stack<int> affected, Triangle current, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit, double eps)
         {
             while (true)
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    if (TrySplitOrFlip(affected, current, i, constraint, toInsert, alwaysSplit))
+                    if (TrySplitOrFlip(affected, current, i, constraint, toInsert, alwaysSplit, eps))
                     {
                         return true;
                     }
@@ -277,7 +296,7 @@ namespace CDTISharp.Meshing
             }
         }
 
-        bool TrySplitOrFlip(Stack<int> affected, Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false, double eps = 1e-6)
+        bool TrySplitOrFlip(Stack<int> affected, Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit, double eps)
         {
             Node a = Nodes[triangle.indices[edge]];
             Node b = Nodes[triangle.indices[NEXT[edge]]];
@@ -409,7 +428,7 @@ namespace CDTISharp.Meshing
             }
         }
 
-        public void FindContaining(Node pt, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
+        public void FindContaining(Node pt, out int triangle, out int edge, out int node, double eps, int searchStart = -1)
         {
             triangle = edge = node = -1;
             if (_triangles.Count == 0)
