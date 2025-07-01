@@ -1,5 +1,8 @@
 ﻿
+using System;
 using System.Data;
+using System.Runtime.Intrinsics.X86;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CDTISharp.Meshing
 {
@@ -25,6 +28,290 @@ namespace CDTISharp.Meshing
             _triangles = new List<Triangle>();
             _bounds = rectangle;
             _qt = new QuadTree(rectangle);
+        }
+
+        public void FindContaining(double x, double y, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
+        {
+            triangle = edge = node = -1;
+            if (_triangles.Count == 0)
+            {
+                return;
+            }
+
+            Node pt = new Node() { X = x, Y = y };
+
+            int maxSteps = _triangles.Count * 3;
+            int trianglesChecked = 0;
+
+            int skipEdge = -1;
+            int current = searchStart == -1 ? _triangles.Count - 1 : searchStart;
+            while (true)
+            {
+                if (trianglesChecked++ > maxSteps)
+                {
+                    throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
+                }
+
+                Triangle t = _triangles[current];
+
+                int bestExit = -1;
+                double worstCross = 0;
+                bool inside = true;
+                for (int i = 0; i < 3; i++)
+                {
+                    if (i == skipEdge)
+                    {
+                        continue;
+                    }
+
+                    Node start = Nodes[t.indices[i]];
+                    if (GeometryHelper.CloseOrEqual(start, pt, eps))
+                    {
+                        triangle = current;
+                        edge = i;
+                        node = start.Index;
+                        return;
+                    }
+
+                    Node end = Nodes[t.indices[NEXT[i]]];
+                    if (GeometryHelper.CloseOrEqual(start, pt, eps))
+                    {
+                        triangle = current;
+                        edge = NEXT[i];
+                        node = end.Index;
+                        return;
+                    }
+
+                    double cross = GeometryHelper.Cross(start, end, x, y);
+                    if (Math.Abs(cross) < eps)
+                    {
+                        double dx = end.X - start.X;
+                        double dy = end.Y - start.Y;
+                        double dot = (x - start.X) * dx + (y - start.Y) * dy;
+                        double lenSq = dx * dx + dy * dy;
+
+                        if (dot >= -eps && dot <= lenSq + eps)
+                        {
+                            triangle = current;
+                            edge = i;
+                            node = -1;
+                            return;
+                        }
+                    }
+
+                    if (cross < 0)
+                    {
+                        inside = false;
+                        if (bestExit == -1 || cross < worstCross)
+                        {
+                            worstCross = cross;
+                            bestExit = i;
+                        }
+                    }
+                }
+
+                if (inside)
+                {
+                    triangle = current;
+                    edge = node = -1;
+                    return;
+                }
+
+                int next = t.adjacent[bestExit];
+                if (next == -1)
+                {
+                    triangle = edge = node = -1;
+                    return;
+                }
+
+                int bestStart = t.indices[bestExit];
+                int bestEnd = t.indices[NEXT[bestExit]];
+
+                skipEdge = _triangles[next].IndexOf(bestEnd, bestStart);
+                current = next;
+            }
+        }
+
+        public void FindEdgeBrute(int a, int b, out int triangle, out int edge)
+        {
+            foreach (Triangle t in _triangles)
+            {
+                int e = t.IndexOf(a, b);
+                if (e != -1)
+                {
+                    triangle = t.index;
+                    edge = e;
+                    return;
+                }
+            }
+
+            triangle = -1;
+            edge = -1;
+        }
+
+        public void FindEdge(int a, int b, out int triangle, out int edge)
+        {
+            Node nodeA = Nodes[a];
+            TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
+
+            do
+            {
+                Triangle t = _triangles[walker.Current];
+                triangle = t.index;
+
+                int e0 = walker.Edge0;
+                if (t.indices[e0] == a && t.indices[NEXT[e0]] == b)
+                {
+                    edge = e0;
+                    return;
+                }
+
+                int e1 = walker.Edge1;
+                if (t.indices[e1] == a && t.indices[NEXT[e1]] == b)
+                {
+                    edge = e1;
+                    return;
+                }
+            }
+            while (walker.MoveNext());
+
+            triangle = edge = -1;
+        }
+
+        public void Add(Triangle[] tris)
+        {
+            int n = tris.Length;
+            for (int i = 0; i < n; i++)
+            {
+                Triangle t = tris[i];
+
+                int index = t.index;
+                if (index < _triangles.Count)
+                {
+                    SetConnectivity(_triangles[index], false);
+                    _triangles[index] = t;
+                }
+                else
+                {
+                    _triangles.Add(t);
+                }
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                SetConnectivity(tris[i], true);
+            }
+        }
+
+        void SetConnectivity(Triangle t, bool connect)
+        {
+            int ti = t.index;
+            for (int i = 0; i < 3; i++)
+            {
+                int start = t.indices[i];
+                Node origin = Nodes[start];
+
+                if (connect)
+                {
+                    if (origin.Triangle == -1)
+                    {
+                        origin.Triangle = ti;
+                    }
+                }
+                else
+                {
+                    if (origin.Triangle == ti)
+                    {
+                        origin.Triangle = -1;
+                    }
+                }
+
+                int adjIndex = t.adjacent[i];
+                if (adjIndex == -1) continue;
+
+                Triangle adj = _triangles[adjIndex];
+                int end = t.indices[NEXT[i]];
+                int twin = adj.IndexOf(end, start);
+
+                if (twin == -1) continue;
+
+                if (connect)
+                {
+                    if (adj.adjacent[twin] == -1)
+                    {
+                        adj.adjacent[twin] = ti;
+                    }
+                }
+                else
+                {
+                    if (adj.adjacent[twin] == ti)
+                    {
+                        adj.adjacent[twin] = -1;
+                    }
+                }
+            }
+        }
+
+
+        public bool ShouldFlip(int triangle, int edge)
+        {
+            Triangle t0 = _triangles[triangle];
+            int adjIndex = t0.adjacent[edge];
+            Triangle t1 = _triangles[adjIndex];
+
+            Node a = Nodes[t0.indices[0]];
+            Node b = Nodes[t0.indices[1]];
+            int twin = t1.IndexOf(b.Index, a.Index);
+
+            Node d = Nodes[t1.indices[PREV[twin]]];
+            return t0.circle.Contains(d.X, d.Y);
+        }
+
+        public bool CanFlip(int triangle, int edge)
+        {
+            /*
+                           c           
+                           /\          
+                          /  \         
+                         /    \        
+                        /      \       
+                       /   t0   \      
+                      /          \     
+                     /            \     
+                  a +--------------+ b 
+                     \            /    
+                      \          /     
+                       \   t1   /      
+                        \      /       
+                         \    /        
+                          \  /         
+                           \/          
+                            d          
+             */
+
+
+            Triangle t0 = _triangles[triangle];
+            if (t0.constraints[edge] != -1)
+            {
+                return false;
+            }
+            
+            int adjIndex = t0.adjacent[edge];
+            if (adjIndex == -1)
+            {
+                return false;
+            }
+
+            Triangle t1 = _triangles[adjIndex];
+
+            Node a = Nodes[t0.indices[0]];
+            Node b = Nodes[t0.indices[1]];
+            Node c = Nodes[t0.indices[2]];
+
+            int twin = t1.IndexOf(b.Index, a.Index);
+            Node d = Nodes[t1.indices[PREV[twin]]];
+
+            return GeometryHelper.QuadConvex(b, c, a, d);
         }
 
         public Triangle[] Flip(int triangle, int edge)
@@ -59,7 +346,7 @@ namespace CDTISharp.Meshing
             Node b = Nodes[old0.indices[1]];
             Node c = Nodes[old0.indices[2]];
 
-            int twin = old1.IndexOf(c.Index, a.Index);
+            int twin = old1.IndexOf(b.Index, a.Index);
 
             Node d = Nodes[old1.indices[PREV[twin]]];
 
@@ -171,7 +458,7 @@ namespace CDTISharp.Meshing
                          d                            d            
              */
 
-                int twin = old1.IndexOf(c.Index, a.Index);
+                int twin = old1.IndexOf(b.Index, a.Index);
                 Node d = Nodes[old1.indices[PREV[twin]]];
 
                 int ad = NEXT[edge];
@@ -271,6 +558,43 @@ namespace CDTISharp.Meshing
             new2.constraints[0] = old.constraints[2];
 
             return [new0, new1, new2];
+        }
+    }
+
+    public struct TriangleWalker
+    {
+        readonly List<Triangle> _triangles;
+        readonly int _start, _vertex;
+        int _current, _edge0, _edge1;
+
+        public TriangleWalker(List<Triangle> triangles, int triangleIndex, int globalVertexIndex)
+        {
+            _triangles = triangles;
+            _vertex = globalVertexIndex;
+            _current = _start = triangleIndex;
+
+            _edge0 = _triangles[_current].IndexOf(_vertex);
+            _edge1 = Mesh.PREV[_edge0];
+        }
+
+        public int Current => _current;
+        public int Edge0 => _edge0;
+        public int Edge1 => _edge1;
+
+        public bool MoveNext()
+        {
+            Triangle tri = _triangles[_current];
+            int next = tri.adjacent[_edge0];
+            if (next == _start || next == -1)
+            {
+                return false;
+            }
+
+            _current = next;
+            Triangle nextTri = _triangles[_current];
+            _edge0 = nextTri.IndexOf(_vertex);
+            _edge1 = Mesh.PREV[_edge0];
+            return true;
         }
     }
 }
