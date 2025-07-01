@@ -50,7 +50,7 @@ namespace CDTISharp.Meshing
             return Math.Atan2(Math.Abs(det), dot);
         }
 
-        public static bool Intersect(double p1x, double p1y, double p2x, double p2y, double q1x, double q1y, double q2x, double q2y, out double x, out double y)
+        public static Node? Intersect(Node p1, Node p2, Node q1, Node q2)
         {
             // P(u) = p1 + u * (p2 - p1)
             // Q(v) = q1 + v * (q2 - q1)
@@ -67,15 +67,14 @@ namespace CDTISharp.Meshing
             // | a  b | * | u | = | e |
             // | c  d |   | v |   | f |
 
-            x = y = Double.NaN;
-            double a = p2x - p1x, b = q1x - q2x;
-            double c = p2y - p1y, d = q1y - q2y;
-            double e = q1x - p1x, f = q1y - p1y;
+            double a = p2.X - p1.X, b = q1.X - q2.X;
+            double c = p2.Y - p1.Y, d = q1.Y - q2.Y;
+            double e = q1.X - p1.X, f = q1.Y - p1.Y;
 
             double det = a * d - b * c;
             if (Math.Abs(det) < 1e-12)
             {
-                return false;
+                return null; // Lines are parallel or too close to parallel
             }
 
             double u = (e * d - b * f) / det;
@@ -83,12 +82,16 @@ namespace CDTISharp.Meshing
 
             if (u < 0 || u > 1 || v < 0 || v > 1)
             {
-                return false;
+                return null; // No intersection within segments
             }
 
-            x = p1x + u * a;
-            y = p1y + u * c;
-            return true;
+            return new Node
+            {
+                X = p1.X + u * a,
+                Y = p1.Y + u * c,
+                Z = p1.Z + u * (p2.Z - p1.Z), // Interpolated Z from segment P
+                Index = -1
+            };
         }
 
         public static bool Contains(List<Node> closedPolygon, double x, double y, double tolerance)

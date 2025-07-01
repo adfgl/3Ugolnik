@@ -1,5 +1,4 @@
-﻿
-namespace CDTISharp.Meshing
+﻿namespace CDTISharp.Meshing
 {
     public class Mesh
     {
@@ -8,10 +7,11 @@ namespace CDTISharp.Meshing
 
         readonly List<Triangle> _triangles;
         readonly QuadTree _qt;
+        readonly List<Node> _nodes;
         readonly Rectangle _bounds;
 
         public List<Triangle> Triangles => _triangles;
-        public List<Node> Nodes => _qt.Items;
+        public List<Node> Nodes => _nodes;
         public Rectangle Bounds => _bounds;
 
         public Mesh(Rectangle rectangle)
@@ -19,6 +19,7 @@ namespace CDTISharp.Meshing
             _triangles = new List<Triangle>();
             _bounds = rectangle;
             _qt = new QuadTree(rectangle);
+            _nodes = new List<Node>();
         }
 
         public Mesh AddSuperStructure(Rectangle bounds, double scale)
@@ -32,9 +33,9 @@ namespace CDTISharp.Meshing
             Node b = new Node(1, midx + size, midy - size);
             Node c = new Node(2, midx, midy + size);
 
-            _qt.Add(a);
-            _qt.Add(b);
-            _qt.Add(c);
+            _nodes.Add(a);
+            _nodes.Add(b);
+            _nodes.Add(c);
 
             Triangle triangle = new Triangle(0, a, b, c);
             _triangles.Add(triangle);
@@ -99,7 +100,7 @@ namespace CDTISharp.Meshing
                     seen.Remove(constraint);
                     foreach (Constraint e in constraint.Split(node))
                     {
-                        if (seen.Add(e) && e.Enchrouched(_qt) && e.VisibleFromInterior(seen, node.X, node.Y))
+                        if (seen.Add(e) && e.Enchrouched(_qt) && e.VisibleFromInterior(seen, node))
                         {
                             segmentQueue.Enqueue(e);
                         }
@@ -121,10 +122,11 @@ namespace CDTISharp.Meshing
                         continue;
                     }
 
+                    Node node = new Node() { X = x, Y = y };
                     bool encroaches = false;
                     foreach (Constraint seg in seen)
                     {
-                        if (seg.circle.Contains(x, y) && seg.VisibleFromInterior(seen , x, y))
+                        if (seg.circle.Contains(x, y) && seg.VisibleFromInterior(seen, node))
                         {
                             segmentQueue.Enqueue(seg);
                             encroaches = true;
@@ -136,7 +138,6 @@ namespace CDTISharp.Meshing
                         continue;
                     }
 
-                    Node node = new Node() { X = x, Y = y };
                     Node? inserted = Add(affected, node, eps);
                     if (inserted == node)
                     {
@@ -237,6 +238,7 @@ namespace CDTISharp.Meshing
             // do something before adding?
 
             _qt.Add(point);
+            _nodes.Add(point);
             Add(triangles);
             Legalize(affected, triangles);
             return point;
@@ -305,16 +307,16 @@ namespace CDTISharp.Meshing
                 return false;
             }
 
-            if (!GeometryHelper.Intersect(a.X, a.Y, b.X, b.Y, constraint.start.X, constraint.start.Y, constraint.end.X, constraint.end.Y, out double x, out double y))
+            Node? inter = GeometryHelper.Intersect(a, b, constraint.start, constraint.end);
+            if (inter is null)
             {
                 return false;
             }
 
             if (alwaysSplit || !CanFlip(triangle.index, edge))
             {
-                Node newNode = new Node() { Index = -1, X = x, Y = y };
-                Node? inserted = Add(affected, triangle.index, edge, newNode);
-                if (newNode != inserted)
+                Node? inserted = Add(affected, triangle.index, edge, inter);
+                if (inter != inserted)
                 {
                     return false;
                 }

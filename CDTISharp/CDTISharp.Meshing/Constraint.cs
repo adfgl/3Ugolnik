@@ -4,7 +4,7 @@ namespace CDTISharp.Meshing
 {
     public readonly struct Constraint : IEquatable<Constraint>
     {
-        public readonly Node start, end;
+        public readonly Node start, center, end;
         public readonly int type;
         public readonly Circle circle;
 
@@ -12,6 +12,7 @@ namespace CDTISharp.Meshing
         {
             this.circle = new Circle(a.X, a.Y, b.X, b.Y);
             this.type = type;
+            this.center = new Node() { X = circle.x, Y = circle.y, Z = (a.Z + b.Z) * 0.5 };
             if (a.Index < b.Index)
             {
                 this.start = a;
@@ -26,13 +27,11 @@ namespace CDTISharp.Meshing
 
         public bool Degenerate(double eps = 1e-6) => GeometryHelper.CloseOrEqual(start, end, eps);
 
-        public bool VisibleFromInterior(IEnumerable<Constraint> segments, double x, double y)
+        public bool VisibleFromInterior(IEnumerable<Constraint> segments, Node pt)
         {
-            double cx = circle.x;
-            double cy = circle.y;
             foreach (Constraint s in segments)
             {
-                if (!this.Equals(s) && GeometryHelper.Intersect(cx, cy, x, y, s.start.X, s.start.Y, s.end.X, s.end.Y, out _, out _))
+                if (!this.Equals(s) && GeometryHelper.Intersect(start, end, center, pt) is not null)
                 {
                     return false;
                 }
