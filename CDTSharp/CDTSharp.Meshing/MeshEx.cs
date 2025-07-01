@@ -40,7 +40,7 @@ namespace CDTSharp.Meshing
                 var (x2, y2) = project(b.X, b.Y);
                 var (x3, y3) = project(c.X, c.Y);
 
-                sb.Append($"<polygon points='{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1}' fill='lightgray' fill-opacity='0.5'/>");
+                sb.Append($"<polygon points='{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1}' fill='lightblue' fill-opacity='0.5'/>");
 
                 foreach (Edge edge in triangle.Forward())
                 {

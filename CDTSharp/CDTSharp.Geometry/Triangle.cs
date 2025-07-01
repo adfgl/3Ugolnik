@@ -1,4 +1,6 @@
-﻿namespace CDTSharp.Geometry
+﻿using System.Diagnostics;
+
+namespace CDTSharp.Geometry
 {
     public class Triangle
     {
@@ -9,6 +11,11 @@
             Edge ab = new Edge(a);
             Edge bc = new Edge(b);
             Edge ca = new Edge(c);
+
+            if (GeometryHelper.Cross(a, b, c.X, c.Y) < 0)
+            {
+                throw new Exception();
+            }
 
             if (a.Edge == null) a.Edge = ab;
             if (b.Edge == null) b.Edge = bc;

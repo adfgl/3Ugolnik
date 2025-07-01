@@ -68,16 +68,16 @@ namespace CDTSharp
 
             Mesh mesh = new Mesh(contour, userEdgeConstraints, userNodeConstraints);
             CDTQuality? quality = input.Quality;
-            if (quality is not null)
-            {
-                mesh = mesh.Refine(new Quality()
-                {
-                    MaxArea = quality.MaxArea,
-                    MaxEdgeLength = quality.MaxEdgeLength,
-                    MinAngle = quality.MinAngle,
-                });
-            }
-            mesh = mesh.RemoveSuperStructure();
+            //if (quality is not null)
+            //{
+            //    mesh = mesh.Refine(new Quality()
+            //    {
+            //        MaxArea = quality.MaxArea,
+            //        MaxEdgeLength = quality.MaxEdgeLength,
+            //        MinAngle = quality.MinAngle,
+            //    });
+            //}
+            //mesh = mesh.RemoveSuperStructure();
 
 #if DEBUG
             Console.WriteLine(mesh.ToSvg());
@@ -204,7 +204,7 @@ namespace CDTSharp
                 Segment[] split = segment.Split();
                 foreach (Segment s in split)
                 {
-                    nodes.Add(s.Start);
+                    //nodes.Add(s.Start);
                     nodes.Add(s.End);
                 }
             }

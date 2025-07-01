@@ -39,15 +39,6 @@
             return GeometryHelper.Cross(Origin, Next.Origin, x, y);
         }
 
-        public void SetTwin(Edge? twin)
-        {
-            Twin = twin;
-            if (twin is not null)
-            {
-                twin.Twin = this;
-            }
-        }
-
         public void SetConstraint(EConstraint value)
         {
             Constrained = value;

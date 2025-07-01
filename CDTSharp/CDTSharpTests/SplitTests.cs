@@ -39,12 +39,28 @@ namespace CDTSharpTests
         }
 
         [Fact]
+        public void EdgeSplit()
+        {
+            Mesh m = TestCase();
+
+            Triangle t2 = m.Triangles[2];
+            Edge e = t2.Edge.Next;
+
+            Node toInsert = Node.Average(e.Origin, e.Next.Origin);
+            toInsert.Index = m.Nodes.Count;
+
+            Triangle[] tris = m.Split(e, toInsert);
+            Assert.Equal(4, tris.Length);
+
+        }
+
+        [Fact]
         public void TriangleSplit()
         {
             Mesh m = TestCase();
+            Triangle t3 = m.Triangles[3];
             Node toInsert = Node.Average(m.Nodes[0], m.Nodes[1], m.Nodes[2]);
             toInsert.Index = m.Nodes.Count;
-            Triangle t3 = m.Triangles[3];
 
             Triangle[] tris = m.Split(t3, toInsert);
             Assert.Equal(3, tris.Length);
