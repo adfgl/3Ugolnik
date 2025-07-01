@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace CDTISharp.Meshing
 {
@@ -10,6 +11,14 @@ namespace CDTISharp.Meshing
             double dx = b.X - a.X;
             double dy = b.Y - a.Y;
             return dx * dx + dy * dy < eps;
+        }
+
+
+        public static double SquareLength(Node start, Node end)
+        {
+            double dx = end.X - start.X;
+            double dy = end.Y - start.Y;
+            return dx * dx + dy * dy;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

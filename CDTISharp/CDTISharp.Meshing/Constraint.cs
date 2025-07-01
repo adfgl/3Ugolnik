@@ -26,6 +26,20 @@ namespace CDTISharp.Meshing
 
         public bool Degenerate(double eps = 1e-6) => GeometryHelper.CloseOrEqual(start, end, eps);
 
+        public bool VisibleFromInterior(IEnumerable<Constraint> segments, double x, double y)
+        {
+            double cx = circle.x;
+            double cy = circle.y;
+            foreach (Constraint s in segments)
+            {
+                if (!this.Equals(s) && GeometryHelper.Intersect(cx, cy, x, y, s.start.X, s.start.Y, s.end.X, s.end.Y, out _, out _))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         public bool Contains(Node node, double eps = 1e-6)
         {
             return GeometryHelper.CloseOrEqual(start, node, eps) || GeometryHelper.CloseOrEqual(end, node, eps);

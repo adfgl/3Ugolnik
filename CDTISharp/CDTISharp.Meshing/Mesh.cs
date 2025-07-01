@@ -1,9 +1,6 @@
-﻿
-using System;
+﻿using System;
 using System.Data;
-using System.Reflection;
-using System.Runtime.Intrinsics.X86;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Runtime.CompilerServices;
 
 namespace CDTISharp.Meshing
 {
@@ -27,18 +24,179 @@ namespace CDTISharp.Meshing
             _qt = new QuadTree(rectangle);
         }
 
+        public void Refine(Quality quality)
+        {
+            Stack<int> affected = new Stack<int>();
 
-        public Node? Add(Node point)
+            List<Node> nodes = Nodes;
+
+            HashSet<Constraint> seen = new HashSet<Constraint>();
+            Queue<int> triangleQueue = new Queue<int>();
+            Queue<Constraint> segmentQueue = new Queue<Constraint>();
+
+            foreach (Triangle t in _triangles)
+            {
+                if (Bad(t, quality))
+                {
+                    triangleQueue.Enqueue(t.index);
+                }
+
+                for (int i = 0; i < 3; i++)
+                {
+                    int type = t.constraints[i];
+                    if (type == -1) continue;
+
+                    Node a = nodes[t.indices[i]];
+                    Node b = nodes[t.indices[NEXT[i]]];
+                    Constraint constraint = new Constraint(a, b, type);
+                    if (seen.Add(constraint) && constraint.Enchrouched(_qt))
+                    {
+                        segmentQueue.Enqueue(constraint);
+                    }
+                }
+            }
+
+            while (segmentQueue.Count > 0 || triangleQueue.Count > 0)
+            {
+                if (segmentQueue.Count > 0)
+                {
+                    Constraint constraint = segmentQueue.Dequeue();
+                    FindEdge(constraint.start.Index, constraint.end.Index, out int triangle, out int edge);
+                    if (edge == -1)
+                    {
+                        continue;
+                    }
+
+                    Node node = new Node() { Index = nodes.Count,  X = constraint.circle.x, Y = constraint.circle.y };
+                    Triangle[] tris = Split(triangle, edge, node);
+                    Add(tris);
+                    Legalize(affected, tris);
+
+                    while (affected.Count > 0)
+                    {
+                        triangleQueue.Enqueue(affected.Pop());
+                    }
+
+                    seen.Remove(constraint);
+                    foreach (Constraint e in constraint.Split(node))
+                    {
+                        if (seen.Add(e) && e.Enchrouched(_qt) && e.VisibleFromInterior(seen, node.X, node.Y))
+                        {
+                            segmentQueue.Enqueue(e);
+                        }
+                    }
+                }
+
+                if (triangleQueue.Count > 0)
+                {
+                    Triangle t = _triangles[triangleQueue.Dequeue()];
+                    if (!Bad(t, quality))
+                    {
+                        continue;
+                    }
+
+                    double x = t.circle.x;
+                    double y = t.circle.y;
+                    if (!_qt.Bounds.Contains(x, y))
+                    {
+                        continue;
+                    }
+
+                    bool encroaches = false;
+                    foreach (Constraint seg in seen)
+                    {
+                        if (seg.circle.Contains(x, y) && seg.VisibleFromInterior(seen , x, y))
+                        {
+                            segmentQueue.Enqueue(seg);
+                            encroaches = true;
+                        }
+                    }
+
+                    if (encroaches)
+                    {
+                        continue;
+                    }
+
+                    Node node = new Node() { X = x, Y = y };
+                    Node? inserted = Add(affected, node);
+                    if (inserted == node)
+                    {
+                        while (affected.Count > 0)
+                        {
+                            triangleQueue.Enqueue(affected.Pop());
+                        }
+                    }
+                }
+            }
+        }
+
+        public bool Bad(Triangle t, Quality q)
+        {
+            List<Node> nodes = Nodes;
+
+            double edgeLenLimSqr = q.MaxEdgeLength;
+            edgeLenLimSqr *= edgeLenLimSqr;
+
+            double minEdgeSqr = double.MaxValue;
+            double area = -1;
+            for (int i = 0; i < 3; i++)
+            {
+                Node a = nodes[t.indices[i]];
+                if (a.Index < 3)
+                {
+                    return false;
+                }
+                
+                Node b = nodes[t.indices[NEXT[i]]];
+                double lenSqr = GeometryHelper.SquareLength(a, b);
+                if (q.MaxEdgeLength > 0 && lenSqr > edgeLenLimSqr)
+                {
+                    return true;
+                }
+
+                if (minEdgeSqr > lenSqr)
+                {
+                    minEdgeSqr = lenSqr;
+                }
+
+                Node c = nodes[t.indices[PREV[i]]];
+                if (area < 0)
+                {
+                    area = GeometryHelper.Cross(a, b, c.X, c.Y) * 0.5;
+                    if (area < 0)
+                    {
+                        throw new Exception("Wrong winding order.");
+                    }
+
+                    if (area > q.MaxArea)
+                    {
+                        return true;
+                    }
+                }
+
+                if (q.MinAngle > 0)
+                {
+                    double rad = GeometryHelper.Angle(c, a, b);
+                    if (rad < q.MinAngle)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return t.circle.radiusSqr / minEdgeSqr > 2;
+        }
+
+        public Node? Add(Stack<int> affected, Node point)
         {
             FindContaining(point, out int trianlge, out int edge, out int node);
             if (node != -1)
             {
                 return Nodes[node];
             }
-            return Add(trianlge, edge, point);
+            return Add(affected, trianlge, edge, point);
         }
 
-        public Node? Add(int triangle, int edge, Node point)
+        public Node? Add(Stack<int> affected, int triangle, int edge, Node point)
         {
             if (triangle == -1)
             {
@@ -61,14 +219,14 @@ namespace CDTISharp.Meshing
 
             _qt.Add(point);
             Add(triangles);
-            Legalize(triangles);
+            Legalize(affected, triangles);
             return point;
         }
 
-        public void Add(Node start, Node end, int type, bool alwaysSplit = false)
+        public void Add(Stack<int> affected, Node start, Node end, int type, bool alwaysSplit = false)
         {
-            Node? a = Add(start);
-            Node? b = Add(end);
+            Node? a = Add(affected, start);
+            Node? b = Add(affected, end);
             if (a is null || b is null)
             {
                 return;
@@ -92,7 +250,7 @@ namespace CDTISharp.Meshing
                 else
                 {
                     Triangle entrance = EntranceTriangle(constraint.start.Index, constraint.end.Index);
-                    if (WalkAndInsert(entrance, constraint, toInsert))
+                    if (WalkAndInsert(affected, entrance, constraint, toInsert))
                     {
                         continue;
                     }
@@ -100,13 +258,13 @@ namespace CDTISharp.Meshing
             }
         }
 
-        bool WalkAndInsert(Triangle current, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false)
+        bool WalkAndInsert(Stack<int> affected, Triangle current, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false)
         {
             while (true)
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    if (TrySplitOrFlip(current, i, constraint, toInsert, alwaysSplit))
+                    if (TrySplitOrFlip(affected, current, i, constraint, toInsert, alwaysSplit))
                     {
                         return true;
                     }
@@ -119,7 +277,7 @@ namespace CDTISharp.Meshing
             }
         }
 
-        bool TrySplitOrFlip(Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false, double eps = 1e-6)
+        bool TrySplitOrFlip(Stack<int> affected, Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit = false, double eps = 1e-6)
         {
             Node a = Nodes[triangle.indices[edge]];
             Node b = Nodes[triangle.indices[NEXT[edge]]];
@@ -136,7 +294,7 @@ namespace CDTISharp.Meshing
             if (alwaysSplit || !CanFlip(triangle.index, edge))
             {
                 Node newNode = new Node() { Index = -1, X = x, Y = y };
-                Node? inserted = Add(triangle.index, edge, newNode);
+                Node? inserted = Add(affected, triangle.index, edge, newNode);
                 if (newNode != inserted)
                 {
                     return false;
@@ -151,7 +309,7 @@ namespace CDTISharp.Meshing
             {
                 Triangle[] flipped = Flip(triangle.index, edge);
                 Add(flipped);
-                Legalize(flipped);
+                Legalize(affected, flipped);
             }
             return true;
         }
@@ -229,9 +387,8 @@ namespace CDTISharp.Meshing
             throw new Exception("Could not find entrance triangle.");
         }
 
-        public List<int> Legalize(Triangle[] triangles)
+        public void Legalize(Stack<int> affected, Triangle[] triangles)
         {
-            List<int> affected = new List<int>();
             Stack<Triangle> toLegalize = new Stack<Triangle>(triangles);
             while (toLegalize.Count > 0)
             {
@@ -246,11 +403,10 @@ namespace CDTISharp.Meshing
 
                 foreach (Triangle f in flipped)
                 {
-                    affected.Add(f.index);
+                    affected.Push(f.index);
                     toLegalize.Push(f);
                 }
             }
-            return affected;
         }
 
         public void FindContaining(Node pt, out int triangle, out int edge, out int node, double eps = 1e-6, int searchStart = -1)
