@@ -314,7 +314,7 @@ namespace CDTISharp.Meshing
                 return false;
             }
 
-            if (alwaysSplit || !CanFlip(triangle.index, edge))
+            if (alwaysSplit || !Flipping.CanFlip(_triangles, _nodes, triangle.index, edge))
             {
                 Node? inserted = Add(affected, triangle.index, edge, inter);
                 if (inter != inserted)
@@ -329,7 +329,7 @@ namespace CDTISharp.Meshing
             }
             else
             {
-                Triangle[] flipped = Flip(triangle.index, edge);
+                Triangle[] flipped = Flipping.Flip(_triangles, _nodes, triangle.index, edge);
                 Add(flipped);
                 Legalize(affected, flipped);
             }
@@ -415,12 +415,12 @@ namespace CDTISharp.Meshing
             while (toLegalize.Count > 0)
             {
                 Triangle t = toLegalize.Pop();
-                if (!CanFlip(t.index, 0) || !ShouldFlip(t.index, 0))
+                if (!Flipping.CanFlip(_triangles, _nodes, t.index, 0) || !Flipping.ShouldFlip(_triangles, _nodes, t.index, 0))
                 {
                     continue;
                 }
 
-                Triangle[] flipped = Flip(t.index, 0);
+                Triangle[] flipped = Flipping.Flip(_triangles, _nodes, t.index, 0);
                 Add(flipped);
 
                 foreach (Triangle f in flipped)
@@ -655,132 +655,7 @@ namespace CDTISharp.Meshing
         }
 
 
-        public bool ShouldFlip(int triangle, int edge)
-        {
-            Triangle t0 = _triangles[triangle];
-            int adjIndex = t0.adjacent[edge];
-            Triangle t1 = _triangles[adjIndex];
-
-            Node a = _nodes[t0.indices[0]];
-            Node b = _nodes[t0.indices[1]];
-            int twin = t1.IndexOf(b.Index, a.Index);
-
-            Node d = _nodes[t1.indices[PREV[twin]]];
-            return t0.circle.Contains(d.X, d.Y);
-        }
-
-        public bool CanFlip(int triangle, int edge)
-        {
-            /*
-                           c           
-                           /\          
-                          /  \         
-                         /    \        
-                        /      \       
-                       /   t0   \      
-                      /          \     
-                     /            \     
-                  a +--------------+ b 
-                     \            /    
-                      \          /     
-                       \   t1   /      
-                        \      /       
-                         \    /        
-                          \  /         
-                           \/          
-                            d          
-             */
-
-
-            Triangle t0 = _triangles[triangle];
-            if (t0.constraints[edge] != -1)
-            {
-                return false;
-            }
-            
-            int adjIndex = t0.adjacent[edge];
-            if (adjIndex == -1)
-            {
-                return false;
-            }
-
-            Triangle t1 = _triangles[adjIndex];
-
-            Node a = _nodes[t0.indices[0]];
-            Node b = _nodes[t0.indices[1]];
-            Node c = _nodes[t0.indices[2]];
-
-            int twin = t1.IndexOf(b.Index, a.Index);
-            Node d = _nodes[t1.indices[PREV[twin]]];
-
-            return GeometryHelper.QuadConvex(b, c, a, d);
-        }
-
-        public Triangle[] Flip(int triangle, int edge)
-        {
-            Triangle old0 = _triangles[triangle];
-            int adjIndex = old0.adjacent[edge];
-            Triangle old1 = _triangles[adjIndex];
-
-            /*
-                  d - is inserted point, we want to propagate flip away from it, otherwise we 
-                  are risking ending up in flipping degeneracy
-                       c                          c
-                       /\                        /|\
-                      /  \                      / | \
-                     /    \                    /  |  \
-                    /      \                  /   |   \ 
-                   /   t0   \                /    |    \
-                  /          \              /     |     \ 
-                 /            \            /      |      \
-              a +--------------+ b      a +   t0  |  t1   + b
-                 \            /            \      |      /
-                  \          /              \     |     /
-                   \   t1   /                \    |    /
-                    \      /                  \   |   / 
-                     \    /                    \  |  /
-                      \  /                      \ | /
-                       \/                        \|/
-                        d                         d
-            */
-
-            Node a = _nodes[old0.indices[0]];
-            Node b = _nodes[old0.indices[1]];
-            Node c = _nodes[old0.indices[2]];
-
-            int twin = old1.IndexOf(b.Index, a.Index);
-
-            Node d = _nodes[old1.indices[PREV[twin]]];
-
-            int t0 = old0.index;
-            int t1 = old1.index;
-
-            int bc = NEXT[edge];
-            int ca = PREV[edge];
-            int ad = NEXT[twin];
-            int db = PREV[twin];
-
-            Triangle new0 = new Triangle(t0, a, d, c);
-            new0.adjacent[0] = old1.adjacent[ad];
-            new0.adjacent[1] = t1;
-            new0.adjacent[2] = old0.adjacent[ca];
-
-            new0.constraints[0] = old1.constraints[ad];
-            new0.constraints[1] = -1;
-            new0.constraints[2] = old0.constraints[ca];
-
-            Triangle new1 = new Triangle(t1, d, b, c);
-            new1.adjacent[0] = old1.adjacent[db];
-            new1.adjacent[1] = old0.adjacent[bc];
-            new1.adjacent[2] = t0;
-
-            new1.constraints[0] = old1.constraints[db];
-            new1.constraints[1] = old0.constraints[bc];
-            new1.constraints[2] = -1;
-
-            return [new0, new1];
-        }
-
+    
 
     }
 
