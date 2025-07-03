@@ -1,4 +1,4 @@
-﻿namespace CDTISharp.Meshing
+﻿namespace CDTISharp.Geometry
 {
     public class QuadTree
     {

@@ -1,7 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
-using static System.Net.Mime.MediaTypeNames;
 
-namespace CDTISharp.Meshing
+namespace CDTISharp.Geometry
 {
     public static class GeometryHelper
     {

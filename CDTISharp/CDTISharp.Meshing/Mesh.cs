@@ -1,4 +1,6 @@
-﻿namespace CDTISharp.Meshing
+﻿using CDTISharp.Geometry;
+
+namespace CDTISharp.Meshing
 {
     public class Mesh
     {
@@ -48,8 +50,7 @@
         {
             Stack<int> affected = new Stack<int>();
 
-            List<Node> nodes = Nodes;
-
+            List<Node> nodes = _nodes;
             HashSet<Constraint> seen = new HashSet<Constraint>();
             Queue<int> triangleQueue = new Queue<int>();
             Queue<Constraint> segmentQueue = new Queue<Constraint>();
@@ -152,7 +153,12 @@
 
         public bool Bad(Triangle t, Quality q)
         {
-            List<Node> nodes = Nodes;
+            if (t.super || t.partOfHole)
+            {
+                return false;
+            }
+
+            List<Node> nodes = _nodes;
 
             double edgeLenLimSqr = q.MaxEdgeLength;
             edgeLenLimSqr *= edgeLenLimSqr;
@@ -162,11 +168,6 @@
             for (int i = 0; i < 3; i++)
             {
                 Node a = nodes[t.indices[i]];
-                if (a.Index < 3)
-                {
-                    return false;
-                }
-                
                 Node b = nodes[t.indices[NEXT[i]]];
                 double lenSqr = GeometryHelper.SquareLength(a, b);
                 if (q.MaxEdgeLength > 0 && lenSqr > edgeLenLimSqr)
@@ -300,8 +301,8 @@
 
         bool TrySplitOrFlip(Stack<int> affected, Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit, double eps)
         {
-            Node a = Nodes[triangle.indices[edge]];
-            Node b = Nodes[triangle.indices[NEXT[edge]]];
+            Node a = _nodes[triangle.indices[edge]];
+            Node b = _nodes[triangle.indices[NEXT[edge]]];
             if (constraint.Contains(a, eps) || constraint.Contains(b, eps))
             {
                 return false;
@@ -337,7 +338,7 @@
 
         public int FindExitEdge(Triangle triangle, Node node)
         {
-            List<Node> nodes = Nodes;
+            List<Node> nodes = _nodes;
             int bestEdge = -1;
             double bestCross = 0;
             for (int edge = 0; edge < 3; edge++)
@@ -376,8 +377,8 @@
 
         public Triangle EntranceTriangle(int start, int end)
         {
-            Node nodeA = Nodes[start];
-            Node nodeB = Nodes[end];
+            Node nodeA = _nodes[start];
+            Node nodeB = _nodes[end];
 
             double x = nodeB.X;
             double y = nodeB.Y;
@@ -387,16 +388,16 @@
             {
                 Triangle current = _triangles[walker.Current];
                 int e0 = walker.Edge0;
-                Node a0 = Nodes[current.indices[e0]];
-                Node b0 = Nodes[current.indices[NEXT[e0]]];
+                Node a0 = _nodes[current.indices[e0]];
+                Node b0 = _nodes[current.indices[NEXT[e0]]];
                 if (GeometryHelper.Cross(a0, b0, x, y) < 0)
                 {
                     continue;
                 }
 
                 int e1 = walker.Edge1;
-                Node a1 = Nodes[current.indices[e1]];
-                Node b1 = Nodes[current.indices[NEXT[e1]]];
+                Node a1 = _nodes[current.indices[e1]];
+                Node b1 = _nodes[current.indices[NEXT[e1]]];
                 if (GeometryHelper.Cross(a1, b1, x, y) < 0)
                 {
                     continue;
@@ -465,7 +466,7 @@
                         continue;
                     }
 
-                    Node start = Nodes[t.indices[i]];
+                    Node start = _nodes[t.indices[i]];
                     if (GeometryHelper.CloseOrEqual(start, pt, eps))
                     {
                         triangle = current;
@@ -474,7 +475,7 @@
                         return;
                     }
 
-                    Node end = Nodes[t.indices[NEXT[i]]];
+                    Node end = _nodes[t.indices[NEXT[i]]];
                     if (GeometryHelper.CloseOrEqual(start, pt, eps))
                     {
                         triangle = current;
@@ -552,7 +553,7 @@
 
         public void FindEdge(int a, int b, out int triangle, out int edge)
         {
-            Node nodeA = Nodes[a];
+            Node nodeA = _nodes[a];
             TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
 
             do
@@ -604,13 +605,13 @@
             }
         }
 
-        void SetConnectivity(Triangle t, bool connect)
+        public void SetConnectivity(Triangle t, bool connect)
         {
             int ti = t.index;
             for (int i = 0; i < 3; i++)
             {
                 int start = t.indices[i];
-                Node origin = Nodes[start];
+                Node origin = _nodes[start];
 
                 if (connect)
                 {
@@ -660,11 +661,11 @@
             int adjIndex = t0.adjacent[edge];
             Triangle t1 = _triangles[adjIndex];
 
-            Node a = Nodes[t0.indices[0]];
-            Node b = Nodes[t0.indices[1]];
+            Node a = _nodes[t0.indices[0]];
+            Node b = _nodes[t0.indices[1]];
             int twin = t1.IndexOf(b.Index, a.Index);
 
-            Node d = Nodes[t1.indices[PREV[twin]]];
+            Node d = _nodes[t1.indices[PREV[twin]]];
             return t0.circle.Contains(d.X, d.Y);
         }
 
@@ -705,12 +706,12 @@
 
             Triangle t1 = _triangles[adjIndex];
 
-            Node a = Nodes[t0.indices[0]];
-            Node b = Nodes[t0.indices[1]];
-            Node c = Nodes[t0.indices[2]];
+            Node a = _nodes[t0.indices[0]];
+            Node b = _nodes[t0.indices[1]];
+            Node c = _nodes[t0.indices[2]];
 
             int twin = t1.IndexOf(b.Index, a.Index);
-            Node d = Nodes[t1.indices[PREV[twin]]];
+            Node d = _nodes[t1.indices[PREV[twin]]];
 
             return GeometryHelper.QuadConvex(b, c, a, d);
         }
@@ -743,13 +744,13 @@
                         d                         d
             */
 
-            Node a = Nodes[old0.indices[0]];
-            Node b = Nodes[old0.indices[1]];
-            Node c = Nodes[old0.indices[2]];
+            Node a = _nodes[old0.indices[0]];
+            Node b = _nodes[old0.indices[1]];
+            Node c = _nodes[old0.indices[2]];
 
             int twin = old1.IndexOf(b.Index, a.Index);
 
-            Node d = Nodes[old1.indices[PREV[twin]]];
+            Node d = _nodes[old1.indices[PREV[twin]]];
 
             int t0 = old0.index;
             int t1 = old1.index;
@@ -785,9 +786,9 @@
             Triangle old0 = _triangles[triangle];
             int constraint = old0.constraints[edge];
 
-            Node a = Nodes[old0.indices[0]];
-            Node b = Nodes[old0.indices[1]];
-            Node c = Nodes[old0.indices[2]];
+            Node a = _nodes[old0.indices[0]];
+            Node b = _nodes[old0.indices[1]];
+            Node c = _nodes[old0.indices[2]];
             Node e = node;
 
             int bc = NEXT[edge];
@@ -860,7 +861,7 @@
              */
 
                 int twin = old1.IndexOf(b.Index, a.Index);
-                Node d = Nodes[old1.indices[PREV[twin]]];
+                Node d = _nodes[old1.indices[PREV[twin]]];
 
                 int ad = NEXT[edge];
                 int db = PREV[edge];
@@ -928,9 +929,9 @@
             */
 
             Triangle old = _triangles[triangle];
-            Node a = Nodes[old.indices[0]];
-            Node b = Nodes[old.indices[1]];
-            Node c = Nodes[old.indices[2]];
+            Node a = _nodes[old.indices[0]];
+            Node b = _nodes[old.indices[1]];
+            Node c = _nodes[old.indices[2]];
             Node d = node;
 
             int t0 = triangle;

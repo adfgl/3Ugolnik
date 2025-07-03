@@ -1,13 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36109.1 d17.14
+VisualStudioVersion = 17.14.36109.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTISharp", "CDTISharp\CDTISharp.csproj", "{44282A5E-3862-477E-9F0B-7E002A17C41A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTISharp.IO", "CDTISharp.IO\CDTISharp.IO.csproj", "{A088B787-DC06-4F0D-8C3C-C5769F548811}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTISharp.Meshing", "CDTISharp.Meshing\CDTISharp.Meshing.csproj", "{414A2B8D-BBFC-41FB-A2E8-76B030BE42C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDTISharp.Geometry", "CDTISharp.Geometry\CDTISharp.Geometry.csproj", "{0A29B7B8-7A77-471B-884D-48D7B1015C51}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{414A2B8D-BBFC-41FB-A2E8-76B030BE42C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{414A2B8D-BBFC-41FB-A2E8-76B030BE42C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{414A2B8D-BBFC-41FB-A2E8-76B030BE42C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A29B7B8-7A77-471B-884D-48D7B1015C51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A29B7B8-7A77-471B-884D-48D7B1015C51}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A29B7B8-7A77-471B-884D-48D7B1015C51}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A29B7B8-7A77-471B-884D-48D7B1015C51}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

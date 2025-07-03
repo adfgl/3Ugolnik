@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using CDTISharp.Geometry;
+using System.Collections.Generic;
 
 namespace CDTISharp.Meshing
 {

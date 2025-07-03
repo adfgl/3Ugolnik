@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CDTISharp.Geometry\CDTISharp.Geometry.csproj" />
+  </ItemGroup>
+
 </Project>
