@@ -5,6 +5,8 @@ namespace CDTISharpTests
 {
     public class NavigationTests
     {
+
+
         [Fact]
         public void FindContaining_PointInsideStart()
         {

@@ -1,4 +1,6 @@
-﻿namespace CDTISharp.Meshing
+﻿using CDTISharp.Geometry;
+
+namespace CDTISharp.Meshing
 {
     public struct TriangleWalker
     {
@@ -34,6 +36,19 @@
             _edge0 = nextTri.IndexOf(_vertex);
             _edge1 = Mesh.PREV[_edge0];
             return true;
+        }
+
+        public static List<Triangle> GetTriangles(List<Triangle> triangles, Node point)
+        {
+            List<Triangle> tris = new List<Triangle>();
+            TriangleWalker walker = new TriangleWalker(triangles, point.Triangle, point.Index);
+            do
+            {
+                tris.Add(triangles[walker.Current]);
+            }
+            while (walker.MoveNext());
+
+            return tris;
         }
     }
 }

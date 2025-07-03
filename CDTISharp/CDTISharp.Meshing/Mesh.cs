@@ -339,7 +339,7 @@ namespace CDTISharp.Meshing
                 }
                 else
                 {
-                    Triangle entrance = EntranceTriangle(constraint.start.Index, constraint.end.Index);
+                    Triangle entrance = EntranceTriangle(constraint.start, constraint.end);
                     if (WalkAndInsert(affected, entrance, constraint, toInsert, alwaysSplit, eps))
                     {
                         continue;
@@ -443,15 +443,12 @@ namespace CDTISharp.Meshing
             adj.constraints[adj.IndexOf(b, a)] = value;
         }
 
-        public Triangle EntranceTriangle(int start, int end)
+        public Triangle EntranceTriangle(Node a, Node b)
         {
-            Node nodeA = _nodes[start];
-            Node nodeB = _nodes[end];
+            double x = b.X;
+            double y = b.Y;
 
-            double x = nodeB.X;
-            double y = nodeB.Y;
-
-            TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
+            TriangleWalker walker = new TriangleWalker(_triangles, a.Triangle, a.Index);
             do
             {
                 Triangle current = _triangles[walker.Current];
