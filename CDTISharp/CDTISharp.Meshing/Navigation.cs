@@ -91,8 +91,6 @@ namespace CDTISharp.Meshing
                         }
                     }
 
-                    Debug.WriteLine(cross);
-
                     if (cross <= 0)
                     {
                         inside = false;
@@ -103,7 +101,7 @@ namespace CDTISharp.Meshing
                         }
                     }
                 }
-                Debug.WriteLine("");
+              
                 if (inside)
                 {
                     return new SearchResult()

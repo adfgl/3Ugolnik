@@ -24,6 +24,57 @@ namespace CDTISharpTests
         }
 
         [Fact]
+        public void FindContaining_PointOnEdgeStart()
+        {
+            Mesh m = TestCases.Case2();
+            Triangle t = m.Triangles[0];
+
+            for (int i = 0; i < 3; i++)
+            {
+                t.Edge(i, out int startIndex, out int endIndex);
+                Node start = m.Nodes[startIndex];
+                Node end = m.Nodes[endIndex];
+
+                Node pt = Node.Between(start, end);
+
+                List<int> path = new List<int>();
+                SearchResult? result = Navigation.FindContaining(m.Triangles, m.Nodes, pt, path, 0, t.index);
+
+                Assert.NotNull(result);
+
+                Assert.NotEqual(-1, result.Edge);
+                Assert.NotEqual(-1, result.Triangle);
+                Assert.Equal(-1, result.Node);
+
+                Assert.Single(path);
+            }
+        }
+
+        [Fact]
+        public void FindContaining_PointOnNodeStart()
+        {
+            Mesh m = TestCases.Case2();
+            Triangle t = m.Triangles[0];
+
+            for (int i = 0; i < 3; i++)
+            {
+                t.Edge(i, out int startIndex, out int endIndex);
+                Node start = m.Nodes[startIndex];
+
+                List<int> path = new List<int>();
+                SearchResult? result = Navigation.FindContaining(m.Triangles, m.Nodes, new Node() { X = start.X, Y = start.Y }, path, 0, t.index);
+
+                Assert.NotNull(result);
+
+                Assert.NotEqual(-1, result.Edge);
+                Assert.NotEqual(-1, result.Triangle);
+                Assert.NotEqual(-1, result.Node);
+
+                Assert.Single(path);
+            }
+        }
+
+        [Fact]
         public void FindContaining_WhenNode()
         {
             Mesh m = TestCases.Case2();
@@ -65,20 +116,11 @@ namespace CDTISharpTests
                     List<int> path = new List<int>();
                     SearchResult? result = Navigation.FindContaining(m.Triangles, m.Nodes, pt, path, 0);
 
-            
-
                     Assert.NotNull(result);
-
-                    if (result.Edge == -1)
-                    {
-
-                    }
 
                     Assert.NotEqual(-1, result.Edge);
                     Assert.NotEqual(-1, result.Triangle);
                     Assert.Equal(-1, result.Node);
-
-
                 }
             }
         }
