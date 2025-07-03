@@ -1,4 +1,5 @@
 ﻿using CDTISharp.Geometry;
+using System.Data;
 
 namespace CDTISharp.Meshing
 {
@@ -34,6 +35,115 @@ namespace CDTISharp.Meshing
             {
                 _qt.Add(node);
                 _nodes.Add(node);
+            }
+        }
+
+        public Mesh(ClosedPolygon? polygon, List<(Node a, Node b)>? constraintEdges = null, List<Node>? costraintPoints = null)
+        {
+            List<Constraint> conEdges = new List<Constraint>();
+            List<Node> conPoints = new List<Node>();
+
+            double eps = 1e-6;
+
+            double minX, minY, maxX, maxY;
+            minX = minY = double.MaxValue;
+            maxX = maxY = double.MinValue;
+
+            if (polygon is not null)
+            {
+                processPoly(polygon, 0);
+                foreach (ClosedPolygon hole in polygon.Holes)
+                {
+                    processPoly(hole, 1);
+                }
+            }
+
+            if (constraintEdges is not null)
+            {
+                foreach ((Node a, Node b) in constraintEdges)
+                {
+                    process(a);
+                    process(b);
+                    conEdges.Add(new Constraint(a, b, 2));
+                }
+            }
+
+            if (costraintPoints is not null)
+            {
+                foreach (Node node in costraintPoints)
+                {
+                    process(node);
+                    conPoints.Add(node);
+                }
+            }
+
+            _bounds = new Rectangle(minX, minY, maxX, maxY);
+            _qt = new QuadTree(_bounds);
+            _nodes = new List<Node>();
+            _triangles = new List<Triangle>();
+
+            AddSuperStructure(_bounds, 5);
+
+            Stack<int> affected = new Stack<int>();
+            foreach (Constraint edge in conEdges)
+            {
+                affected.Clear();
+                Insert(affected, edge.start, edge.end, edge.type, false, eps);
+            }
+
+            foreach (Node node in conPoints)
+            {
+                affected.Clear();
+                Insert(affected, node, eps);
+            }
+
+            if (polygon is not null)
+            {
+                for (int i = 0; i < _triangles.Count; i++)
+                {
+                    Triangle t = _triangles[i];
+                    if (t.super) continue;
+
+                    double x = 0;
+                    double y = 0;
+                    for (int j = 0; j < 3; j++)
+                    {
+                        Node n = _nodes[t.indices[j]];
+                        x += n.X;
+                        y += n.Y;
+                    }
+                    x /= 3.0;
+                    y /= 3.0;
+
+                    bool isHole = !polygon.Contains(x, y, eps);
+                    if (isHole)
+                    {
+                        t.partOfHole = true;
+                        _triangles[i] = t;
+                    }
+                }
+            }
+
+            void process(Node node)
+            {
+                double x = node.X;
+                double y = node.Y;
+                if (minX > x) minX = x;
+                if (minY > y) minY = y;
+                if (maxX < x) maxX = x;
+                if (maxY < y) maxY = y;
+            }
+
+            void processPoly(ClosedPolygon polygon, int type)
+            {
+                for (int i = 0; i < polygon.Points.Count - 1; i++)
+                {
+                    Node a = polygon.Points[i];
+                    Node b = polygon.Points[i + 1];
+
+                    process(a);
+                    conEdges.Add(new Constraint(a, b, type));
+                }
             }
         }
 
@@ -197,7 +307,7 @@ namespace CDTISharp.Meshing
                         continue;
                     }
 
-                    Node? inserted = Add(affected, node, eps);
+                    Node? inserted = Insert(affected, node, eps);
                     if (inserted == node)
                     {
                         while (affected.Count > 0)
@@ -265,7 +375,7 @@ namespace CDTISharp.Meshing
             return t.circle.radiusSqr / minEdgeSqr > 2;
         }
 
-        public Node? Add(Stack<int> affected, Node point, double eps)
+        public Node? Insert(Stack<int> affected, Node point, double eps)
         {
             List<int> visited = new List<int>();
             SearchResult? result = Navigation.FindContaining(_triangles, _nodes, point, visited, eps);
@@ -278,10 +388,10 @@ namespace CDTISharp.Meshing
             {
                 return Nodes[result.Node];
             }
-            return Add(affected, result.Triangle, result.Edge, point);
+            return Insert(affected, result.Triangle, result.Edge, point);
         }
 
-        public Node? Add(Stack<int> affected, int triangle, int edge, Node point)
+        public Node? Insert(Stack<int> affected, int triangle, int edge, Node point)
         {
             if (triangle == -1)
             {
@@ -308,10 +418,10 @@ namespace CDTISharp.Meshing
             return point;
         }
 
-        public void Add(Stack<int> affected, Node start, Node end, int type, bool alwaysSplit, double eps)
+        public void Insert(Stack<int> affected, Node start, Node end, int type, bool alwaysSplit, double eps)
         {
-            Node? a = Add(affected, start, eps);
-            Node? b = Add(affected, end, eps);
+            Node? a = Insert(affected, start, eps);
+            Node? b = Insert(affected, end, eps);
             if (a is null || b is null)
             {
                 return;
@@ -384,7 +494,7 @@ namespace CDTISharp.Meshing
 
             if (alwaysSplit || !Flipping.CanFlip(_triangles, _nodes, triangle.index, edge))
             {
-                Node? inserted = Add(affected, triangle.index, edge, inter);
+                Node? inserted = Insert(affected, triangle.index, edge, inter);
                 if (inter != inserted)
                 {
                     return false;
