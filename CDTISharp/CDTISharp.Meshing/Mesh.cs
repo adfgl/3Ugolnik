@@ -58,7 +58,7 @@ namespace CDTISharp.Meshing
 
                     Triangle tj = triangles[j];
 
-                    for (int k = 0; k < 3; i++)
+                    for (int k = 0; k < 3; k++)
                     {
                         if (ti.adjacent[k] != -1) continue;
 

@@ -21,6 +21,12 @@ namespace CDTISharp.Meshing
             this.super = a.Index < 3 || b.Index < 3 || c.Index < 3;
         }
 
+        public void Edge(int index, out int start, out int end)
+        {
+            start = indices[index];
+            end = indices[Mesh.NEXT[index]];
+        }
+
         public int IndexOf(int vertex)
         {
             for (int i = 0; i < 3; i++)
@@ -43,6 +49,11 @@ namespace CDTISharp.Meshing
                 }
             }
             return -1;
+        }
+
+        public override string ToString()
+        {
+            return $"[{index}] {String.Join(" ", indices)}";
         }
     }
 }

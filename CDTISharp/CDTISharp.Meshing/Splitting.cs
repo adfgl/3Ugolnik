@@ -138,44 +138,44 @@ namespace CDTISharp.Meshing
         public static Triangle[] Split(List<Triangle> triangles, List<Node> nodes, int triangle, Node node)
         {
             /*
-                         *C
+                         * v2
 
 
 
-                    /           ^
-                   ^      *D     \
+                     /           ^
+                    ^      *v3     \
 
 
 
-               A*        ->         *B
+               v0 *        ->         * v1
 
             */
 
             Triangle old = triangles[triangle];
-            Node a = nodes[old.indices[0]];
-            Node b = nodes[old.indices[1]];
-            Node c = nodes[old.indices[2]];
-            Node d = node;
+            Node v0 = nodes[old.indices[0]];
+            Node v1 = nodes[old.indices[1]];
+            Node v2 = nodes[old.indices[2]];
+            Node v3 = node;
 
             int t0 = triangle;
             int t1 = triangles.Count;
             int t2 = t1 + 1;
 
-            Triangle new0 = new Triangle(t0, a, b, d);
+            Triangle new0 = new Triangle(t0, v0, v1, v3);
             new0.adjacent[0] = old.adjacent[0];
             new0.adjacent[1] = t1;
             new0.adjacent[2] = t2;
 
             new0.constraints[0] = old.constraints[0];
 
-            Triangle new1 = new Triangle(t1, b, c, d);
+            Triangle new1 = new Triangle(t1, v1, v2, v3);
             new1.adjacent[0] = old.adjacent[1];
             new1.adjacent[1] = t2;
             new1.adjacent[2] = t0;
 
             new1.constraints[0] = old.constraints[1];
 
-            Triangle new2 = new Triangle(t2, b, c, d);
+            Triangle new2 = new Triangle(t2, v2, v0, v3);
             new2.adjacent[0] = old.adjacent[2];
             new2.adjacent[1] = t0;
             new2.adjacent[2] = t1;
