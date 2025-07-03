@@ -25,15 +25,7 @@ namespace CDTISharp.Geometry
             return end.X * (y - start.Y) - end.Y * (x - start.X);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool QuadConvex(Node a, Node b, Node c, Node d)
-        {
-            double ab_bc = Cross(a, b, c.X, c.Y);
-            double bc_cd = Cross(b, c, d.X, d.Y);
-            double cd_da = Cross(c, d, a.X, a.Y);
-            double da_ab = Cross(d, a, b.X, b.Y);
-            return ab_bc > 0 && bc_cd > 0 && cd_da > 0 && da_ab > 0;
-        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Angle(Node a, Node b, Node c)

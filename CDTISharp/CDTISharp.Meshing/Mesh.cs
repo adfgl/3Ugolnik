@@ -24,6 +24,59 @@ namespace CDTISharp.Meshing
             _nodes = new List<Node>();
         }
 
+        public Mesh(List<Triangle> tris, List<Node> nodes)
+        {
+            _bounds = Rectangle.FromPoints(nodes, o => o.X, o => o.Y);
+            _triangles = tris;
+            _qt = new QuadTree(_bounds);
+            _nodes = new List<Node>();
+            foreach (Node node in nodes)
+            {
+                _qt.Add(node);
+                _nodes.Add(node);
+            }
+        }
+
+        public void AddNode(Node node)
+        {
+            node.Index = _nodes.Count;
+            _nodes.Add(node);
+            _qt.Add(node);
+        }
+
+        public Mesh BruteForceTwins()
+        {
+            List<Triangle> triangles = _triangles;
+
+            int n = triangles.Count;
+            for (int i = 0; i < n; i++)
+            {
+                Triangle ti = triangles[i];
+                for (int j = 0; j < n; j++)
+                {
+                    if (i == j) continue;
+
+                    Triangle tj = triangles[j];
+
+                    for (int k = 0; k < 3; i++)
+                    {
+                        if (ti.adjacent[k] != -1) continue;
+
+                        int a = ti.indices[k];
+                        int b = ti.indices[(k + 1) % 3];
+
+                        int twin = tj.IndexOf(b, a);
+                        if (twin != -1)
+                        {
+                            tj.adjacent[twin] = i;
+                            ti.adjacent[k] = j;
+                        }
+                    }
+                }
+            }
+            return this;
+        }
+
         public Mesh AddSuperStructure(Rectangle bounds, double scale)
         {
             double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
@@ -230,7 +283,7 @@ namespace CDTISharp.Meshing
                 return null;
             }
 
-            point.Index = _qt.Items.Count;
+            point.Index = _nodes.Count;
 
             Triangle[] triangles;
             if (edge != -1)
@@ -244,8 +297,7 @@ namespace CDTISharp.Meshing
 
             // do something before adding?
 
-            _qt.Add(point);
-            _nodes.Add(point);
+            AddNode(point);
             Add(triangles);
             Legalize(affected, triangles);
             return point;
