@@ -77,12 +77,10 @@ namespace CDTISharp.Meshing
                     double cross = GeometryHelper.Cross(start, end, x, y);
                     if (Math.Abs(cross) <= eps)
                     {
-                        double dx = end.X - start.X;
-                        double dy = end.Y - start.Y;
-                        double dot = (x - start.X) * dx + (y - start.Y) * dy;
-                        double lenSq = dx * dx + dy * dy;
-
-                        if (dot >= -eps && dot <= lenSq + eps)
+                        if (x >= Math.Min(start.X, end.X) - eps && 
+                            x <= Math.Max(start.X, end.X) + eps && 
+                            y >= Math.Min(start.Y, end.Y) - eps &&
+                            y <= Math.Max(start.Y, end.Y) + eps)
                         {
                             return new SearchResult()
                             {
