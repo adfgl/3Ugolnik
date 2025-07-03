@@ -82,7 +82,7 @@ namespace CDTISharp.Meshing
                 if (segmentQueue.Count > 0)
                 {
                     Constraint constraint = segmentQueue.Dequeue();
-                    FindEdge(constraint.start.Index, constraint.end.Index, out int triangle, out int edge);
+                    Navigation.FindEdge(_triangles, constraint.start, constraint.end, out int triangle, out int edge);
                     if (edge == -1)
                     {
                         continue;
@@ -209,7 +209,7 @@ namespace CDTISharp.Meshing
 
         public Node? Add(Stack<int> affected, Node point, double eps)
         {
-            FindContaining(point, out int trianlge, out int edge, out int node, eps);
+            Navigation.FindContaining(_triangles, _nodes, point, out int trianlge, out int edge, out int node, eps);
             if (node != -1)
             {
                 return Nodes[node];
@@ -264,7 +264,7 @@ namespace CDTISharp.Meshing
                     continue;
                 }
 
-                FindEdge(constraint.start.Index, constraint.end.Index, out int triangle, out int edge);
+                Navigation.FindEdge(_triangles, constraint.start, constraint.end, out int triangle, out int edge);
                 if (edge != -1)
                 {
                     SetConstraint(triangle, edge, type);
@@ -431,154 +431,7 @@ namespace CDTISharp.Meshing
             }
         }
 
-        public void FindContaining(Node pt, out int triangle, out int edge, out int node, double eps, int searchStart = -1)
-        {
-            triangle = edge = node = -1;
-            if (_triangles.Count == 0)
-            {
-                return;
-            }
 
-            double x = pt.X;
-            double y = pt.Y;
-
-            int maxSteps = _triangles.Count * 3;
-            int trianglesChecked = 0;
-
-            int skipEdge = -1;
-            int current = searchStart == -1 ? _triangles.Count - 1 : searchStart;
-            while (true)
-            {
-                if (trianglesChecked++ > maxSteps)
-                {
-                    throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
-                }
-
-                Triangle t = _triangles[current];
-
-                int bestExit = -1;
-                double worstCross = 0;
-                bool inside = true;
-                for (int i = 0; i < 3; i++)
-                {
-                    if (i == skipEdge)
-                    {
-                        continue;
-                    }
-
-                    Node start = _nodes[t.indices[i]];
-                    if (GeometryHelper.CloseOrEqual(start, pt, eps))
-                    {
-                        triangle = current;
-                        edge = i;
-                        node = start.Index;
-                        return;
-                    }
-
-                    Node end = _nodes[t.indices[NEXT[i]]];
-                    if (GeometryHelper.CloseOrEqual(start, pt, eps))
-                    {
-                        triangle = current;
-                        edge = NEXT[i];
-                        node = end.Index;
-                        return;
-                    }
-
-                    double cross = GeometryHelper.Cross(start, end, x, y);
-                    if (Math.Abs(cross) < eps)
-                    {
-                        double dx = end.X - start.X;
-                        double dy = end.Y - start.Y;
-                        double dot = (x - start.X) * dx + (y - start.Y) * dy;
-                        double lenSq = dx * dx + dy * dy;
-
-                        if (dot >= -eps && dot <= lenSq + eps)
-                        {
-                            triangle = current;
-                            edge = i;
-                            node = -1;
-                            return;
-                        }
-                    }
-
-                    if (cross < 0)
-                    {
-                        inside = false;
-                        if (bestExit == -1 || cross < worstCross)
-                        {
-                            worstCross = cross;
-                            bestExit = i;
-                        }
-                    }
-                }
-
-                if (inside)
-                {
-                    triangle = current;
-                    edge = node = -1;
-                    return;
-                }
-
-                int next = t.adjacent[bestExit];
-                if (next == -1)
-                {
-                    triangle = edge = node = -1;
-                    return;
-                }
-
-                int bestStart = t.indices[bestExit];
-                int bestEnd = t.indices[NEXT[bestExit]];
-
-                skipEdge = _triangles[next].IndexOf(bestEnd, bestStart);
-                current = next;
-            }
-        }
-
-        public void FindEdgeBrute(int a, int b, out int triangle, out int edge)
-        {
-            foreach (Triangle t in _triangles)
-            {
-                int e = t.IndexOf(a, b);
-                if (e != -1)
-                {
-                    triangle = t.index;
-                    edge = e;
-                    return;
-                }
-            }
-
-            triangle = -1;
-            edge = -1;
-        }
-
-        public void FindEdge(int a, int b, out int triangle, out int edge)
-        {
-            Node nodeA = _nodes[a];
-            TriangleWalker walker = new TriangleWalker(_triangles, nodeA.Triangle, nodeA.Index);
-
-            do
-            {
-                Triangle t = _triangles[walker.Current];
-                triangle = t.index;
-
-                int e0 = walker.Edge0;
-                if (t.indices[e0] == a && t.indices[NEXT[e0]] == b)
-                {
-                    edge = e0;
-                    return;
-                }
-
-                int e1 = walker.Edge1;
-                if (t.indices[e1] == a && t.indices[NEXT[e1]] == b)
-                {
-                    edge = e1;
-                    return;
-                }
-            }
-            while (walker.MoveNext());
-
-            triangle = edge = -1;
-        }
 
         public void Add(Triangle[] tris)
         {
@@ -659,40 +512,5 @@ namespace CDTISharp.Meshing
 
     }
 
-    public struct TriangleWalker
-    {
-        readonly List<Triangle> _triangles;
-        readonly int _start, _vertex;
-        int _current, _edge0, _edge1;
-
-        public TriangleWalker(List<Triangle> triangles, int triangleIndex, int globalVertexIndex)
-        {
-            _triangles = triangles;
-            _vertex = globalVertexIndex;
-            _current = _start = triangleIndex;
-
-            _edge0 = _triangles[_current].IndexOf(_vertex);
-            _edge1 = Mesh.PREV[_edge0];
-        }
-
-        public int Current => _current;
-        public int Edge0 => _edge0;
-        public int Edge1 => _edge1;
-
-        public bool MoveNext()
-        {
-            Triangle tri = _triangles[_current];
-            int next = tri.adjacent[_edge0];
-            if (next == _start || next == -1)
-            {
-                return false;
-            }
-
-            _current = next;
-            Triangle nextTri = _triangles[_current];
-            _edge0 = nextTri.IndexOf(_vertex);
-            _edge1 = Mesh.PREV[_edge0];
-            return true;
-        }
-    }
+  
 }
