@@ -46,6 +46,78 @@ namespace CDTISharpTests
         }
 
         [Fact]
+        public void EdgeSplit()
+        {
+            Mesh m = TestCases.Case1();
+
+            int triangleIndex = 3;
+            int startIndex = 5;
+            int endIndex = 4;
+
+            Triangle triangle = m.Triangles[triangleIndex];
+            Assert.Equal(triangleIndex, triangle.index);
+
+            Node start = m.Nodes[startIndex];
+            Assert.Equal(startIndex, start.Index);
+
+            Node end = m.Nodes[endIndex];
+            Assert.Equal(endIndex, end.Index);
+
+            Node toInsert = Node.Between(start, end);
+            toInsert.Index = m.Nodes.Count;
+
+            int edge = triangle.IndexOf(start.Index, end.Index);
+            Triangle[] tris = Splitting.Split(m.Triangles, m.Nodes, triangle.index, edge, toInsert);
+            Assert.Equal(4, tris.Length);
+
+            /*
+                     c                            c            
+                     /\                          /|\             
+                    /  \                        / | \           
+                   /    \                      /  |  \          
+                  /      \                    /   |   \       
+                 /   f0   \                  /    |    \        
+                /          \                / f0  |  f1 \       
+               /            \              /      |      \      
+            a +--------------+ b        a +-------e-------+ b  
+               \            /              \      |      /      
+                \          /                \ f3  |  f2 /       
+                 \   f1   /                  \    |    /        
+                  \      /                    \   |   /      
+                   \    /                      \  |  /          
+                    \  /                        \ | /           
+                     \/                          \|/            
+                     d                            d            
+            */
+
+            Triangle adjacent = m.Triangles[triangle.adjacent[edge]];
+
+            int ab = edge;
+            int bc = Mesh.NEXT[ab];
+            int ca = Mesh.PREV[ab];
+
+            int a = triangle.indices[ab];
+            int b = triangle.indices[bc];
+            int c = triangle.indices[ca];
+
+            int ba = adjacent.IndexOf(b, a);
+            int ad = Mesh.NEXT[ba];
+            int db = Mesh.PREV[ba];
+
+            int d = adjacent.indices[db];
+
+            Triangle t0 = tris[0];
+            Triangle t1 = tris[1];
+            Triangle t2 = tris[2];
+            Triangle t3 = tris[3];
+
+            Assert.Equal(triangle.index, t0.index);
+            Assert.Equal(adjacent.index, t1.index);
+            Assert.Equal(m.Triangles.Count, t2.index);
+            Assert.Equal(m.Triangles.Count + 1, t3.index);
+        }
+
+        [Fact]
         public void EdgeSplitNoAdjacent()
         {
             Mesh m = TestCases.Case1();
@@ -63,11 +135,10 @@ namespace CDTISharpTests
             Node end = m.Nodes[endIndex];
             Assert.Equal(endIndex, end.Index);
 
-            int edge = triangle.IndexOf(start.Index, end.Index);
-
             Node toInsert = Node.Between(start, end);
             toInsert.Index = m.Nodes.Count;
 
+            int edge = triangle.IndexOf(start.Index, end.Index);
             Triangle[] tris = Splitting.Split(m.Triangles, m.Nodes, triangle.index, edge, toInsert);
             Assert.Equal(2, tris.Length);
 
@@ -83,14 +154,15 @@ namespace CDTISharpTests
                      a +--------------+ b        a +-------+-------+ b
                                                            e
             */
-
-            int a = triangle.indices[0];
-            int b = triangle.indices[1];
-            int c = triangle.indices[2];
+    
 
             int ab = edge;
             int bc = Mesh.NEXT[ab];
             int ca = Mesh.PREV[ab];
+
+            int a = triangle.indices[ab];
+            int b = triangle.indices[bc];
+            int c = triangle.indices[ca];
 
             Triangle t0 = tris[0];
             Triangle t1 = tris[1];

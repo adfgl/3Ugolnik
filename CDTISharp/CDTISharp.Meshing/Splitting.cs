@@ -9,18 +9,19 @@ namespace CDTISharp.Meshing
             Triangle old0 = triangles[triangle];
             int constraint = old0.constraints[edge];
 
-            Node a = nodes[old0.indices[0]];
-            Node b = nodes[old0.indices[1]];
-            Node c = nodes[old0.indices[2]];
-            Node e = node;
-
+            int ab = edge;
             int bc = Mesh.NEXT[edge];
             int ca = Mesh.PREV[edge];
 
-            int adjIndex = old0.adjacent[edge];
+            Node a = nodes[old0.indices[ab]];
+            Node b = nodes[old0.indices[bc]];
+            Node c = nodes[old0.indices[ca]];
+            Node e = node;
+
+            int ba = old0.adjacent[ab];
 
             Triangle[] newTris;
-            if (adjIndex == -1)
+            if (ba == -1)
             {
                 /*
                              c                            c        
@@ -60,8 +61,7 @@ namespace CDTISharp.Meshing
             }
             else
             {
-                Triangle old1 = triangles[adjIndex];
-
+                Triangle old1 = triangles[ba];
 
                 /*
                          c                            c            

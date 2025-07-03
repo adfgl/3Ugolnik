@@ -51,5 +51,10 @@
                 Z = z
             };
         }
+
+        public override string ToString()
+        {
+            return $"[{Index}] {X} {Y}";
+        }
     }
 }
