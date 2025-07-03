@@ -82,7 +82,7 @@ namespace CDTISharp.Meshing
             _nodes = new List<Node>();
             _triangles = new List<Triangle>();
 
-            AddSuperStructure(_bounds, 5);
+            AddSuperStructure(_bounds, 3);
 
             Stack<int> affected = new Stack<int>();
             foreach (Constraint edge in conEdges)
@@ -218,7 +218,6 @@ namespace CDTISharp.Meshing
         {
             Stack<int> affected = new Stack<int>();
 
-            List<Node> nodes = _nodes;
             HashSet<Constraint> seen = new HashSet<Constraint>();
             Queue<int> triangleQueue = new Queue<int>();
             Queue<Constraint> segmentQueue = new Queue<Constraint>();
@@ -235,8 +234,8 @@ namespace CDTISharp.Meshing
                     int type = t.constraints[i];
                     if (type == -1) continue;
 
-                    Node a = nodes[t.indices[i]];
-                    Node b = nodes[t.indices[NEXT[i]]];
+                    Node a = _nodes[t.indices[i]];
+                    Node b = _nodes[t.indices[NEXT[i]]];
                     Constraint constraint = new Constraint(a, b, type);
                     if (seen.Add(constraint) && constraint.Enchrouched(_qt))
                     {
@@ -256,7 +255,7 @@ namespace CDTISharp.Meshing
                         continue;
                     }
 
-                    Node node = new Node() { Index = nodes.Count,  X = constraint.circle.x, Y = constraint.circle.y };
+                    Node node = new Node() { Index = _nodes.Count,  X = constraint.circle.x, Y = constraint.circle.y };
                     Triangle[] tris = Splitting.Split(_triangles, _nodes, result.Triangle, result.Edge, node);
                     Add(tris);
                     Legalize(affected, tris);

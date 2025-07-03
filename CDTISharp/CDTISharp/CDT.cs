@@ -67,6 +67,22 @@ namespace CDTISharp
                 userNodeConstraints.Add(item.ToNode());
             }
 
+            Mesh mesh = new Mesh(contour, userEdgeConstraints, userNodeConstraints);
+            CDTQuality? quality = input.Quality;
+            if (quality is not null)
+            {
+                mesh.Refine(new Quality()
+                {
+                    MaxArea = quality.MaxArea,
+                    MaxEdgeLength = quality.MaxEdgeLength,
+                    MinAngle = quality.MinAngle,
+                }, 1e-6);
+            }
+
+#if DEBUG
+            Console.WriteLine(mesh.ToSvg());
+#endif
+
             sw.Stop();
             long execution = sw.ElapsedMilliseconds;
 
