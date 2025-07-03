@@ -1,6 +1,7 @@
 ﻿using CDTISharp.Geometry;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,7 +44,7 @@ namespace CDTISharp.Meshing
                 path.Add(current);
 
                 int bestExit = -1;
-                double worstCross = 0;
+                double worstCross = double.MaxValue;
                 bool inside = true;
                 for (int i = 0; i < 3; i++)
                 {
@@ -77,8 +78,8 @@ namespace CDTISharp.Meshing
                     double cross = GeometryHelper.Cross(start, end, x, y);
                     if (Math.Abs(cross) <= eps)
                     {
-                        if (x >= Math.Min(start.X, end.X) - eps && 
-                            x <= Math.Max(start.X, end.X) + eps && 
+                        if (x >= Math.Min(start.X, end.X) - eps &&
+                            x <= Math.Max(start.X, end.X) + eps &&
                             y >= Math.Min(start.Y, end.Y) - eps &&
                             y <= Math.Max(start.Y, end.Y) + eps)
                         {
@@ -90,6 +91,8 @@ namespace CDTISharp.Meshing
                         }
                     }
 
+                    Debug.WriteLine(cross);
+
                     if (cross <= 0)
                     {
                         inside = false;
@@ -100,7 +103,7 @@ namespace CDTISharp.Meshing
                         }
                     }
                 }
-
+                Debug.WriteLine("");
                 if (inside)
                 {
                     return new SearchResult()

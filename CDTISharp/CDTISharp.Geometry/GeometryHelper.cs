@@ -22,10 +22,8 @@ namespace CDTISharp.Geometry
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Cross(Node start, Node end, double x, double y)
         {
-            return end.X * (y - start.Y) - end.Y * (x - start.X);
+            return (end.X - start.X) * (y - start.Y) - (end.Y - start.Y) * (x - start.X);
         }
-
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Angle(Node a, Node b, Node c)
