@@ -9,7 +9,7 @@ namespace CDTISharp.Geometry
             if (a == b) return true;
             double dx = b.X - a.X;
             double dy = b.Y - a.Y;
-            return dx * dx + dy * dy < eps;
+            return dx * dx + dy * dy <= eps;
         }
 
         public static double SquareLength(Node start, Node end)

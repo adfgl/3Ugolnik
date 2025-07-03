@@ -74,6 +74,11 @@ namespace CDTISharp.Meshing
                     }
                 }
             }
+
+            foreach (var item in _triangles)
+            {
+                SetConnectivity(item, true);
+            }
             return this;
         }
 
@@ -494,8 +499,6 @@ namespace CDTISharp.Meshing
             }
         }
 
-
-
         public void Add(Triangle[] tris)
         {
             int n = tris.Length;
@@ -569,11 +572,5 @@ namespace CDTISharp.Meshing
                 }
             }
         }
-
-
-    
-
     }
-
-  
 }

@@ -64,7 +64,7 @@ namespace CDTISharp.Meshing
                     }
 
                     Node end = nodes[t.indices[Mesh.NEXT[i]]];
-                    if (GeometryHelper.CloseOrEqual(start, pt, eps))
+                    if (GeometryHelper.CloseOrEqual(end, pt, eps))
                     {
                         return new SearchResult()
                         {
@@ -75,7 +75,7 @@ namespace CDTISharp.Meshing
                     }
 
                     double cross = GeometryHelper.Cross(start, end, x, y);
-                    if (Math.Abs(cross) < eps)
+                    if (Math.Abs(cross) <= eps)
                     {
                         double dx = end.X - start.X;
                         double dy = end.Y - start.Y;
@@ -92,7 +92,7 @@ namespace CDTISharp.Meshing
                         }
                     }
 
-                    if (cross < 0)
+                    if (cross <= 0)
                     {
                         inside = false;
                         if (bestExit == -1 || cross < worstCross)
