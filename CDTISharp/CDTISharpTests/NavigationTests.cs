@@ -125,5 +125,22 @@ namespace CDTISharpTests
             }
         }
 
+        [Fact]
+        public void FindContaining_WhenCenter()
+        {
+            Mesh m = TestCases.Case2();
+            foreach (Triangle item in m.Triangles)
+            {
+                Node pt = m.Center(item);
+
+                List<int> path = new List<int>();
+                SearchResult? result = Navigation.FindContaining(m.Triangles, m.Nodes, pt, path, 0);
+
+                Assert.NotNull(result);
+                Assert.Equal(item.index, result.Triangle);
+                Assert.Equal(-1, result.Edge);
+                Assert.Equal(-1, result.Node);
+            }
+        }
     }
 }
