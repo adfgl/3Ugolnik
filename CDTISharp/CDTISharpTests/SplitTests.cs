@@ -10,34 +10,102 @@ namespace CDTISharpTests
         {
             Mesh m = TestCases.Case1();
 
-            Triangle t3 = m.Triangles[3];
-            Assert.Equal(3, t3.index);
+            int triangleIndex = 3;
+            Triangle triangle = m.Triangles[triangleIndex];
+            Assert.Equal(triangleIndex, triangle.index);
 
-            Node toInsert = m.Center(t3); 
+            Node toInsert = m.Center(triangle); 
             toInsert.Index = m.Nodes.Count;
 
-            Triangle[] tris = Splitting.Split(m.Triangles, m.Nodes, t3.index, toInsert);
+            Triangle[] tris = Splitting.Split(m.Triangles, m.Nodes, triangle.index, toInsert);
             Assert.Equal(3, tris.Length);
 
-            int[] expectedIndices = [t3.index, m.Triangles.Count, m.Triangles.Count + 1];
-            for (int i = 0; i < 3; i++)
-            {
-                Triangle curr = tris[i];
-                Assert.Equal(expectedIndices[i], curr.index);
+            int a = triangle.indices[0];
+            int b = triangle.indices[1];
+            int c = triangle.indices[2];
 
-                Triangle next = tris[(i + 1) % 3];
-                Triangle prev = tris[(i + 2) % 3];
+            Triangle t0 = tris[0];
+            Triangle t1 = tris[1];
+            Triangle t2 = tris[2];
 
-                Assert.Equal(t3.adjacent[i], curr.adjacent[0]);
-                Assert.Equal(next.index, curr.adjacent[1]);
-                Assert.Equal(prev.index, curr.adjacent[2]);
+            Assert.Equal(triangle.index, t0.index);
+            Assert.Equal(m.Triangles.Count, t1.index);
+            Assert.Equal(m.Triangles.Count + 1, t2.index);
 
-                Assert.Equal(t3.constraints[i], curr.constraints[0]);
-                if (i != 0)
-                {
-                    Assert.Equal(-1, curr.constraints[i]);
-                }
-            }
+            Assert.Equal([a, b, toInsert.Index], t0.indices);
+            Assert.Equal([b, c, toInsert.Index], t1.indices);
+            Assert.Equal([c, a, toInsert.Index], t2.indices);
+
+            Assert.Equal([triangle.adjacent[0], t1.index, t2.index], t0.adjacent);
+            Assert.Equal([triangle.adjacent[1], t2.index, t0.index], t1.adjacent);
+            Assert.Equal([triangle.adjacent[2], t0.index, t1.index], t2.adjacent);
+
+            Assert.Equal([triangle.constraints[0], -1, -1], t0.constraints);
+            Assert.Equal([triangle.constraints[1], -1, -1], t1.constraints);
+            Assert.Equal([triangle.constraints[2], -1, -1], t2.constraints);
+        }
+
+        [Fact]
+        public void EdgeSplitNoAdjacent()
+        {
+            Mesh m = TestCases.Case1();
+
+            int triangleIndex = 1;
+            int startIndex = 4;
+            int endIndex = 1;
+
+            Triangle triangle = m.Triangles[triangleIndex];
+            Assert.Equal(triangleIndex, triangle.index);
+
+            Node start = m.Nodes[startIndex];
+            Assert.Equal(startIndex, start.Index);
+
+            Node end = m.Nodes[endIndex];
+            Assert.Equal(endIndex, end.Index);
+
+            int edge = triangle.IndexOf(start.Index, end.Index);
+
+            Node toInsert = Node.Between(start, end);
+            toInsert.Index = m.Nodes.Count;
+
+            Triangle[] tris = Splitting.Split(m.Triangles, m.Nodes, triangle.index, edge, toInsert);
+            Assert.Equal(2, tris.Length);
+
+            /*
+                              c                            c        
+                              /\                          /|\        
+                             /  \                        / | \       
+                            /    \                      /  |  \      
+                           /      \                    /   |   \      
+                          /  f0    \                  /    |    \    
+                         /          \                /     |     \   
+                        /            \              /  f0  |  f1  \  
+                     a +--------------+ b        a +-------+-------+ b
+                                                           e
+            */
+
+            int a = triangle.indices[0];
+            int b = triangle.indices[1];
+            int c = triangle.indices[2];
+
+            int ab = edge;
+            int bc = Mesh.NEXT[ab];
+            int ca = Mesh.PREV[ab];
+
+            Triangle t0 = tris[0];
+            Triangle t1 = tris[1];
+
+            Assert.Equal(triangle.index, t0.index);
+            Assert.Equal(m.Triangles.Count, t1.index);
+
+            Assert.Equal([c, a, toInsert.Index], t0.indices);
+            Assert.Equal([b, c, toInsert.Index], t1.indices);
+
+            Assert.Equal([triangle.adjacent[ca], -1, t1.index], t0.adjacent);
+            Assert.Equal([triangle.adjacent[bc], t0.index, -1], t1.adjacent);
+
+            Assert.Equal([triangle.constraints[ca], triangle.constraints[ab], -1], t0.constraints);
+            Assert.Equal([triangle.constraints[bc], -1, triangle.constraints[ab]], t1.constraints);
         }
     }
 }
