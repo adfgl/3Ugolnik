@@ -82,14 +82,14 @@ namespace CDTISharp.Meshing
                 if (segmentQueue.Count > 0)
                 {
                     Constraint constraint = segmentQueue.Dequeue();
-                    Navigation.FindEdge(_triangles, constraint.start, constraint.end, out int triangle, out int edge);
-                    if (edge == -1)
+                    SearchResult? result = Navigation.FindEdge(_triangles, constraint.start, constraint.end);
+                    if (result is null || result.Edge == -1)
                     {
                         continue;
                     }
 
                     Node node = new Node() { Index = nodes.Count,  X = constraint.circle.x, Y = constraint.circle.y };
-                    Triangle[] tris = Splitting.Split(_triangles, _nodes, triangle, edge, node);
+                    Triangle[] tris = Splitting.Split(_triangles, _nodes, result.Triangle, result.Edge, node);
                     Add(tris);
                     Legalize(affected, tris);
 
@@ -209,12 +209,18 @@ namespace CDTISharp.Meshing
 
         public Node? Add(Stack<int> affected, Node point, double eps)
         {
-            Navigation.FindContaining(_triangles, _nodes, point, out int trianlge, out int edge, out int node, eps);
-            if (node != -1)
+            List<int> visited = new List<int>();
+            SearchResult? result = Navigation.FindContaining(_triangles, _nodes, point, visited, eps);
+            if (result is null)
             {
-                return Nodes[node];
+                throw new Exception();
             }
-            return Add(affected, trianlge, edge, point);
+
+            if (result.Node != -1)
+            {
+                return Nodes[result.Node];
+            }
+            return Add(affected, result.Triangle, result.Edge, point);
         }
 
         public Node? Add(Stack<int> affected, int triangle, int edge, Node point)
@@ -264,10 +270,15 @@ namespace CDTISharp.Meshing
                     continue;
                 }
 
-                Navigation.FindEdge(_triangles, constraint.start, constraint.end, out int triangle, out int edge);
-                if (edge != -1)
+                SearchResult? result = Navigation.FindEdge(_triangles, constraint.start, constraint.end);
+                if (result is null)
                 {
-                    SetConstraint(triangle, edge, type);
+                    throw new Exception();
+                }
+
+                if (result.Edge != -1)
+                {
+                    SetConstraint(result.Triangle, result.Edge, type);
                 }
                 else
                 {

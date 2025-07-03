@@ -7,24 +7,31 @@ using System.Threading.Tasks;
 
 namespace CDTISharp.Meshing
 {
+    public class SearchResult
+    {
+        public int Triangle { get; set; } = -1;
+        public int Edge { get; set; } = -1;
+        public int Node { get; set; } = -1;
+    }
+
     public static class Navigation
     {
-        public static void FindContaining(List<Triangle> triangles, List<Node> nodes, Node pt, out int triangle, out int edge, out int node, double eps, int searchStart = -1)
+        public static SearchResult? FindContaining(List<Triangle> triangles, List<Node> nodes, Node pt, List<int> path, double eps, int searchStart = -1)
         {
-            triangle = edge = node = -1;
             if (triangles.Count == 0)
             {
-                return;
+                return null;
             }
 
             double x = pt.X;
             double y = pt.Y;
 
-            int maxSteps = _triangles.Count * 3;
+            int maxSteps = triangles.Count * 3;
             int trianglesChecked = 0;
 
             int skipEdge = -1;
             int current = searchStart == -1 ? triangles.Count - 1 : searchStart;
+
             while (true)
             {
                 if (trianglesChecked++ > maxSteps)
@@ -33,6 +40,7 @@ namespace CDTISharp.Meshing
                 }
 
                 Triangle t = triangles[current];
+                path.Add(current);
 
                 int bestExit = -1;
                 double worstCross = 0;
@@ -47,19 +55,23 @@ namespace CDTISharp.Meshing
                     Node start = nodes[t.indices[i]];
                     if (GeometryHelper.CloseOrEqual(start, pt, eps))
                     {
-                        triangle = current;
-                        edge = i;
-                        node = start.Index;
-                        return;
+                        return new SearchResult()
+                        {
+                            Edge = i,
+                            Triangle = current,
+                            Node = start.Index,
+                        };
                     }
 
                     Node end = nodes[t.indices[Mesh.NEXT[i]]];
                     if (GeometryHelper.CloseOrEqual(start, pt, eps))
                     {
-                        triangle = current;
-                        edge = Mesh.NEXT[i];
-                        node = end.Index;
-                        return;
+                        return new SearchResult()
+                        {
+                            Edge = Mesh.NEXT[i],
+                            Triangle = current,
+                            Node = end.Index,
+                        };
                     }
 
                     double cross = GeometryHelper.Cross(start, end, x, y);
@@ -72,10 +84,11 @@ namespace CDTISharp.Meshing
 
                         if (dot >= -eps && dot <= lenSq + eps)
                         {
-                            triangle = current;
-                            edge = i;
-                            node = -1;
-                            return;
+                            return new SearchResult()
+                            {
+                                Edge = i,
+                                Triangle = current,
+                            };
                         }
                     }
 
@@ -92,16 +105,16 @@ namespace CDTISharp.Meshing
 
                 if (inside)
                 {
-                    triangle = current;
-                    edge = node = -1;
-                    return;
+                    return new SearchResult()
+                    {
+                        Triangle = current
+                    };
                 }
 
                 int next = t.adjacent[bestExit];
                 if (next == -1)
                 {
-                    triangle = edge = node = -1;
-                    return;
+                    return null;
                 }
 
                 int bestStart = t.indices[bestExit];
@@ -112,48 +125,53 @@ namespace CDTISharp.Meshing
             }
         }
 
-        public static void FindEdgeBrute(List<Triangle> triangles, Node a, Node b, out int triangle, out int edge)
+        public static SearchResult? FindEdgeBrute(List<Triangle> triangles, Node a, Node b)
         {
             foreach (Triangle t in triangles)
             {
                 int e = t.IndexOf(a.Index, b.Index);
                 if (e != -1)
                 {
-                    triangle = t.index;
-                    edge = e;
-                    return;
+                    return new SearchResult()
+                    {
+                        Triangle = t.index,
+                        Edge = e,
+                    };
                 }
             }
-
-            triangle = -1;
-            edge = -1;
+            return null;
         }
 
-        public static void FindEdge(List<Triangle> triangles, Node a, Node b, out int triangle, out int edge)
+        public static SearchResult? FindEdge(List<Triangle> triangles, Node a, Node b)
         {
             TriangleWalker walker = new TriangleWalker(triangles, a.Triangle, a.Index);
             do
             {
                 Triangle t = triangles[walker.Current];
-                triangle = t.index;
 
                 int e0 = walker.Edge0;
                 if (t.indices[e0] == a.Index && t.indices[Mesh.NEXT[e0]] == b.Index)
                 {
-                    edge = e0;
-                    return;
+                    return new SearchResult()
+                    {
+                        Triangle = t.index,
+                        Edge = e0,
+                    };
                 }
 
                 int e1 = walker.Edge1;
                 if (t.indices[e1] == a.Index && t.indices[Mesh.NEXT[e1]] == b.Index)
                 {
-                    edge = e1;
-                    return;
+                    return new SearchResult()
+                    {
+                        Triangle = t.index,
+                        Edge = e1,
+                    };
                 }
             }
             while (walker.MoveNext());
 
-            triangle = edge = -1;
+            return null;
         }
     }
 }
