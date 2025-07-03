@@ -64,7 +64,7 @@ namespace CDTISharp.Geometry
                 double t1 = (double)(i + 1) / parts;
 
                 List<Node> subCurve = Subdivide(_controlPoints, t0, t1, 20);
-                segments[i] = new BezierSegment(subCurve);
+                segments[i] = new BezierSegment(subCurve) { Data = this.Data };
             }
             return segments;
         }

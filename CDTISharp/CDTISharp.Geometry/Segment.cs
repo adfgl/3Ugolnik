@@ -13,6 +13,7 @@
 
         public Node Start => _start;
         public Node End => _end;
+        public int Data { get; set; }
 
         public int Segments
         {

@@ -107,7 +107,7 @@ namespace CDTISharp.Geometry
                 double t1 = (double)(i + 1) / parts;
                 Node start = PointAt(t0);
                 Node end = PointAt(t1);
-                segments[i] = new ArcSegment(start, end, Center, Clockwise);
+                segments[i] = new ArcSegment(start, end, Center, Clockwise) { Data = this.Data };
             }
             return segments;
         }

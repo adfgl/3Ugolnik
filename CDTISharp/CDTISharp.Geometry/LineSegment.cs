@@ -31,7 +31,7 @@
 
                 Node start = PointAt(t0);
                 Node end = PointAt(t1);
-                segments[i] = new LineSegment(start, end);
+                segments[i] = new LineSegment(start, end) { Data = this.Data };
             }
             return segments;
         }
