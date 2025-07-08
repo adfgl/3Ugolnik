@@ -262,10 +262,10 @@ namespace CDTISharp.Meshing
 
                     Node node = new Node() { Index = _nodes.Count,  X = constraint.circle.x, Y = constraint.circle.y };
                     Triangle[] tris = Splitting.Split(_triangles, _nodes, result.Triangle, result.Edge, node);
+
                     AddNode(node);
                     Add(tris);
                     Legalize(affected, tris);
-
                     while (affected.Count > 0)
                     {
                         triangleQueue.Enqueue(affected.Pop());
@@ -294,10 +294,16 @@ namespace CDTISharp.Meshing
                     double y = t.circle.y;
                     if (!_qt.Bounds.Contains(x, y))
                     {
-                        continue;
+                        Node a = _nodes[t.indices[0]];
+                        Node b = _nodes[t.indices[1]];
+                        Node c = _nodes[t.indices[2]];
+
+                        x = (a.X + b.X + c.X) / 3.0;
+                        y = (a.Y + b.Y + c.Y) / 3.0;
                     }
 
                     Node node = new Node() { X = x, Y = y };
+
                     bool encroaches = false;
                     foreach (Constraint seg in seen)
                     {
@@ -338,6 +344,7 @@ namespace CDTISharp.Meshing
             double area = GeometryHelper.Cross(a, b, c.X, c.Y) * 0.5;
             if (area < 0)
             {
+                Console.WriteLine(this.ToSvg());
                 throw new Exception("Wrong windning order");
             }
 
@@ -360,6 +367,7 @@ namespace CDTISharp.Meshing
             SearchResult? result = Navigation.FindContaining(_triangles, _nodes, point, visited, eps);
             if (result is null)
             {
+                Console.WriteLine(this.ToSvg());
                 throw new Exception();
             }
 
@@ -569,7 +577,10 @@ namespace CDTISharp.Meshing
             while (toLegalize.Count > 0)
             {
                 Triangle t = toLegalize.Pop();
-                if (!Flipping.CanFlip(_triangles, _nodes, t.index, 0) || !Flipping.ShouldFlip(_triangles, _nodes, t.index, 0))
+                affected.Push(t.index);
+
+                if (!Flipping.CanFlip(_triangles, _nodes, t.index, 0) || 
+                    !Flipping.ShouldFlip(_triangles, _nodes, t.index, 0))
                 {
                     continue;
                 }

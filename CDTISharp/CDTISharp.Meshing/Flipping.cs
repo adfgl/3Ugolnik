@@ -21,8 +21,8 @@ namespace CDTISharp.Meshing
             int adjIndex = t0.adjacent[edge];
             Triangle t1 = triangles[adjIndex];
 
-            Node a = nodes[t0.indices[0]];
-            Node b = nodes[t0.indices[1]];
+            Node a = nodes[t0.indices[edge]];
+            Node b = nodes[t0.indices[Mesh.NEXT[edge]]];
             int twin = t1.IndexOf(b.Index, a.Index);
 
             Node d = nodes[t1.indices[Mesh.PREV[twin]]];
@@ -64,12 +64,11 @@ namespace CDTISharp.Meshing
                 return false;
             }
 
+            Node a = nodes[t0.indices[edge]];
+            Node b = nodes[t0.indices[Mesh.NEXT[edge]]];
+            Node c = nodes[t0.indices[Mesh.PREV[edge]]];
+
             Triangle t1 = triangles[adjIndex];
-
-            Node a = nodes[t0.indices[0]];
-            Node b = nodes[t0.indices[1]];
-            Node c = nodes[t0.indices[2]];
-
             int twin = t1.IndexOf(b.Index, a.Index);
             Node d = nodes[t1.indices[Mesh.PREV[twin]]];
 
@@ -104,12 +103,11 @@ namespace CDTISharp.Meshing
                         d                         d
             */
 
-            Node a = nodes[old0.indices[0]];
-            Node b = nodes[old0.indices[1]];
-            Node c = nodes[old0.indices[2]];
+            Node a = nodes[old0.indices[edge]];
+            Node b = nodes[old0.indices[Mesh.NEXT[edge]]];
+            Node c = nodes[old0.indices[Mesh.PREV[edge]]];
 
             int twin = old1.IndexOf(b.Index, a.Index);
-
             Node d = nodes[old1.indices[Mesh.PREV[twin]]];
 
             int t0 = old0.index;

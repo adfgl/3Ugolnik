@@ -52,8 +52,8 @@
             double dx = rect.maxX - rect.minX;
             double dy = rect.maxY - rect.minY;
             double dm = Math.Max(dx, dy);
-            double exp = Math.Max(10, dm * 1.1);
-            return rect.Expand(dm);
+            double exp = dm * 0.01;
+            return rect.Expand(exp);
         }
 
         public Node? TryGet(double x, double y, double precision = 1e-10)

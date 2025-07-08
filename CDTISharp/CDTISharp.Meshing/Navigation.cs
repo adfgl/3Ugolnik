@@ -37,6 +37,7 @@ namespace CDTISharp.Meshing
             {
                 if (trianglesChecked++ > maxSteps)
                 {
+                    return null;
                     throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
                 }
 

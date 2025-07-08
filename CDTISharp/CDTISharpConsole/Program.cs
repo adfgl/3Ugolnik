@@ -22,7 +22,7 @@ namespace CDTISharpConsole
                 Contour = [ab, bc, cd, da],
                 Quality = new CDTQuality()
                 {
-                    MaxArea = 5
+                    MaxArea = 400
                 }
             };
 
