@@ -74,8 +74,6 @@ namespace CDTISharp
                 mesh.Refine(new Quality()
                 {
                     MaxArea = quality.MaxArea,
-                    MaxEdgeLength = quality.MaxEdgeLength,
-                    MinAngle = quality.MinAngle,
                 }, 1e-6);
             }
 

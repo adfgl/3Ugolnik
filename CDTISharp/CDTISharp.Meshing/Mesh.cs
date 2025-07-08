@@ -216,6 +216,11 @@ namespace CDTISharp.Meshing
 
         public void Refine(Quality quality, double eps)
         {
+            if (quality.MaxArea <= 0)
+            {
+                return;
+            }
+
             Stack<int> affected = new Stack<int>();
 
             HashSet<Constraint> seen = new HashSet<Constraint>();
@@ -257,6 +262,7 @@ namespace CDTISharp.Meshing
 
                     Node node = new Node() { Index = _nodes.Count,  X = constraint.circle.x, Y = constraint.circle.y };
                     Triangle[] tris = Splitting.Split(_triangles, _nodes, result.Triangle, result.Edge, node);
+                    AddNode(node);
                     Add(tris);
                     Legalize(affected, tris);
 
@@ -273,6 +279,7 @@ namespace CDTISharp.Meshing
                             segmentQueue.Enqueue(e);
                         }
                     }
+                    continue;
                 }
 
                 if (triangleQueue.Count > 0)
@@ -325,52 +332,25 @@ namespace CDTISharp.Meshing
                 return false;
             }
 
-            List<Node> nodes = _nodes;
-
-            double edgeLenLimSqr = q.MaxEdgeLength;
-            edgeLenLimSqr *= edgeLenLimSqr;
-
-            double minEdgeSqr = double.MaxValue;
-            double area = -1;
-            for (int i = 0; i < 3; i++)
+            Node a = _nodes[t.indices[0]];
+            Node b = _nodes[t.indices[1]];
+            Node c = _nodes[t.indices[2]];
+            double area = GeometryHelper.Cross(a, b, c.X, c.Y) * 0.5;
+            if (area < 0)
             {
-                Node a = nodes[t.indices[i]];
-                Node b = nodes[t.indices[NEXT[i]]];
-                double lenSqr = GeometryHelper.SquareLength(a, b);
-                if (q.MaxEdgeLength > 0 && lenSqr > edgeLenLimSqr)
-                {
-                    return true;
-                }
-
-                if (minEdgeSqr > lenSqr)
-                {
-                    minEdgeSqr = lenSqr;
-                }
-
-                Node c = nodes[t.indices[PREV[i]]];
-                if (area < 0)
-                {
-                    area = GeometryHelper.Cross(a, b, c.X, c.Y) * 0.5;
-                    if (area < 0)
-                    {
-                        throw new Exception("Wrong winding order.");
-                    }
-
-                    if (area > q.MaxArea)
-                    {
-                        return true;
-                    }
-                }
-
-                if (q.MinAngle > 0)
-                {
-                    double rad = GeometryHelper.Angle(c, a, b);
-                    if (rad < q.MinAngle)
-                    {
-                        return true;
-                    }
-                }
+                throw new Exception("Wrong windning order");
             }
+
+            if (area > q.MaxArea)
+            {
+                return true;
+            }
+
+            double ab = GeometryHelper.SquareLength(a, b);
+            double bc = GeometryHelper.SquareLength(b, c);
+            double ca = GeometryHelper.SquareLength(c, a);
+
+            double minEdgeSqr = Math.Min(ab, Math.Min(bc, ca));
             return t.circle.radiusSqr / minEdgeSqr > 2;
         }
 
@@ -431,7 +411,7 @@ namespace CDTISharp.Meshing
             while (toInsert.Count > 0)
             {
                 Constraint constraint = toInsert.Dequeue();
-                if (constraint.Degenerate())
+                if (constraint.Degenerate(eps))
                 {
                     continue;
                 }
