@@ -32,7 +32,7 @@ namespace CDTISharp.Meshing
         {
             foreach (Constraint s in segments)
             {
-                if (!this.Equals(s) && GeometryHelper.Intersect(start, end, center, pt) is not null)
+                if (!this.Equals(s) && GeometryHelper.Intersect(center, pt, start, end) is not null)
                 {
                     return false;
                 }

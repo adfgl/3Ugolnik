@@ -1,4 +1,5 @@
 ﻿using CDTISharp.Geometry;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace CDTISharp.Meshing
@@ -18,14 +19,13 @@ namespace CDTISharp.Meshing
         public static bool ShouldFlip(List<Triangle> triangles, List<Node> nodes, int triangle, int edge)
         {
             Triangle t0 = triangles[triangle];
-            int adjIndex = t0.adjacent[edge];
-            Triangle t1 = triangles[adjIndex];
-
             Node a = nodes[t0.indices[edge]];
             Node b = nodes[t0.indices[Mesh.NEXT[edge]]];
-            int twin = t1.IndexOf(b.Index, a.Index);
 
-            Node d = nodes[t1.indices[Mesh.PREV[twin]]];
+            Triangle t1 = triangles[t0.adjacent[edge]];
+            int ba = t1.IndexOf(b.Index, a.Index);
+
+            Node d = nodes[t1.indices[Mesh.PREV[ba]]];
             return t0.circle.Contains(d.X, d.Y);
         }
 
@@ -64,23 +64,20 @@ namespace CDTISharp.Meshing
                 return false;
             }
 
-            Node a = nodes[t0.indices[edge]];
-            Node b = nodes[t0.indices[Mesh.NEXT[edge]]];
-            Node c = nodes[t0.indices[Mesh.PREV[edge]]];
+            int ab = edge;
+            Node a = nodes[t0.indices[ab]];
+            Node b = nodes[t0.indices[Mesh.NEXT[ab]]];
+            Node c = nodes[t0.indices[Mesh.PREV[ab]]];
 
             Triangle t1 = triangles[adjIndex];
-            int twin = t1.IndexOf(b.Index, a.Index);
-            Node d = nodes[t1.indices[Mesh.PREV[twin]]];
+            int ba = t1.IndexOf(b.Index, a.Index);
+            Node d = nodes[t1.indices[Mesh.PREV[ba]]];
 
             return QuadConvex(b, c, a, d);
         }
 
         public static Triangle[] Flip(List<Triangle> triangles, List<Node> nodes, int triangle, int edge)
         {
-            Triangle old0 = triangles[triangle];
-            int adjIndex = old0.adjacent[edge];
-            Triangle old1 = triangles[adjIndex];
-
             /*
                   d - is inserted point, we want to propagate flip away from it, otherwise we 
                   are risking ending up in flipping degeneracy
@@ -103,21 +100,30 @@ namespace CDTISharp.Meshing
                         d                         d
             */
 
-            Node a = nodes[old0.indices[edge]];
-            Node b = nodes[old0.indices[Mesh.NEXT[edge]]];
-            Node c = nodes[old0.indices[Mesh.PREV[edge]]];
 
-            int twin = old1.IndexOf(b.Index, a.Index);
-            Node d = nodes[old1.indices[Mesh.PREV[twin]]];
+            int t0 = triangle;
+            Triangle old0 = triangles[t0];
+            Debug.Assert(t0 == old0.index);
 
-            int t0 = old0.index;
-            int t1 = old1.index;
+            int t1 = old0.adjacent[edge];
+            Triangle old1 = triangles[t1];
+            Debug.Assert(t1 == old1.index);
 
-            int bc = Mesh.NEXT[edge];
-            int ca = Mesh.PREV[edge];
-            int ad = Mesh.NEXT[twin];
-            int db = Mesh.PREV[twin];
+            int ab = edge;
+            int bc = Mesh.NEXT[ab];
+            int ca = Mesh.PREV[ab];
 
+            Node a = nodes[old0.indices[ab]];
+            Node b = nodes[old0.indices[bc]];
+            Node c = nodes[old0.indices[ca]];
+
+            int ba = old1.IndexOf(b.Index, a.Index);
+            int ad = Mesh.NEXT[ba];
+            int db = Mesh.PREV[ba];
+
+            Node d = nodes[old1.indices[db]];
+
+            // ADC
             Triangle new0 = new Triangle(t0, a, d, c);
             new0.adjacent[0] = old1.adjacent[ad];
             new0.adjacent[1] = t1;
@@ -127,6 +133,7 @@ namespace CDTISharp.Meshing
             new0.constraints[1] = -1;
             new0.constraints[2] = old0.constraints[ca];
 
+            // DBC
             Triangle new1 = new Triangle(t1, d, b, c);
             new1.adjacent[0] = old1.adjacent[db];
             new1.adjacent[1] = old0.adjacent[bc];

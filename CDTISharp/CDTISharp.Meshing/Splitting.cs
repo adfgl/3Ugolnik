@@ -1,4 +1,5 @@
 ﻿using CDTISharp.Geometry;
+using System.Diagnostics;
 
 namespace CDTISharp.Meshing
 {
@@ -26,8 +27,17 @@ namespace CDTISharp.Meshing
                          d                            d            
              */
 
+            int t0 = triangle;
             Triangle old0 = triangles[triangle];
-            int constraint = old0.constraints[edge];
+            Debug.Assert(t0 == old0.index);
+
+            int t1 = old0.adjacent[edge];
+            Triangle old1 = triangles[t1];
+            Debug.Assert(t1 == old1.index);
+
+            int t2 = triangles.Count;
+            int t3 = t2 + 1;
+
 
             int ab = edge;
             int bc = Mesh.NEXT[edge];
@@ -36,20 +46,16 @@ namespace CDTISharp.Meshing
             Node a = nodes[old0.indices[ab]];
             Node b = nodes[old0.indices[bc]];
             Node c = nodes[old0.indices[ca]];
+
+            int ba = old1.IndexOf(b.Index, a.Index);
+            int ad = Mesh.NEXT[ba];
+            int db = Mesh.PREV[ba];
+
             Node e = node;
+            Node d = nodes[old1.indices[db]];
 
-            int adjIndex = old0.adjacent[ab];
-            if (adjIndex == -1)
-            {
-                throw new Exception($"{nameof(SplitEdgeWithAdjacent)}: {old0} is supposed to have an adjacent triangle.");
-            }
-
-            Triangle old1 = triangles[adjIndex];
-
-            int t0 = old0.index;
-            int t1 = triangles.Count;
-            int t2 = old1.index;
-            int t3 = triangles.Count + 1;
+            int constraint = old0.constraints[ab];
+            Debug.Assert(constraint == old1.constraints[ba]);
 
             // CAE
             Triangle new0 = new Triangle(t0, c, a, e);
@@ -70,11 +76,6 @@ namespace CDTISharp.Meshing
             new1.constraints[0] = old0.constraints[bc];
             new1.constraints[1] = -1;
             new1.constraints[2] = constraint;
-
-            int ba = old1.IndexOf(b.Index, a.Index);
-            int ad = Mesh.NEXT[ba];
-            int db = Mesh.PREV[ba];
-            Node d = nodes[old1.indices[db]];
 
             // DBE
             Triangle new2 = new Triangle(t2, d, b, e);
@@ -107,51 +108,47 @@ namespace CDTISharp.Meshing
                       /  \                        / | \       
                      /    \                      /  |  \      
                     /      \                    /   |   \      
-                   /  t0    \                  /    |    \    
+                   /  old   \                  /    |    \    
                   /          \                /     |     \   
-                 /            \              /  t0  |  t1  \  
+                 /            \              /  new0|new1  \  
               a +--------------+ b        a +-------+-------+ b
                                                     e
            */
 
-            Triangle old0 = triangles[triangle];
-            int constraint = old0.constraints[edge];
+            int t0 = triangle;
+            Triangle old = triangles[t0];
+            Debug.Assert(t0 == old.index);
+
+            int t1 = triangles.Count;
 
             int ab = edge;
             int bc = Mesh.NEXT[edge];
             int ca = Mesh.PREV[edge];
 
-            Node a = nodes[old0.indices[ab]];
-            Node b = nodes[old0.indices[bc]];
-            Node c = nodes[old0.indices[ca]];
+            Node a = nodes[old.indices[ab]];
+            Node b = nodes[old.indices[bc]];
+            Node c = nodes[old.indices[ca]];
             Node e = node;
 
-            int adjIndex = old0.adjacent[ab];
-            if (adjIndex != -1)
-            {
-                throw new Exception($"{nameof(SplitEdgeNoAdjacent)}: {old0} not supposed to have an adjacent triangle.");
-            }
-
-            int t0 = old0.index;
-            int t1 = triangles.Count;
+            int constraint = old.constraints[edge];
 
             // CAE
             Triangle new0 = new Triangle(t0, c, a, e);
-            new0.adjacent[0] = old0.adjacent[ca];
+            new0.adjacent[0] = old.adjacent[ca];
             new0.adjacent[1] = -1;
             new0.adjacent[2] = t1;
 
-            new0.constraints[0] = old0.constraints[ca];
+            new0.constraints[0] = old.constraints[ca];
             new0.constraints[1] = constraint;
             new0.constraints[2] = -1;
 
             // BCE
             Triangle new1 = new Triangle(t1, b, c, e);
-            new1.adjacent[0] = old0.adjacent[bc];
+            new1.adjacent[0] = old.adjacent[bc];
             new1.adjacent[1] = t0;
             new1.adjacent[2] = -1;
 
-            new1.constraints[0] = old0.constraints[bc];
+            new1.constraints[0] = old.constraints[bc];
             new1.constraints[1] = -1;
             new1.constraints[2] = constraint;
 
@@ -170,44 +167,47 @@ namespace CDTISharp.Meshing
         public static Triangle[] Split(List<Triangle> triangles, List<Node> nodes, int triangle, Node node)
         {
             /*
-                         * v2
+                         * c
 
 
 
                      /           ^
-                    ^      *v3     \
+                    ^ new2*d new1\
 
+                         new0
 
-
-               v0 *        ->         * v1
+               a *        ->         * b
 
             */
 
             Triangle old = triangles[triangle];
-            Node v0 = nodes[old.indices[0]];
-            Node v1 = nodes[old.indices[1]];
-            Node v2 = nodes[old.indices[2]];
-            Node v3 = node;
+            Node a = nodes[old.indices[0]];
+            Node b = nodes[old.indices[1]];
+            Node c = nodes[old.indices[2]];
+            Node d = node;
 
             int t0 = triangle;
             int t1 = triangles.Count;
-            int t2 = t1 + 1;
+            int t2 = triangles.Count + 1;
 
-            Triangle new0 = new Triangle(t0, v0, v1, v3);
+            // ABD
+            Triangle new0 = new Triangle(t0, a, b, d);
             new0.adjacent[0] = old.adjacent[0];
             new0.adjacent[1] = t1;
             new0.adjacent[2] = t2;
 
             new0.constraints[0] = old.constraints[0];
 
-            Triangle new1 = new Triangle(t1, v1, v2, v3);
+            // BCD
+            Triangle new1 = new Triangle(t1, b, c, d);
             new1.adjacent[0] = old.adjacent[1];
             new1.adjacent[1] = t2;
             new1.adjacent[2] = t0;
 
             new1.constraints[0] = old.constraints[1];
 
-            Triangle new2 = new Triangle(t2, v2, v0, v3);
+            // CAD
+            Triangle new2 = new Triangle(t2, c, a, d);
             new2.adjacent[0] = old.adjacent[2];
             new2.adjacent[1] = t0;
             new2.adjacent[2] = t1;

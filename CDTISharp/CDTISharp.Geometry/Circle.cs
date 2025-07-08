@@ -52,9 +52,9 @@
 
         public bool Contains(double x, double y)
         {
-            double dx = x - this.x;
-            double dy = y - this.y;
-            return dx * dx + dy * dy <= radiusSqr;
+            double dx = this.x - x;
+            double dy = this.y - y;
+            return dx * dx + dy * dy < radiusSqr;
         }
     }
 }

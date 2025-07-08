@@ -58,7 +58,6 @@ namespace CDTISharp.Geometry
 
             double a = p2.X - p1.X, b = q1.X - q2.X;
             double c = p2.Y - p1.Y, d = q1.Y - q2.Y;
-            double e = q1.X - p1.X, f = q1.Y - p1.Y;
 
             double det = a * d - b * c;
             if (Math.Abs(det) < 1e-12)
@@ -66,19 +65,20 @@ namespace CDTISharp.Geometry
                 return null; // Lines are parallel or too close to parallel
             }
 
+            double e = q1.X - p1.X, f = q1.Y - p1.Y;
             double u = (e * d - b * f) / det;
             double v = (a * f - e * c) / det;
 
             if (u < 0 || u > 1 || v < 0 || v > 1)
             {
-                return null; // No intersection within segments
+                return null;
             }
 
             return new Node
             {
                 X = p1.X + u * a,
                 Y = p1.Y + u * c,
-                Z = p1.Z + u * (p2.Z - p1.Z), // Interpolated Z from segment P
+                Z = p1.Z + u * (p2.Z - p1.Z), 
                 Index = -1
             };
         }

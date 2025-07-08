@@ -294,12 +294,7 @@ namespace CDTISharp.Meshing
                     double y = t.circle.y;
                     if (!_qt.Bounds.Contains(x, y))
                     {
-                        Node a = _nodes[t.indices[0]];
-                        Node b = _nodes[t.indices[1]];
-                        Node c = _nodes[t.indices[2]];
-
-                        x = (a.X + b.X + c.X) / 3.0;
-                        y = (a.Y + b.Y + c.Y) / 3.0;
+                        continue;
                     }
 
                     Node node = new Node() { X = x, Y = y };
@@ -579,7 +574,8 @@ namespace CDTISharp.Meshing
                 Triangle t = toLegalize.Pop();
                 affected.Push(t.index);
 
-                if (!Flipping.CanFlip(_triangles, _nodes, t.index, 0) || 
+                if (
+                    !Flipping.CanFlip(_triangles, _nodes, t.index, 0) ||
                     !Flipping.ShouldFlip(_triangles, _nodes, t.index, 0))
                 {
                     continue;
