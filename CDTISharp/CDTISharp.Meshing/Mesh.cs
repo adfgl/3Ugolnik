@@ -148,7 +148,6 @@ namespace CDTISharp.Meshing
 
         public Mesh Clean()
         {
-
             Dictionary<int, int> remap = new Dictionary<int, int>(_triangles.Count);
             int write = 0;
             for (int read = 0; read < _triangles.Count; read++)
@@ -381,7 +380,7 @@ namespace CDTISharp.Meshing
 
                     double x = t.circle.x;
                     double y = t.circle.y;
-                    if (!_qt.Bounds.Contains(x, y))
+                    if (!_bounds.Contains(x, y))
                     {
                         continue;
                     }
@@ -428,7 +427,6 @@ namespace CDTISharp.Meshing
             double area = GeometryHelper.Cross(a, b, c.X, c.Y) * 0.5;
             if (area < 0)
             {
-                Console.WriteLine(this.ToSvg());
                 throw new Exception("Wrong windning order");
             }
 

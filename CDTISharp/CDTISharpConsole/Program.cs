@@ -28,11 +28,11 @@ namespace CDTISharpConsole
             var input = new CDTInput()
             {
                 Contour = [ab, bc, cd, da],
-                ConstraintEdges = [new CDTArcSegment(e, f, new CDTNode(0, 0), true ) {  Segments = 8}], // 
+                ConstraintEdges = [new CDTArcSegment(e, f, new CDTNode(0, 0), true ) {  Segments = 16}], // 
 
                 Quality = new CDTQuality()
                 {
-                    MaxArea = 400
+                    MaxArea = 450
                 }
             };
 
