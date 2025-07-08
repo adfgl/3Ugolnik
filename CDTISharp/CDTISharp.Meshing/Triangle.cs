@@ -4,7 +4,7 @@ namespace CDTISharp.Meshing
 {
     public struct Triangle
     {
-        public readonly int index;
+        public int index;
         public readonly bool super;
         public readonly int[] indices, adjacent, constraints;
         public readonly Circle circle;

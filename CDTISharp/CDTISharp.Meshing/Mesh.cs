@@ -146,6 +146,95 @@ namespace CDTISharp.Meshing
             }
         }
 
+        public Mesh Clean()
+        {
+
+            Dictionary<int, int> remap = new Dictionary<int, int>(_triangles.Count);
+            int write = 0;
+            for (int read = 0; read < _triangles.Count; read++)
+            {
+                Triangle t = _triangles[read];
+                bool discard = t.super || t.partOfHole;
+
+                if (discard)
+                {
+                    for (int ab = 0; ab < 3; ab++)
+                    {
+                        int adjIndex = t.adjacent[ab];
+                        if (adjIndex == -1) continue;
+
+                        int a = t.indices[ab];
+                        int b = t.indices[NEXT[ab]];
+                        Triangle adj = _triangles[adjIndex];
+                        int ba = adj.IndexOf(b, a);
+
+                        if (ba != -1)
+                        {
+                            adj.adjacent[ba] = -1;
+                            _triangles[adjIndex] = adj;
+                        }
+
+                        Node nodeA = _nodes[a];
+                        if (nodeA.Triangle == t.index)
+                        {
+                            nodeA.Triangle = -1;
+                        }
+                    }
+                }
+                else
+                {
+                    remap[t.index] = write;
+                    _triangles[write] = t;
+                    write++;
+                }
+            }
+
+            _nodes.RemoveRange(0, 3);
+            if (write < _triangles.Count)
+            {
+                _triangles.RemoveRange(write, _triangles.Count - write);
+            }
+
+            for (int i = 0; i < _triangles.Count; i++)
+            {
+                Triangle t = _triangles[i];
+                t.index = i;
+
+                for (int edge = 0; edge < 3; edge++)
+                {
+                    t.indices[edge] -= 3;
+                    if (t.adjacent[edge] != -1)
+                    {
+                        if (remap.TryGetValue(t.adjacent[edge], out int newAdj))
+                        {
+                            t.adjacent[edge] = newAdj;
+                        }
+                        else
+                        {
+                            t.adjacent[edge] = -1;
+                        }
+                    }
+                }
+                _triangles[i] = t;
+            }
+
+            foreach (Node node in _nodes)
+            {
+                node.Index -= 3;
+                if (node.Triangle != -1) continue;
+
+                foreach (var t in _triangles)
+                {
+                    if (t.IndexOf(node.Index) != -1)
+                    {
+                        node.Triangle = t.index;
+                        break;
+                    }
+                }
+            }
+            return this;
+        }
+
         public Node AddNode(Node node)
         {
             node.Index = _nodes.Count;

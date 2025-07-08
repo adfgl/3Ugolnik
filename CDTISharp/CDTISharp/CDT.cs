@@ -77,6 +77,8 @@ namespace CDTISharp
                 }, 1e-6);
             }
 
+            mesh = mesh.Clean();
+
 #if DEBUG
             Console.WriteLine(mesh.ToSvg());
 #endif
