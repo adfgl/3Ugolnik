@@ -7,6 +7,14 @@
 
         public static Rectangle Empty => new Rectangle(double.MaxValue, double.MaxValue, double.MinValue, double.MinValue);
 
+        public Rectangle(Node a, Node b)
+        {
+            this.minX = Math.Min(a.X, b.X);
+            this.minY = Math.Min(a.Y, b.Y);
+            this.maxX = Math.Max(a.X, b.X);
+            this.maxY = Math.Max(a.Y, b.Y);
+        }
+
         public Rectangle(double minX, double minY, double maxX, double maxY)
         {
             this.minX = minX;

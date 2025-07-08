@@ -1,4 +1,5 @@
 ﻿using CDTISharp.Geometry;
+using System.Xml.Linq;
 
 namespace CDTISharp.Meshing
 {
@@ -41,6 +42,70 @@ namespace CDTISharp.Meshing
             {
                 _qt.Add(node);
                 _nodes.Add(node);
+            }
+        }
+
+        public Mesh MarkHoles(Func<Triangle, bool> isHole)
+        {
+            for (int i = 0; i < _triangles.Count; i++)
+            {
+                Triangle t = _triangles[i];
+                t.discard = isHole(t);
+                _triangles[i] = t;
+            }
+            return this;
+        }
+
+        public void Process(ClosedPolygon polygon, List<Constraint> edges, List<Node> nodes)
+        {
+
+        }
+
+
+        public Mesh(List<Constraint> edges, List<Node> nodes)
+        {
+            double minX, minY, maxX, maxY;
+            minX = minY = double.MaxValue;
+            maxX = maxY = double.MinValue;
+            foreach (Constraint edge in edges)
+            {
+                process(edge.start);
+                process(edge.end);
+            }
+
+            foreach (Node node in nodes)
+            {
+                process(node);
+            }
+
+            _bounds = new Rectangle(minX, minY, maxX, maxY);
+            _qt = new QuadTree(_bounds);
+            _nodes = new List<Node>();
+            _triangles = new List<Triangle>();
+
+            AddSuperStructure(_bounds, 2);
+
+            List<int> affected = new List<int>();
+            for (int i = 0; i < edges.Count; i++)
+            {
+                Constraint edge = edges[i];
+                Insert(affected, edge.start, edge.end, edge.type, false, _eps);
+            }
+
+            foreach (Node node in nodes)
+            {
+                Insert(affected, node, _eps);
+            }
+
+            void process(Node node)
+            {
+                double x = node.X;
+                double y = node.Y;
+
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
             }
         }
 
@@ -118,12 +183,8 @@ namespace CDTISharp.Meshing
                     x /= 3.0;
                     y /= 3.0;
 
-                    bool isHole = !polygon.Contains(x, y, _eps);
-                    if (isHole)
-                    {
-                        t.partOfHole = true;
-                        _triangles[i] = t;
-                    }
+                    t.discard = !polygon.Contains(x, y, _eps);
+                    _triangles[i] = t;
                 }
             }
 
@@ -157,7 +218,7 @@ namespace CDTISharp.Meshing
             for (int read = 0; read < _triangles.Count; read++)
             {
                 Triangle t = _triangles[read];
-                bool discard = t.super || t.partOfHole;
+                bool discard = t.super || t.discard;
 
                 if (discard)
                 {
@@ -420,7 +481,7 @@ namespace CDTISharp.Meshing
 
         public bool Bad(Triangle t, Quality q)
         {
-            if (t.super || t.partOfHole)
+            if (t.super || t.discard)
             {
                 return false;
             }
@@ -466,6 +527,11 @@ namespace CDTISharp.Meshing
 
         public Node? Insert(List<int> affected, int triangle, int edge, Node point)
         {
+            if (!_bounds.Contains(point.X, point.Y))
+            {
+                throw new Exception("Out of bounds");
+            }
+
             if (triangle == -1)
             {
                 return null;

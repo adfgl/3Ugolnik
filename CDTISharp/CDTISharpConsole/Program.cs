@@ -12,7 +12,7 @@ namespace CDTISharpConsole
             var c = new CDTNode(+100, +100);
             var d = new CDTNode(-100, +100);
 
-            var e = new CDTNode(-50, -50);  
+            var e = new CDTNode(-350, -50);
             var f = new CDTNode(+50, +50);
 
             var g = new CDTNode(-50, +50);
@@ -28,15 +28,17 @@ namespace CDTISharpConsole
             var input = new CDTInput()
             {
                 Contour = [ab, bc, cd, da],
-                ConstraintEdges = [new CDTArcSegment(e, f, new CDTNode(0, 0), true ) {  Segments = 16}], // 
+                //ConstraintEdges = [new CDTLineSegment(e, f)],
 
                 Quality = new CDTQuality()
                 {
-                    MaxArea = 450
+                    MaxArea = 350
                 }
             };
 
             CDT.Triangulate(input);
+
+
         }
     }
 }

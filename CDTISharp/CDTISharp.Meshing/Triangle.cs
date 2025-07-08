@@ -8,7 +8,7 @@ namespace CDTISharp.Meshing
         public readonly bool super;
         public readonly int[] indices, adjacent, constraints;
         public readonly Circle circle;
-        public bool partOfHole = false;
+        public bool discard = false;
 
 
         public Triangle(int index, Node a, Node b, Node c)
