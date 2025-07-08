@@ -84,16 +84,14 @@ namespace CDTISharp.Meshing
 
             AddSuperStructure(_bounds, 3);
 
-            Stack<int> affected = new Stack<int>();
+            List<int> affected = new List<int>();
             foreach (Constraint edge in conEdges)
             {
-                affected.Clear();
                 Insert(affected, edge.start, edge.end, edge.type, false, eps);
             }
 
             foreach (Node node in conPoints)
             {
-                affected.Clear();
                 Insert(affected, node, eps);
             }
 
@@ -222,7 +220,7 @@ namespace CDTISharp.Meshing
                 return;
             }
 
-            Stack<int> affected = new Stack<int>();
+            List<int> affected = new List<int>();
 
             HashSet<Constraint> seen = new HashSet<Constraint>();
             Queue<int> triangleQueue = new Queue<int>();
@@ -267,21 +265,10 @@ namespace CDTISharp.Meshing
                     AddNode(node);
                     Add(tris);
                     Legalize(affected, tris);
-                    while (affected.Count > 0)
+                    foreach (var item in affected)
                     {
-                        triangleQueue.Enqueue(affected.Pop());
+                        triangleQueue.Enqueue(item);
                     }
-
-                    //if (triangleQueue.Count == 0)
-                    //{
-                    //    foreach (var item in _triangles)
-                    //    {
-                    //        if (Bad(item, quality))
-                    //        {
-                    //            triangleQueue.Enqueue(item.index);
-                    //        }
-                    //    }
-                    //}
 
                     seen.Remove(constraint);
                     foreach (Constraint e in constraint.Split(node))
@@ -329,9 +316,9 @@ namespace CDTISharp.Meshing
                     Node? inserted = Insert(affected, node, eps);
                     if (inserted == node)
                     {
-                        while (affected.Count > 0)
+                        foreach (var item in affected)
                         {
-                            triangleQueue.Enqueue(affected.Pop());
+                            triangleQueue.Enqueue(item);
                         }
                     }
                 }
@@ -368,7 +355,7 @@ namespace CDTISharp.Meshing
             return t.circle.radiusSqr / minEdgeSqr > 2;
         }
 
-        public Node? Insert(Stack<int> affected, Node point, double eps)
+        public Node? Insert(List<int> affected, Node point, double eps)
         {
             List<int> visited = new List<int>();
             SearchResult? result = Navigation.FindContaining(_triangles, _nodes, point, visited, eps);
@@ -385,7 +372,7 @@ namespace CDTISharp.Meshing
             return Insert(affected, result.Triangle, result.Edge, point);
         }
 
-        public Node? Insert(Stack<int> affected, int triangle, int edge, Node point)
+        public Node? Insert(List<int> affected, int triangle, int edge, Node point)
         {
             if (triangle == -1)
             {
@@ -412,7 +399,7 @@ namespace CDTISharp.Meshing
             return point;
         }
 
-        public void Insert(Stack<int> affected, Node start, Node end, int type, bool alwaysSplit, double eps)
+        public void Insert(List<int> affected, Node start, Node end, int type, bool alwaysSplit, double eps)
         {
             Node? a = Insert(affected, start, eps);
             Node? b = Insert(affected, end, eps);
@@ -452,7 +439,7 @@ namespace CDTISharp.Meshing
             }
         }
 
-        bool WalkAndInsert(Stack<int> affected, Triangle current, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit, double eps)
+        bool WalkAndInsert(List<int> affected, Triangle current, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit, double eps)
         {
             while (true)
             {
@@ -471,7 +458,7 @@ namespace CDTISharp.Meshing
             }
         }
 
-        bool TrySplitOrFlip(Stack<int> affected, Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit, double eps)
+        bool TrySplitOrFlip(List<int> affected, Triangle triangle, int edge, Constraint constraint, Queue<Constraint> toInsert, bool alwaysSplit, double eps)
         {
             Node a = _nodes[triangle.indices[edge]];
             Node b = _nodes[triangle.indices[NEXT[edge]]];
@@ -578,13 +565,14 @@ namespace CDTISharp.Meshing
             throw new Exception("Could not find entrance triangle.");
         }
 
-        public void Legalize(Stack<int> affected, Triangle[] triangles)
+        public void Legalize(List<int> affected, Triangle[] triangles)
         {
+            affected.Clear();
             Stack<Triangle> toLegalize = new Stack<Triangle>(triangles);
             while (toLegalize.Count > 0)
             {
                 Triangle t = toLegalize.Pop();
-                affected.Push(t.index);
+                affected.Add(t.index);
 
                 for (int edge = 0; edge < 3; edge++)
                 {
@@ -604,7 +592,7 @@ namespace CDTISharp.Meshing
                         int index = f.index;
                         if (t.index != index)
                         {
-                            affected.Push(index);
+                            affected.Add(index);
                         }
                     }
                     break;
