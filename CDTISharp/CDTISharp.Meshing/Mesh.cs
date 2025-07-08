@@ -147,11 +147,12 @@ namespace CDTISharp.Meshing
             }
         }
 
-        public void AddNode(Node node)
+        public Node AddNode(Node node)
         {
             node.Index = _nodes.Count;
             _nodes.Add(node);
             _qt.Add(node);
+            return node;
         }
 
         public Mesh BruteForceTwins()
@@ -270,6 +271,17 @@ namespace CDTISharp.Meshing
                     {
                         triangleQueue.Enqueue(affected.Pop());
                     }
+
+                    //if (triangleQueue.Count == 0)
+                    //{
+                    //    foreach (var item in _triangles)
+                    //    {
+                    //        if (Bad(item, quality))
+                    //        {
+                    //            triangleQueue.Enqueue(item.index);
+                    //        }
+                    //    }
+                    //}
 
                     seen.Remove(constraint);
                     foreach (Constraint e in constraint.Split(node))
@@ -574,20 +586,28 @@ namespace CDTISharp.Meshing
                 Triangle t = toLegalize.Pop();
                 affected.Push(t.index);
 
-                if (
-                    !Flipping.CanFlip(_triangles, _nodes, t.index, 0) ||
-                    !Flipping.ShouldFlip(_triangles, _nodes, t.index, 0))
+                for (int edge = 0; edge < 3; edge++)
                 {
-                    continue;
-                }
+                    if (!Flipping.CanFlip(_triangles, _nodes, t.index, edge) ||
+                        !Flipping.ShouldFlip(_triangles, _nodes, t.index, edge))
+                    {
+                        continue;
+                    }
 
-                Triangle[] flipped = Flipping.Flip(_triangles, _nodes, t.index, 0);
-                Add(flipped);
+                    Triangle[] flipped = Flipping.Flip(_triangles, _nodes, t.index, edge);
+                    Add(flipped);
 
-                foreach (Triangle f in flipped)
-                {
-                    affected.Push(f.index);
-                    toLegalize.Push(f);
+                    foreach (Triangle f in flipped)
+                    {
+                        toLegalize.Push(f);
+
+                        int index = f.index;
+                        if (t.index != index)
+                        {
+                            affected.Push(index);
+                        }
+                    }
+                    break;
                 }
             }
         }

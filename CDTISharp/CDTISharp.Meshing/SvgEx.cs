@@ -11,7 +11,7 @@ namespace CDTISharp.Meshing
 {
     public static class SvgEx
     {
-        public static string ToSvg(this Mesh mesh, int size = 1000, float padding = 10)
+        public static string ToSvg(this Mesh mesh, int size = 1000, double padding = 10, bool drawCircle = false)
         {
             // https://www.svgviewer.dev/
 
@@ -106,6 +106,13 @@ namespace CDTISharp.Meshing
                     var (ex2, ey2) = project(end.X, end.Y);
 
                     sb.Append($"<line x1='{ex1:F1}' y1='{ey1:F1}' x2='{ex2:F1}' y2='{ey2:F1}' stroke='{edgeColor}' stroke-width='{thickness}'/>");
+                }
+
+                if (drawCircle)
+                {
+                    var (cx, cy) = project(triangle.circle.x, triangle.circle.y);
+                    double r = Math.Sqrt(triangle.circle.radiusSqr) * scale;
+                    sb.Append($"<circle cx='{cx:F1}' cy='{cy:F1}' r='{r:F1}' fill='none' stroke='blue' stroke-opacity='0.6' stroke-width='1'/>");
                 }
             }
 

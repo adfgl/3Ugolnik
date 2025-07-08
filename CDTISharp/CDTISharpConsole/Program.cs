@@ -7,10 +7,10 @@ namespace CDTISharpConsole
     {
         static void Main(string[] args)
         {
-            var a = new CDTNode(0, 0);
-            var b = new CDTNode(0, 100);
-            var c = new CDTNode(200, 100);
-            var d = new CDTNode(200, 0);
+            var a = new CDTNode(-100, -100);
+            var b = new CDTNode(+100, -100);
+            var c = new CDTNode(+100, +100);
+            var d = new CDTNode(-100, +100);
 
             var ab = new CDTLineSegment(a, b);
             var bc = new CDTLineSegment(b, c);
