@@ -93,6 +93,7 @@ namespace CDTISharp.Meshing
                             edgeColor = "green";
                             thickness = 1.5;
                             break;
+
                         default:
                             edgeColor = "red";
                             thickness = 3;

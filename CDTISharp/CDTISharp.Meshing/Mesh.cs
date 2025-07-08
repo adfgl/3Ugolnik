@@ -85,8 +85,9 @@ namespace CDTISharp.Meshing
             AddSuperStructure(_bounds, 3);
 
             List<int> affected = new List<int>();
-            foreach (Constraint edge in conEdges)
+            for (int i = 0; i < conEdges.Count; i++)
             {
+                Constraint edge = conEdges[i];
                 Insert(affected, edge.start, edge.end, edge.type, false, eps);
             }
 
@@ -419,12 +420,7 @@ namespace CDTISharp.Meshing
                 }
 
                 SearchResult? result = Navigation.FindEdge(_triangles, constraint.start, constraint.end);
-                if (result is null)
-                {
-                    throw new Exception();
-                }
-
-                if (result.Edge != -1)
+                if (result != null && result.Edge != -1)
                 {
                     SetConstraint(result.Triangle, result.Edge, type);
                 }

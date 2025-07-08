@@ -149,24 +149,17 @@ namespace CDTISharp.Meshing
             {
                 Triangle t = triangles[walker.Current];
 
-                int e0 = walker.Edge0;
-                if (t.indices[e0] == a.Index && t.indices[Mesh.NEXT[e0]] == b.Index)
+                int[] edges = [walker.Edge0, walker.Edge1];
+                foreach (int edge in edges)
                 {
-                    return new SearchResult()
+                    if (t.indices[edge] == a.Index && t.indices[Mesh.NEXT[edge]] == b.Index)
                     {
-                        Triangle = t.index,
-                        Edge = e0,
-                    };
-                }
-
-                int e1 = walker.Edge1;
-                if (t.indices[e1] == a.Index && t.indices[Mesh.NEXT[e1]] == b.Index)
-                {
-                    return new SearchResult()
-                    {
-                        Triangle = t.index,
-                        Edge = e1,
-                    };
+                        return new SearchResult()
+                        {
+                            Triangle = t.index,
+                            Edge = edge,
+                        };
+                    }
                 }
             }
             while (walker.MoveNext());
