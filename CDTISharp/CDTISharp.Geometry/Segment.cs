@@ -20,7 +20,7 @@
             get => _segments;
             set
             {
-                _segments = Math.Max(_segments, 1);
+                _segments = Math.Max(value, 1);
             }
         }
 

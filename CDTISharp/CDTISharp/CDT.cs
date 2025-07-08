@@ -55,7 +55,7 @@ namespace CDTISharp
                 Segment segment = item.ToSegment();
                 Segment[] split = segment.Split();
 
-                foreach (LineSegment line in split)
+                foreach (var line in split)
                 {
                     userEdgeConstraints.Add((line.Start, line.End));
                 }

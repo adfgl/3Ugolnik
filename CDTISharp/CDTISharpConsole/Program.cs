@@ -28,7 +28,7 @@ namespace CDTISharpConsole
             var input = new CDTInput()
             {
                 Contour = [ab, bc, cd, da],
-                ConstraintEdges = [new CDTLineSegment(e, f), new CDTLineSegment(g, h)], // 
+                ConstraintEdges = [new CDTArcSegment(e, f, new CDTNode(0, 0), true ) {  Segments = 8}], // 
 
                 Quality = new CDTQuality()
                 {

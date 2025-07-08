@@ -82,7 +82,7 @@ namespace CDTISharp.Meshing
             _nodes = new List<Node>();
             _triangles = new List<Triangle>();
 
-            AddSuperStructure(_bounds, 3);
+            AddSuperStructure(_bounds, 2);
 
             List<int> affected = new List<int>();
             for (int i = 0; i < conEdges.Count; i++)
@@ -570,28 +570,25 @@ namespace CDTISharp.Meshing
                 Triangle t = toLegalize.Pop();
                 affected.Add(t.index);
 
-                for (int edge = 0; edge < 3; edge++)
+                int edge = 0;
+                if (!Flipping.CanFlip(_triangles, _nodes, t.index, edge) ||
+                       !Flipping.ShouldFlip(_triangles, _nodes, t.index, edge))
                 {
-                    if (!Flipping.CanFlip(_triangles, _nodes, t.index, edge) ||
-                        !Flipping.ShouldFlip(_triangles, _nodes, t.index, edge))
+                    continue;
+                }
+
+                Triangle[] flipped = Flipping.Flip(_triangles, _nodes, t.index, edge);
+                Add(flipped);
+
+                foreach (Triangle f in flipped)
+                {
+                    toLegalize.Push(f);
+
+                    int index = f.index;
+                    if (t.index != index)
                     {
-                        continue;
+                        affected.Add(index);
                     }
-
-                    Triangle[] flipped = Flipping.Flip(_triangles, _nodes, t.index, edge);
-                    Add(flipped);
-
-                    foreach (Triangle f in flipped)
-                    {
-                        toLegalize.Push(f);
-
-                        int index = f.index;
-                        if (t.index != index)
-                        {
-                            affected.Add(index);
-                        }
-                    }
-                    break;
                 }
             }
         }
