@@ -1,5 +1,4 @@
 ﻿using CDTISharp.Geometry;
-using System.Data;
 
 namespace CDTISharp.Meshing
 {
@@ -8,6 +7,7 @@ namespace CDTISharp.Meshing
         public readonly static int[] NEXT = [1, 2, 0];
         public readonly static int[] PREV = [2, 0, 1];
 
+        double _eps = 1e-12;
         readonly List<Triangle> _triangles;
         readonly QuadTree _qt;
         readonly List<Node> _nodes;
@@ -16,6 +16,12 @@ namespace CDTISharp.Meshing
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
         public Rectangle Bounds => _bounds;
+
+        public double Eps
+        {
+            get => _eps; 
+            set => _eps = value;
+        }
 
         public Mesh(Rectangle rectangle)
         {
@@ -42,8 +48,6 @@ namespace CDTISharp.Meshing
         {
             List<Constraint> conEdges = new List<Constraint>();
             List<Node> conPoints = new List<Node>();
-
-            double eps = 1e-6;
 
             double minX, minY, maxX, maxY;
             minX = minY = double.MaxValue;
@@ -88,12 +92,12 @@ namespace CDTISharp.Meshing
             for (int i = 0; i < conEdges.Count; i++)
             {
                 Constraint edge = conEdges[i];
-                Insert(affected, edge.start, edge.end, edge.type, false, eps);
+                Insert(affected, edge.start, edge.end, edge.type, false, _eps);
             }
 
             foreach (Node node in conPoints)
             {
-                Insert(affected, node, eps);
+                Insert(affected, node, _eps);
             }
 
             if (polygon is not null)
@@ -114,7 +118,7 @@ namespace CDTISharp.Meshing
                     x /= 3.0;
                     y /= 3.0;
 
-                    bool isHole = !polygon.Contains(x, y, eps);
+                    bool isHole = !polygon.Contains(x, y, _eps);
                     if (isHole)
                     {
                         t.partOfHole = true;
