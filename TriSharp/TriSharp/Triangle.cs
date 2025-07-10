@@ -30,6 +30,15 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int IndexOf(int vtx)
+        {
+            if (indxA == vtx) return 0;
+            if (indxB == vtx) return 1;
+            if (indxC == vtx) return 2;
+            return NO_INDEX;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int EdgeIndex(int a, int b)
         {
             if (indxA == a && indxB == b) return 0;
