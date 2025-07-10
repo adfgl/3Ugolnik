@@ -39,6 +39,31 @@
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Edge(int edge, out int start, out int end)
+        {
+            switch (edge)
+            {
+                case 0:
+                    start = indxA;
+                    end = indxB;
+                    break;
+
+                case 1:
+                    start = indxB;
+                    end = indxC;
+                    break;
+
+                case 2:
+                    start = indxC;
+                    end = indxA;
+                    break;
+
+                default:
+                    throw new IndexOutOfRangeException($"Expected index 0, 1 or 2 but got {edge}.");
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Triangle Orient(int edge)
         {
             return edge switch
