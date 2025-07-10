@@ -4,34 +4,58 @@
     using System.Runtime.CompilerServices;
     using System.Security.Cryptography;
     using System.Xml.Linq;
-    using static Int3;
 
     public struct Triangle
     {
-        public int index;
-        public Int3 inds;
-        public Int3 adjs;
-        public Int3 cons;
-        public Circle circle;
+        public const int NO_INDEX = -1;
 
-        public Triangle(int index,
-            Vertex a, Vertex b, Vertex c, 
-            int abAdj = NO_INDEX, int bcAdj = NO_INDEX, int caAdj = NO_INDEX, 
-            int abCon = NO_INDEX, int bcCon = NO_INDEX, int caCon = NO_INDEX)
+        public int index;
+        public int indxA, indxB, indxC;
+        public int adjAB, adjBC, adjCA;
+        public int conAB, conBC, conCA;
+
+        public Triangle(int index, int indxA, int indxB, int indxC, int adjAB, int adjBC, int adjCA, int conAB, int conBC, int conCA)
         {
             this.index = index;
-            this.inds = new Int3(a.Index, b.Index, c.Index);
-            this.adjs = new Int3(abAdj, bcAdj, caAdj);
-            this.cons = new Int3(abCon, bcCon, caCon);
-            this.circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+
+            this.indxA = indxA;
+            this.indxB = indxB;
+            this.indxC = indxC;
+
+            this.adjAB = adjAB;
+            this.adjBC = adjBC;
+            this.adjCA = adjCA;
+
+            this.conAB = conAB;
+            this.conBC = conBC;
+            this.conCA = conCA;
         }
 
-        public static Triangle[] Flip(IReadOnlyList<Triangle> triangles, IReadOnlyList<Vertex> nodes, int triangle, int edge)
+        public int EdgeIndex(int a, int b)
+        {
+            if (indxA == a) return indxB == b ? 0 : NO_INDEX;
+            if (indxB == a) return indxC == b ? 1 : NO_INDEX;
+            if (indxC == a) return indxA == b ? 2 : NO_INDEX;
+            return NO_INDEX;
+        }
+
+        public Triangle Orient(int edge)
+        {
+            return edge switch
+            {
+                0 => this,
+                1 => new Triangle(index, indxB, indxC, indxA, adjBC, adjCA, adjAB, conBC, conCA, conAB),
+                2 => new Triangle(index, indxC, indxA, indxB, adjCA, adjAB, adjBC, conCA, conAB, conBC),
+                _ => throw new IndexOutOfRangeException($"Expected index 0, 1 or 2 but got {edge}."),
+            };
+        }
+
+        public static Triangle[] Flip(IReadOnlyList<Triangle> triangles, int triangle, int edge)
         {
             /*
-                   v3 - is inserted point, we want to propagate flip away from it, otherwise we 
+                   d - is inserted point, we want to propagate flip away from it, otherwise we 
                    are risking ending up in flipping degeneracy
-                        v2                         v2
+                        c                          c
                         /\                        /|\
                        /  \                      / | \
                       /    \                    /  |  \
@@ -39,7 +63,7 @@
                     /   t0   \                /    |    \
                    /          \              /     |     \ 
                   /            \            /      |      \
-              v0 +--------------+ v1    v0 +   t0  |  t1   + v1
+               a +--------------+ b      a +   t0  |  t1   + b
                   \            /            \      |      /
                    \          /              \     |     /
                     \   t1   /                \    |    /
@@ -47,48 +71,41 @@
                       \    /                    \  |  /
                        \  /                      \ | /
                         \/                        \|/
-                        v3                         v3
+                        d                          d
              */
 
             int t0 = triangle;
-            Triangle old0 = triangles[t0]; Debug.Assert(t0 == old0.index);
-            Vertex v0 = nodes[old0.inds.a]; Debug.Assert(old0.inds.a == v0.Index);
-            Vertex v1 = nodes[old0.inds.b]; Debug.Assert(old0.inds.b == v1.Index);
-            Vertex v2 = nodes[old0.inds.c]; Debug.Assert(old0.inds.c == v2.Index);
+            Triangle old0 = triangles[t0].Orient(edge); Debug.Assert(t0 == old0.index);
 
-            Deconstruct(old0, edge, out _, out int adj01, out int adj12, out int adj20, out int con01, out int con12, out int con20);
+            int a = old0.indxA;
+            int b = old0.indxB;
+            int c = old0.indxC;
 
-            int t1 = adj01;
+            int t1 = old0.adjAB;
             Triangle old1 = triangles[t1]; Debug.Assert(t1 == old1.index);
+            int twin = old1.EdgeIndex(b, a);
+            old1 = old1.Orient(twin);
 
-            int twin = old1.inds.IndexOf(v1.Index, v0.Index);
-            Deconstruct(old1, twin, out int i3, out int adj10, out int adj03, out int adj31, out int con10, out int con03, out int con31);
-
-            Debug.Assert(con01 == con10);
-            Debug.Assert(adj01 == t1);
-            Debug.Assert(adj10 == t0);
-
-            Vertex v3 = nodes[i3]; Debug.Assert(i3 == v3.Index);
-
+            int d = old1.indxC;
             return [
-                new Triangle(t0, v0, v3, v2, adj03, t1, adj20, con03, -1, con20),
-                new Triangle(t1, v3, v1, v2, adj31, adj12, t0,con31, con12, -1)
+                new Triangle(t0, a, d, c, old1.adjBC, t1, old0.adjCA, old1.conBC, NO_INDEX, old0.adjCA),
+                new Triangle(t1, d, b, c, old1.adjCA, old0.adjBC, t0, old1.conCA, old0.conBC, NO_INDEX)
             ];
         }
 
-        public static Triangle[] Split(IReadOnlyList<Triangle> triangles, IReadOnlyList<Vertex> nodes, int triangle, Vertex node)
+        public static Triangle[] Split(IReadOnlyList<Triangle> triangles, int triangle, int vtx)
         {
             /*
-                        * v2
+                        * c
 
 
 
-                    /     v3   ^
-                   ^ new2*  new1\
+                    /     vtx   ^
+                   ^ new2 X  new1\
 
                         new0
 
-              v0 *        ->         * v1
+              a *        ->         * b
 
            */
 
@@ -97,96 +114,29 @@
             int t2 = t1 + 1;
 
             Triangle t = triangles[t0];  Debug.Assert(t0 == t.index);
-            Vertex v0 = nodes[t.inds.a]; Debug.Assert(t.inds.a == v0.Index);
-            Vertex v1 = nodes[t.inds.b]; Debug.Assert(t.inds.b == v1.Index);
-            Vertex v2 = nodes[t.inds.c]; Debug.Assert(t.inds.c == v2.Index);
-            Vertex v3 = node;
+            int a = t.indxA;
+            int b = t.indxB;
+            int c = t.indxC;
 
             return [
-                new Triangle(t0, v0, v1, v3, t.adjs.a, t1, t2, t.cons.a, -1, -1),
-                new Triangle(t1, v1, v2, v3, t.adjs.b, t2, t0, t.cons.b, -1, -1),
-                new Triangle(t2, v2, v0, v3, t.adjs.c, t0, t1, t.cons.c, -1, -1)];
+                new Triangle(t0, a, b, vtx, t.adjAB, t1, t2, t.conAB, NO_INDEX, NO_INDEX),
+                new Triangle(t1, b, c, vtx, t.adjBC, t2, t0, t.conBC, NO_INDEX, NO_INDEX),
+                new Triangle(t2, c, a, vtx, t.adjCA, t0, t1, t.conCA, NO_INDEX, NO_INDEX)];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]  
-        static void Deconstruct(Triangle t, int edge, out int opposite, out int adj0, out int adj1, out int adj2, out int con0, out int con1, out int con2)
+        public static Triangle[] Split(IReadOnlyList<Triangle> triangles, int triangle, int edge, int vtx)
         {
-            switch (edge)
-            {
-                case 0:
-                    adj0 = t.adjs.a;
-                    adj1 = t.adjs.b;
-                    adj2 = t.adjs.c;
-
-                    con0 = t.cons.a;
-                    con1 = t.cons.b;
-                    con2 = t.cons.c;
-
-                    opposite = t.inds.c;
-                    break;
-
-                case 1:
-                    adj0 = t.adjs.b;
-                    adj1 = t.adjs.c;
-                    adj2 = t.adjs.a;
-
-                    con0 = t.cons.b;
-                    con1 = t.cons.c;
-                    con2 = t.cons.a;
-
-                    opposite = t.inds.a;
-                    break;
-
-                case 2:
-                    adj0 = t.adjs.c;
-                    adj1 = t.adjs.a;
-                    adj2 = t.adjs.b;
-
-                    con0 = t.cons.c;
-                    con1 = t.cons.a;
-                    con2 = t.cons.b;
-
-                    opposite = t.inds.b;
-                    break;
-
-                default:
-                    throw new IndexOutOfRangeException();
-            }
-        }
-
-        public static Triangle[] Split(IReadOnlyList<Triangle> triangles, IReadOnlyList<Vertex> nodes, int triangle, int edge, Vertex node)
-        {
-            /*
-                         v2                           v2           
-                         /\                          /|\             
-                        /  \                        / | \           
-                       /    \                      /  |  \          
-                      /      \                    /   |   \       
-                     /  old0  \                  /new0|new1\        
-                    /          \                /     |     \       
-                   /            \              /      |      \      
-               v0 +--------------+ v1      v0 +-------X-------+ v1  
-                   \            /              \      |node  /      
-                    \          /                \     |     /       
-                     \  old1  /                  \new3|new2/        
-                      \      /                    \   |   /      
-                       \    /                      \  |  /          
-                        \  /                        \ | /           
-                         \/                          \|/            
-                         v3                           v3            
-             */
-
             int t0 = triangle;
-            Triangle old0 = triangles[t0];  Debug.Assert(t0 == old0.index);
-            Vertex v0 = nodes[old0.inds.a]; Debug.Assert(old0.inds.a == v0.Index);
-            Vertex v1 = nodes[old0.inds.b]; Debug.Assert(old0.inds.b == v1.Index);
-            Vertex v2 = nodes[old0.inds.c]; Debug.Assert(old0.inds.c == v2.Index);
+            Triangle old0 = triangles[t0].Orient(edge); Debug.Assert(t0 == old0.index);
 
-            Deconstruct(old0, edge, out _, out int adj01, out int adj12, out int adj20, out int con01, out int con12, out int con20);
-            if (adj01 == NO_INDEX)
+            int a = old0.indxA;
+            int b = old0.indxB;
+            int c = old0.indxC;
+
+            if (old0.adjAB == NO_INDEX)
             {
                 /*
-                           v2                           v2        
+                           c                            c        
                            /\                          /|\        
                           /  \                        / | \       
                          /    \                      /  |  \      
@@ -194,43 +144,62 @@
                        /  old   \                  /    |    \    
                       /          \                /     |     \   
                      /            \              /  new0|new1  \  
-                 v0 +--------------+ v1      v0 +-------x-------+ v1
-                                                        node
+                  a +--------------+ b        a +-------x-------+ b
+                                                        vtx
                */
 
                 int t1 = triangles.Count;
                 return [
-                    new Triangle(t0, v2, v0, node, adj20, NO_INDEX, t1, con20, con01, NO_INDEX),
-                    new Triangle(t1, v1, v2, node, adj12, t0, NO_INDEX, con12, NO_INDEX, con01)];
+                    new Triangle(t0, c, a, vtx, old0.adjCA, NO_INDEX, t1, old0.conCA, old0.conAB, NO_INDEX),
+                    new Triangle(t1, b, c, vtx, old0.adjBC, t0, NO_INDEX, old0.conBC, NO_INDEX, old0.conAB)];
             }
             else
             {
-                int t1 = adj01;
+                /*
+                           c                            c           
+                           /\                          /|\             
+                          /  \                        / | \           
+                         /    \                      /  |  \          
+                        /      \                    /   |   \       
+                       /  old0  \                  /new0|new1\        
+                      /          \                /     |     \       
+                     /            \              /      |      \      
+                  a +--------------+ b        a +-------X-------+ b  
+                     \            /              \      |vtx   /      
+                      \          /                \     |     /       
+                       \  old1  /                  \new3|new2/        
+                        \      /                    \   |   /      
+                         \    /                      \  |  /          
+                          \  /                        \ | /           
+                           \/                          \|/            
+                           d                            d            
+               */
+
+
+                int t1 = old0.adjAB;
                 Triangle old1 = triangles[t1]; Debug.Assert(t1 == old1.index);
+                int twin = old1.EdgeIndex(b, a);
+                old1 = old1.Orient(twin);
 
                 int t2 = triangles.Count;
                 int t3 = t2 + 1;
 
-                int twin = old1.inds.IndexOf(v1.Index, v0.Index);
-                Deconstruct(old1, twin, out int i3, out int adj10, out int adj03, out int adj31, out int con10, out int con03, out int con31);
+                int d = old1.indxC;
 
-                Debug.Assert(con01 == con10);
-                Debug.Assert(adj01 == t1);
-                Debug.Assert(adj10 == t0);
+                Debug.Assert(old0.conAB == old1.conAB);
 
-                Vertex v3 = nodes[i3]; Debug.Assert(i3 == v3.Index);
                 return [
+                    new Triangle(t0, c, a, vtx, old0.adjCA, t3, t1, old0.conCA, old0.conAB, NO_INDEX),
+                    new Triangle(t1, b, c, vtx, old0.adjBC, t0, t2, old0.conBC, NO_INDEX, old0.conAB),
 
-                    new Triangle(t0, v2, v0, node, adj20, t3, t1, con20, con01, -1),
-                    new Triangle(t1, v1, v2, node, adj12, t0, t2, con12, -1, con01),
-                    new Triangle(t2, v3, v1, node, adj31, t1, t3, con31, con10, -1),
-                    new Triangle(t3, v0, v3, node, adj03, t2, t0, con03, -1, con10)];
+                    new Triangle(t2, d, b, vtx, old1.adjCA, t1, t3, old1.conCA, old1.conAB, NO_INDEX),
+                    new Triangle(t3, a, d, vtx, old1.adjBC, t2, t0, old1.conBC, NO_INDEX, old1.conAB)];
             }
         }
 
         public override string ToString()
         {
-            return $"[{index}] {inds}";
+            return $"[{index}] {indxA} {indxB} {indxC}";
         }
     }
 }
