@@ -15,6 +15,21 @@ namespace TriSharp
         List<Triangle> _triangles = new List<Triangle>();
         List<Circle> _circles = new List<Circle>();
 
+        public (int triangle, int edge) FindEdgeBrute(Vertex a, Vertex b)
+        {
+            int ai = a.Index;
+            int bi = b.Index;
+            foreach (Triangle t in _triangles)
+            {
+                int edge = t.EdgeIndex(ai, bi);
+                if (edge != NO_INDEX)
+                {
+                    return (t.index, edge);
+                }
+            }
+            return (NO_INDEX, NO_INDEX);
+        }
+
         public (int triangle, int edge) FindEdge(Vertex a, Vertex b)
         {
             TriangleWalker walker = new TriangleWalker(_triangles, a);
