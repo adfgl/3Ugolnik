@@ -42,18 +42,17 @@ namespace TriSharp
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static Triangle OrientTriangle(ref Triangle t, int vertex)
         {
-            int edge = t.IndexOf(vertex);
-            if (edge == 0)
+            if (t.indxA == vertex)
             {
                 return t;
             }
                
-            if (edge == 1)
+            if (t.indxB == 1)
             {
                 return new Triangle(t.index, t.indxB, t.indxC, t.indxA, t.adjBC, t.adjCA, t.adjAB, t.conBC, t.conCA, t.conAB);
             }
                
-            if (edge == 2)
+            if (t.indxC == 2)
             {
                 return new Triangle(t.index, t.indxC, t.indxA, t.indxB, t.adjCA, t.adjAB, t.adjBC, t.conCA, t.conAB, t.conBC);
             }

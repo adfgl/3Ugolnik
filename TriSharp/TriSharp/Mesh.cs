@@ -29,11 +29,11 @@ namespace TriSharp
             int created;
             if (edge == NO_INDEX)
             {
-                created = Triangle.Split(_triangles, triangle, _vertices.Count, tris);
+                created = Split(_triangles, triangle, _vertices.Count, tris);
             }
             else
             {
-                created = Triangle.Split(_triangles, triangle, edge, _vertices.Count, tris, constraint, out _);
+                created = Split(_triangles, triangle, edge, _vertices.Count, tris, NO_INDEX, out _);
             }
 
             // do something before adding?
@@ -80,27 +80,19 @@ namespace TriSharp
             throw new Exception("Could not find entrance triangle.");
         }
 
-        public List<Constraint> Insert(int type, Vertex start, Vertex end, double eps, bool alwaysSplit)
+        public List<Constraint> Insert(int constraint, Vertex start, Vertex end, double eps, bool alwaysSplit)
         {
-            Span<Triangle> tris = stackalloc Triangle[4];
-            int created;
-
             List<Constraint> constraints = new List<Constraint>();
 
-            Vertex? actualStart = Insert(start, eps);
-            Vertex? actualEnd = Insert(end, eps);
-            if (actualStart is null || actualEnd is null)
-            {
-                return constraints;
-            }
+            Queue<(Vertex?, Vertex?)> toInsert = new Queue<(Vertex?, Vertex?)>();
+            toInsert.Enqueue((Insert(start, eps), Insert(end, eps)));
 
-            Queue<(Vertex, Vertex)> toInsert = new Queue<(Vertex, Vertex)>();
-            toInsert.Enqueue((actualStart, actualEnd));
-
+            Span<Triangle> tris = stackalloc Triangle[4];
+            int created;
             while (toInsert.Count > 0)
             {
-                (Vertex s, Vertex e) = toInsert.Dequeue();
-                if (Vertex.CloseOrEqual(s, e, eps))
+                (Vertex? s, Vertex? e) = toInsert.Dequeue();
+                if (s == null || e == null || Vertex.CloseOrEqual(s, e, eps))
                 {
                     continue;
                 }
@@ -108,8 +100,8 @@ namespace TriSharp
                 (int triangle, int edge) = FindEdge(s, e);
                 if (edge != NO_INDEX)
                 {
-                    SetConstraint(triangle, edge, type);
-                    constraints.Add(new Constraint(s, e, type));
+                    SetConstraint(triangle, edge, constraint);
+                    constraints.Add(new Constraint(s, e, constraint));
                     continue;
                 }
 
@@ -123,14 +115,14 @@ namespace TriSharp
                     if (Vertex.AreParallel(a, b, s, e, eps))
                     {
                         toInsert.Enqueue((a, b));
-                        toInsert.Enqueue((b, actualEnd));
+                        toInsert.Enqueue((b, e));
                         break;
                     }
 
                     if (Vertex.AreParallel(a, c, s, e, eps))
                     {
                         toInsert.Enqueue((a, c));
-                        toInsert.Enqueue((c, actualEnd));
+                        toInsert.Enqueue((c, e));
                         break;
                     }
 
@@ -140,20 +132,27 @@ namespace TriSharp
                         throw new Exception();
                     }
 
-                    int opposite;
                     if (CanFlip(t, 1) && !alwaysSplit)
                     {
-                        created = Flip(_triangles, t.index, 1, tris, type, out opposite);
+                        created = Flip(_triangles, t.index, 1, tris, constraint, out int opposite);
+
+                        Vertex op = _vertices[opposite];
+                        toInsert.Enqueue((s, op));
+                        toInsert.Enqueue((op, e));
                     }
                     else
                     {
-                        created = Split(_triangles, triangle, 1, _vertices.Count, tris, type, out opposite);
-                        AddVertex(inter);
+                        created = Split(_triangles, triangle, 1, _vertices.Count, tris, constraint, out int opposite);
+                        inter = AddVertex(inter);
+
+                        Vertex op = _vertices[opposite];
+                        toInsert.Enqueue((s, inter));
+                        toInsert.Enqueue((inter, op));
+                        toInsert.Enqueue((op, e));
                     }
 
                     AddTriangles(tris, created);
                     Legalize(tris, created);
-                    toInsert.Enqueue((_vertices[opposite], actualEnd));
                     break;
                 }
             }
@@ -377,7 +376,7 @@ namespace TriSharp
                     Vertex v0 = _vertices[i0];
                     Vertex v1 = _vertices[i1];
                     if (Vertex.CloseOrEqual(v0, vtx, eps))
-                        return (current, edge, i0);
+                        return (current, NO_INDEX, i0);
 
                     double cross = Vertex.Cross(v0, v1, vtx);
                     if (Math.Abs(cross) <= eps &&
@@ -574,7 +573,7 @@ namespace TriSharp
                     continue;
                 }
 
-                count = Triangle.Flip(_triangles, t.index, edge, triangles, -1, out _);
+                count = Triangle.Flip(_triangles, t.index, edge, triangles, NO_INDEX, out _);
                 for (int i = 0; i < count; i++)
                 {
                     toLegalize.Push(triangles[i]);
