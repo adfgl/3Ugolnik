@@ -24,6 +24,11 @@ namespace TriSharp
             _current = OrientTriangle(ref t, globalVertexIndex);
         }
 
+        public TriangleWalker(List<Triangle> triangles, Vertex vtx) : this(triangles, vtx.Triangle, vtx.Index)
+        {
+
+        }
+
         public Triangle Current => _current;
         public int Vertex => _vertex;
         public int Start => _start;
@@ -71,7 +76,5 @@ namespace TriSharp
             while (walker.Next());
             return output;
         }
-
-
     }
 }

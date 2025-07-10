@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace TriSharp
 {
@@ -13,6 +14,35 @@ namespace TriSharp
         List<Vertex> _vertices = new List<Vertex>();
         List<Triangle> _triangles = new List<Triangle>();
         List<Circle> _circles = new List<Circle>();
+
+        public (int triangle, int edge) FindEdge(Vertex a, Vertex b)
+        {
+            TriangleWalker walker = new TriangleWalker(_triangles, a);
+
+            int ai = a.Index;
+            int bi = b.Index;
+            do
+            {
+                Triangle t = walker.Current;
+                if ((t.indxA == ai && t.indxB == bi) || (t.indxA == bi && t.indxB == ai))
+                {
+                    return (t.index, 0);
+                }
+
+                if ((t.indxB == ai && t.indxC == bi) || (t.indxB == bi && t.indxC == ai))
+                {
+                    return (t.index, 1);
+                }
+
+                if ((t.indxC == ai && t.indxA == bi) || (t.indxC == bi && t.indxA == ai))
+                {
+                    return (t.index, 2);
+                }
+            }
+            while (walker.Next());
+
+            return (NO_INDEX, NO_INDEX);
+        }
 
         public bool CanFlip(Triangle t, int edge)
         {
