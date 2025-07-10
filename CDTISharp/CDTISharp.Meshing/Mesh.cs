@@ -767,11 +767,12 @@ namespace CDTISharp.Meshing
                 {
                     _triangles.Add(t);
                 }
+                SetConnectivity(tris[i], true);
+
             }
 
             for (int i = 0; i < n; i++)
             {
-                SetConnectivity(tris[i], true);
             }
         }
 

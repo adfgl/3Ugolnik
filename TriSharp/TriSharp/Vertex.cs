@@ -27,6 +27,7 @@ namespace TriSharp
 
         public int Index { get; set; } = NO_INDEX;
         public int Triangle { get; set; } = NO_INDEX;
+        public int Type { get; set; } = NO_INDEX;
 
         public double X { get; set; }   
         public double Y { get; set; }
@@ -98,7 +99,7 @@ namespace TriSharp
             double det = a * d - b * c;
             if (Math.Abs(det) < 1e-12)
             {
-                return null; // Lines are parallel or too close to parallel
+                return null; 
             }
 
             double e = q1.X - p1.X, f = q1.Y - p1.Y;
@@ -116,6 +117,15 @@ namespace TriSharp
                 Y = p1.Y + u * c,
                 Z = p1.Z + u * (p2.Z - p1.Z),
             };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool AreParallel(Vertex p1, Vertex p2, Vertex q1, Vertex q2, double eps)
+        {
+            double a = p2.X - p1.X, b = q1.X - q2.X;
+            double c = p2.Y - p1.Y, d = q1.Y - q2.Y;
+            double det = a * d - b * c;
+            return Math.Abs(det) <= eps;
         }
 
 

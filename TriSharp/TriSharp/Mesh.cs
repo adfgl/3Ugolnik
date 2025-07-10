@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -11,11 +14,326 @@ namespace TriSharp
 
     public class Mesh
     {
+
         List<Vertex> _vertices = new List<Vertex>();
+        readonly QuadTree _quadTree;
         List<Triangle> _triangles = new List<Triangle>();
         List<Circle> _circles = new List<Circle>();
+        Rectangle _bounds;
+        List<int> _affected;
 
-        public (int triangle, int edge, int node) Find(Vertex vtx, List<int> path, double eps, int searchStart = -1)
+        Vertex Insert(int triangle, int edge, Vertex vtx, double eps, int constraint)
+        {
+            List<int> visited = new List<int>();
+            Span<Triangle> tris = stackalloc Triangle[4];
+            int created;
+            if (edge == NO_INDEX)
+            {
+                created = Triangle.Split(_triangles, triangle, _vertices.Count, tris);
+            }
+            else
+            {
+                created = Triangle.Split(_triangles, triangle, edge, _vertices.Count, tris, constraint, out _);
+            }
+
+            // do something before adding?
+
+            vtx = AddVertex(vtx);
+            AddTriangles(tris, created);
+            Legalize(tris, created);
+            return vtx;
+        }
+
+        public Vertex? Insert(Vertex vtx, double eps)
+        {
+            List<int> visited = new List<int>();
+            (int t, int e, int v) = Find(vtx, visited, eps);
+
+            if (t == NO_INDEX)
+            {
+                return null;
+            }
+            return Insert(t, e, vtx, eps, -1);
+        }
+
+        public Triangle EntranceTriangle(Vertex start, Vertex end)
+        {
+            Circler walker = new Circler(_triangles, start);
+            do
+            {
+                Triangle t = walker.Current;
+                Vertex a = _vertices[t.indxA];
+
+                if (Vertex.Cross(a, _vertices[t.indxB], end) < 0)
+                {
+                    continue;
+                }
+
+                if (Vertex.Cross(_vertices[t.indxC], a, end) < 0)
+                {
+                    continue;
+                }
+                return t.Orient(t.IndexOf(start.Index));
+
+            } while (walker.Next());
+
+            throw new Exception("Could not find entrance triangle.");
+        }
+
+        public List<Constraint> Insert(int type, Vertex start, Vertex end, double eps, bool alwaysSplit)
+        {
+            Span<Triangle> tris = stackalloc Triangle[4];
+            int created;
+
+            List<Constraint> constraints = new List<Constraint>();
+
+            Vertex? actualStart = Insert(start, eps);
+            Vertex? actualEnd = Insert(end, eps);
+            if (actualStart is null || actualEnd is null)
+            {
+                return constraints;
+            }
+
+            Queue<(Vertex, Vertex)> toInsert = new Queue<(Vertex, Vertex)>();
+            toInsert.Enqueue((actualStart, actualEnd));
+
+            while (toInsert.Count > 0)
+            {
+                (Vertex s, Vertex e) = toInsert.Dequeue();
+                if (Vertex.CloseOrEqual(s, e, eps))
+                {
+                    continue;
+                }
+
+                (int triangle, int edge) = FindEdge(s, e);
+                if (edge != NO_INDEX)
+                {
+                    SetConstraint(triangle, edge, type);
+                    constraints.Add(new Constraint(s, e, type));
+                    continue;
+                }
+
+                while (true)
+                {
+                    Triangle t = EntranceTriangle(s, e);
+                    Vertex a = _vertices[t.indxA];
+                    Vertex b = _vertices[t.indxB];
+                    Vertex c = _vertices[t.indxC];
+
+                    if (Vertex.AreParallel(a, b, s, e, eps))
+                    {
+                        toInsert.Enqueue((a, b));
+                        toInsert.Enqueue((b, actualEnd));
+                        break;
+                    }
+
+                    if (Vertex.AreParallel(a, c, s, e, eps))
+                    {
+                        toInsert.Enqueue((a, c));
+                        toInsert.Enqueue((c, actualEnd));
+                        break;
+                    }
+
+                    Vertex? inter = Vertex.Intersect(b, c, s, e);
+                    if (inter == null)
+                    {
+                        throw new Exception();
+                    }
+
+                    int opposite;
+                    if (CanFlip(t, 1) && !alwaysSplit)
+                    {
+                        created = Flip(_triangles, t.index, 1, tris, type, out opposite);
+                    }
+                    else
+                    {
+                        created = Split(_triangles, triangle, 1, _vertices.Count, tris, type, out opposite);
+                        AddVertex(inter);
+                    }
+
+                    AddTriangles(tris, created);
+                    Legalize(tris, created);
+                    toInsert.Enqueue((_vertices[opposite], actualEnd));
+                    break;
+                }
+            }
+            return constraints;
+        }
+
+        public void SetConstraint(int triangle, int edge, int type)
+        {
+            Triangle t = _triangles[triangle].Orient(edge);
+            t.conAB = type;
+            _triangles[triangle] = t;
+
+            int adjIndex = t.adjAB;
+            if (adjIndex == NO_INDEX) return;
+
+            Triangle adj = _triangles[adjIndex];
+            adj = adj.Orient(adj.IndexOf(t.indxB));
+            adj.conAB = type;
+            _triangles[adjIndex] = adj;
+        }
+
+        Vertex AddVertex(Vertex vtx)
+        {
+            if (!_bounds.Contains(vtx.X, vtx.Y))
+            {
+                throw new Exception("Out of bounds");
+            }
+
+            vtx.Index = _vertices.Count;
+            _quadTree.Add(vtx);
+            _vertices.Add(vtx);
+            return vtx;
+        }
+
+        void AddTriangles(Span<Triangle> triangles, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                Triangle t = triangles[i];
+                Vertex a = _vertices[t.indxA];
+                Vertex b = _vertices[t.indxB];
+                Vertex c = _vertices[t.indxC];
+                Circle circle = new Circle(a.X, a.Y, b.X, b.Y, c.X, c.Y);
+
+                int index = t.index;
+                if (index < _triangles.Count)
+                {
+                    Disconnect(_triangles[index]);
+                    _triangles[index] = t;
+                    _circles[index] = circle;
+                }
+                else
+                {
+                    _triangles.Add(t);
+                    _circles.Add(circle);
+                }
+                Connect(_triangles[index]);
+            }
+        }
+
+        void Connect(Triangle t)
+        {
+            int index = t.index;
+
+            Vertex a = _vertices[t.indxA];
+            Vertex b = _vertices[t.indxB];
+            Vertex c = _vertices[t.indxC];
+
+            if (a.Triangle == NO_INDEX) a.Triangle = index;
+            if (b.Triangle == NO_INDEX) b.Triangle = index;
+            if (c.Triangle == NO_INDEX) c.Triangle = index;
+
+            if (t.adjAB != NO_INDEX)
+            {
+                Triangle adj = _triangles[t.adjAB];
+                switch (adj.IndexOf(b.Index))
+                {
+                    case 0: adj.adjAB = index; break;
+                    case 1: adj.adjBC = index; break;
+                    case 2: adj.adjCA = index; break;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+                _triangles[adj.index] = adj;
+            }
+
+            if (t.adjBC != NO_INDEX)
+            {
+                Triangle adj = _triangles[t.adjBC];
+                switch (adj.IndexOf(c.Index))
+                {
+                    case 0: adj.adjAB = index; break;
+                    case 1: adj.adjBC = index; break;
+                    case 2: adj.adjCA = index; break;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+
+                _triangles[adj.index] = adj;
+            }
+
+            if (t.adjCA != NO_INDEX)
+            {
+                Triangle adj = _triangles[t.adjCA];
+                switch (adj.IndexOf(a.Index))
+                {
+                    case 0: adj.adjAB = index; break;
+                    case 1: adj.adjBC = index; break;
+                    case 2: adj.adjCA = index; break;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+
+                _triangles[adj.index] = adj;
+            }
+        }
+
+        Triangle Disconnect(Triangle t)
+        {
+            int index = t.index;
+
+            Vertex a = _vertices[t.indxA];
+            Vertex b = _vertices[t.indxB];
+            Vertex c = _vertices[t.indxC];
+
+            if (a.Triangle == index) a.Triangle = NO_INDEX;
+            if (b.Triangle == index) b.Triangle = NO_INDEX;
+            if (c.Triangle == index) c.Triangle = NO_INDEX;
+
+            if (t.adjAB != NO_INDEX)
+            {
+                Triangle adj = _triangles[t.adjAB];
+                switch (adj.IndexOf(b.Index))
+                {
+                    case 0: adj.adjAB = NO_INDEX; break;
+                    case 1: adj.adjBC = NO_INDEX; break;
+                    case 2: adj.adjCA = NO_INDEX; break;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+
+                _triangles[adj.index] = adj;
+                t.adjAB = NO_INDEX;
+            }
+
+            if (t.adjBC != NO_INDEX)
+            {
+                Triangle adj = _triangles[t.adjBC];
+                switch (adj.IndexOf(c.Index))
+                {
+                    case 0: adj.adjAB = NO_INDEX; break;
+                    case 1: adj.adjBC = NO_INDEX; break;
+                    case 2: adj.adjCA = NO_INDEX; break;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+
+                _triangles[adj.index] = adj;
+                t.adjBC = NO_INDEX;
+            }
+
+            if (t.adjCA != NO_INDEX)
+            {
+                Triangle adj = _triangles[t.adjCA];
+                switch (adj.IndexOf(a.Index))
+                {
+                    case 0: adj.adjAB = NO_INDEX; break;
+                    case 1: adj.adjBC = NO_INDEX; break;
+                    case 2: adj.adjCA = NO_INDEX; break;
+                    default:
+                        throw new IndexOutOfRangeException();
+                }
+
+                _triangles[adj.index] = adj;
+                t.adjCA = NO_INDEX;
+            }
+            return t;
+        }
+
+        public (int t, int e, int v) Find(Vertex vtx, List<int> path, double eps, int searchStart = -1)
         {
             if (_triangles.Count == 0)
                 return (NO_INDEX, NO_INDEX, NO_INDEX);
@@ -31,13 +349,17 @@ namespace TriSharp
             {
                 if (trianglesChecked++ > maxSteps)
                 {
+#if DEBUG
                     throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
+#endif
+                    return (NO_INDEX, NO_INDEX, NO_INDEX);
+                  
                 }
 
                 path.Add(current);
 
                 Triangle t = _triangles[current];
-                Span<int> indices = [t.indxA, t.indxB, t.indxC];
+                Span<int> inds = [t.indxA, t.indxB, t.indxC];
                 Span<int> adjs = [t.adjAB, t.adjBC, t.adjCA];
 
                 int bestExit = NO_INDEX;
@@ -45,8 +367,8 @@ namespace TriSharp
                 bool inside = true;
                 for (int edge = 0; edge < 3; edge++)
                 {
-                    int i0 = indices[edge];
-                    int i1 = indices[(edge + 1) % 3];
+                    int i0 = inds[edge];
+                    int i1 = inds[(edge + 1) % 3];
                     if (i0 == bestExitEnd && i1 == bestExitStart)
                     {
                         continue;
@@ -101,7 +423,7 @@ namespace TriSharp
 
         public (int triangle, int edge) FindEdge(Vertex a, Vertex b)
         {
-            TriangleWalker walker = new TriangleWalker(_triangles, a);
+            Circler walker = new Circler(_triangles, a);
 
             int ai = a.Index;
             int bi = b.Index;
@@ -228,6 +550,36 @@ namespace TriSharp
                 ((x2 - x3) * (x2 - x1) + (y2 - y3) * (y2 - y1)) +
                 (sAlpha *
                 ((x2 - x3) * (y2 - y1) - (x2 - x1) * (y2 - y3))) < 0;
+        }
+
+        void Legalize(Span<Triangle> triangles, int count)
+        {
+            _affected.Clear();
+
+            Stack<Triangle> toLegalize = new Stack<Triangle>();
+            for (int i = 0; i < count; i++)
+            {
+                toLegalize.Push(triangles[i]);
+            }
+
+            while (toLegalize.Count > 0)
+            {
+                Triangle t = toLegalize.Pop();
+                _affected.Add(t.index);
+
+                int edge = 0;
+                if (!CanFlip(t, edge) ||
+                    !ShouldFlipCirclePrecalculated(t, edge))
+                {
+                    continue;
+                }
+
+                count = Triangle.Flip(_triangles, t.index, edge, triangles, -1, out _);
+                for (int i = 0; i < count; i++)
+                {
+                    toLegalize.Push(triangles[i]);
+                }
+            }
         }
     }
 }

@@ -32,8 +32,6 @@
 
         }
 
-        public bool Degenerate(double eps) => Vertex.CloseOrEqual(start, end, eps);
-
         public bool VisibleFromInterior(IEnumerable<Constraint> segments, Vertex pt)
         {
             Rectangle rect = new Rectangle(pt, center);

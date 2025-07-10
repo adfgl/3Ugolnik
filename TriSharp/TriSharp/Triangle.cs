@@ -84,7 +84,7 @@
             };
         }
 
-        public static int Flip(IReadOnlyList<Triangle> triangles, int triangle, int edge, Span<Triangle> output)
+        public static int Flip(IReadOnlyList<Triangle> triangles, int triangle, int edge, Span<Triangle> output, int constraint, out int opposite)
         {
             /*
                    d - is inserted point, we want to propagate flip away from it, otherwise we 
@@ -117,14 +117,17 @@
             int c = old0.indxC;
 
             int t1 = old0.adjAB;
-            Triangle old1 = triangles[t1]; Debug.Assert(t1 == old1.index);
+            Triangle old1 = triangles[t1]; 
+            Debug.Assert(t1 == old1.index);
             int twin = old1.EdgeIndex(b, a);
             old1 = old1.Orient(twin);
 
             int d = old1.indxC;
 
-            output[0] = new Triangle(t0, a, d, c, old1.adjBC, t1, old0.adjCA, old1.conBC, NO_INDEX, old0.adjCA);
-            output[1] = new Triangle(t1, d, b, c, old1.adjCA, old0.adjBC, t0, old1.conCA, old0.conBC, NO_INDEX);
+            output[0] = new Triangle(t0, a, d, c, old1.adjBC, t1, old0.adjCA, old1.conBC, constraint, old0.adjCA);
+            output[1] = new Triangle(t1, d, b, c, old1.adjCA, old0.adjBC, t0, old1.conCA, old0.conBC, constraint);
+
+            opposite = d;
             return 2;
         }
 
@@ -161,7 +164,7 @@
             return 3;
         }
 
-        public static int Split(IReadOnlyList<Triangle> triangles, int triangle, int edge, int vtx, Span<Triangle> output)
+        public static int Split(IReadOnlyList<Triangle> triangles, int triangle, int edge, int vtx, Span<Triangle> output, int constraint, out int opposite)
         {
             int t0 = triangle;
             Triangle old0 = triangles[t0].Orient(edge); 
@@ -188,8 +191,10 @@
 
                 int t1 = triangles.Count;
 
-                output[0] = new Triangle(t0, c, a, vtx, old0.adjCA, NO_INDEX, t1, old0.conCA, old0.conAB, NO_INDEX);
-                output[1] = new Triangle(t1, b, c, vtx, old0.adjBC, t0, NO_INDEX, old0.conBC, NO_INDEX, old0.conAB);
+                output[0] = new Triangle(t0, c, a, vtx, old0.adjCA, NO_INDEX, t1, old0.conCA, old0.conAB, constraint);
+                output[1] = new Triangle(t1, b, c, vtx, old0.adjBC, t0, NO_INDEX, old0.conBC, constraint, old0.conAB);
+
+                opposite = NO_INDEX;
                 return 2;
             }
             else
@@ -228,11 +233,13 @@
                 int d = old1.indxC;
                 Debug.Assert(old0.conAB == old1.conAB);
 
-                output[0] = new Triangle(t0, c, a, vtx, old0.adjCA, t3, t1, old0.conCA, old0.conAB, NO_INDEX);
-                output[1] = new Triangle(t1, b, c, vtx, old0.adjBC, t0, t2, old0.conBC, NO_INDEX, old0.conAB);
+                output[0] = new Triangle(t0, c, a, vtx, old0.adjCA, t3, t1, old0.conCA, old0.conAB, constraint);
+                output[1] = new Triangle(t1, b, c, vtx, old0.adjBC, t0, t2, old0.conBC, constraint, old0.conAB);
 
-                output[2] = new Triangle(t2, d, b, vtx, old1.adjCA, t1, t3, old1.conCA, old1.conAB, NO_INDEX);
-                output[3] = new Triangle(t3, a, d, vtx, old1.adjBC, t2, t0, old1.conBC, NO_INDEX, old1.conAB);
+                output[2] = new Triangle(t2, d, b, vtx, old1.adjCA, t1, t3, old1.conCA, old1.conAB, constraint);
+                output[3] = new Triangle(t3, a, d, vtx, old1.adjBC, t2, t0, old1.conBC, constraint, old1.conAB);
+
+                opposite = d;
                 return 4;
             }
         }

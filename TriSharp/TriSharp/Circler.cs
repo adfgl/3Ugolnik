@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
+﻿using System.Runtime.CompilerServices;
 
 namespace TriSharp
 {
-    public struct TriangleWalker
+    public struct Circler
     {
         readonly List<Triangle> _triangles;
         readonly int _start, _vertex;
         Triangle _current;
 
-        public TriangleWalker(List<Triangle> triangles, int triangleIndex, int globalVertexIndex)
+        public Circler(List<Triangle> triangles, int triangleIndex, int globalVertexIndex)
         {
             _triangles = triangles;
             _vertex = globalVertexIndex;
@@ -24,7 +18,7 @@ namespace TriSharp
             _current = OrientTriangle(ref t, globalVertexIndex);
         }
 
-        public TriangleWalker(List<Triangle> triangles, Vertex vtx) : this(triangles, vtx.Triangle, vtx.Index)
+        public Circler(List<Triangle> triangles, Vertex vtx) : this(triangles, vtx.Triangle, vtx.Index)
         {
 
         }
@@ -68,7 +62,7 @@ namespace TriSharp
 
         public static List<Triangle> GetTriangles(List<Triangle> triangles, Vertex point, List<Triangle> output)
         {
-            TriangleWalker walker = new TriangleWalker(triangles, point.Triangle, point.Index);
+            Circler walker = new Circler(triangles, point.Triangle, point.Index);
             do
             {
                 output.Add(walker.Current);
