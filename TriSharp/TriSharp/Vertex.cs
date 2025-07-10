@@ -20,12 +20,27 @@ namespace TriSharp
             Z = z;
         }
 
+        public void Deconstruct(out double x, out double y)
+        {
+            x = X; y = Y;
+        }
+
         public int Index { get; set; } = NO_INDEX;
         public int Triangle { get; set; } = NO_INDEX;
 
         public double X { get; set; }   
         public double Y { get; set; }
         public double Z { get; set; }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool QuadConvex(Vertex a, Vertex b, Vertex c, Vertex d)
+        {
+            return 
+                Cross(a, b, c) > 0 && 
+                Cross(b, c, d) > 0 && 
+                Cross(c, d, a) > 0 && 
+                Cross(d, a, b) > 0;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool CloseOrEqual(Vertex a, Vertex b, double eps)
