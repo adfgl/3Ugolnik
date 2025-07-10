@@ -15,6 +15,126 @@ namespace TriSharp
         List<Triangle> _triangles = new List<Triangle>();
         List<Circle> _circles = new List<Circle>();
 
+        public (int triangle, int edge, int node) Find(Vertex vtx, List<int> path, double eps, int searchStart = -1)
+        {
+            if (_triangles.Count == 0)
+            {
+                return (NO_INDEX, NO_INDEX, NO_INDEX);
+            }
+
+            double x = vtx.X;
+            double y = vtx.Y;
+
+            int maxSteps = _triangles.Count * 3;
+            int trianglesChecked = 0;
+
+            int current = searchStart == NO_INDEX ? _triangles.Count - 1 : searchStart;
+
+            Vertex start, end;
+            double cross;
+            while (true)
+            {
+                if (trianglesChecked++ > maxSteps)
+                {
+                    throw new Exception("FindContaining exceeded max steps. Likely invalid topology.");
+                }
+
+                path.Add(current);
+                Triangle t = _triangles[current];
+
+                int bestExit = NO_INDEX;
+                double worstCross = double.MaxValue;
+                bool inside = true;
+
+                start = _vertices[t.indxA];
+                end = _vertices[t.indxB];
+
+                // a -> b
+                if (Vertex.CloseOrEqual(start, vtx, eps))
+                {
+                    return (current, 0, start.Index);
+                }
+
+                cross = Vertex.Cross(start, end, vtx);
+                if (Math.Abs(cross) <= eps &&
+                    x >= Math.Min(start.X, end.X) - eps && x <= Math.Max(start.X, end.X) + eps &&
+                    y >= Math.Min(start.Y, end.Y) - eps && y <= Math.Max(start.Y, end.Y) + eps)
+                {
+                    return (current, 0, NO_INDEX);
+                }
+                    
+                if (cross <= 0) 
+                {
+                    inside = false;
+                    if (bestExit == NO_INDEX || cross < worstCross)
+                    {
+                        worstCross = cross;
+                        bestExit = t.adjAB;
+                    }
+                }
+
+                // b -> c
+                start = _vertices[t.indxB];
+                end = _vertices[t.indxC];
+
+                if (Vertex.CloseOrEqual(start, vtx, eps))
+                {
+                    return (current, 1, start.Index);
+                }
+
+                cross = Vertex.Cross(start, end, vtx);
+                if (Math.Abs(cross) <= eps &&
+                    x >= Math.Min(start.X, end.X) - eps && x <= Math.Max(start.X, end.X) + eps &&
+                    y >= Math.Min(start.Y, end.Y) - eps && y <= Math.Max(start.Y, end.Y) + eps)
+                {
+                    return (current, 0, NO_INDEX);
+                }
+
+                if (cross <= 0)
+                {
+                    inside = false;
+                    if (bestExit == NO_INDEX || cross < worstCross)
+                    {
+                        worstCross = cross;
+                        bestExit = t.adjBC;
+                    }
+                }
+
+                // c -> a
+                start = _vertices[t.indxC];
+                end = _vertices[t.indxA];
+
+                if (Vertex.CloseOrEqual(start, vtx, eps))
+                {
+                    return (current, 2, start.Index);
+                }
+
+                cross = Vertex.Cross(start, end, vtx);
+                if (Math.Abs(cross) <= eps &&
+                    x >= Math.Min(start.X, end.X) - eps && x <= Math.Max(start.X, end.X) + eps &&
+                    y >= Math.Min(start.Y, end.Y) - eps && y <= Math.Max(start.Y, end.Y) + eps)
+                {
+                    return (current, 0, NO_INDEX);
+                }
+
+                if (cross <= 0)
+                {
+                    inside = false;
+                    if (bestExit == NO_INDEX || cross < worstCross)
+                    {
+                        worstCross = cross;
+                        bestExit = t.adjCA;
+                    }
+                }
+
+                if (inside)
+                {
+                    return (current, NO_INDEX, NO_INDEX);
+                }
+                current = bestExit;
+            }
+        }
+
         public (int triangle, int edge) FindEdgeBrute(Vertex a, Vertex b)
         {
             int ai = a.Index;
