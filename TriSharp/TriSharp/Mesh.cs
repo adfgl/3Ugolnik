@@ -1,26 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-
+﻿
 namespace TriSharp
 {
     using static Triangle;
 
     public class Mesh
     {
-
         List<Vertex> _vertices = new List<Vertex>();
         readonly QuadTree _quadTree;
         List<Triangle> _triangles = new List<Triangle>();
         List<Circle> _circles = new List<Circle>();
-        Rectangle _bounds;
-        List<int> _affected;
+        Rect _bounds;
+        readonly List<int> _affected = new List<int>();
 
         Vertex Insert(int triangle, int edge, Vertex vtx, double eps, int constraint)
         {
@@ -33,7 +23,7 @@ namespace TriSharp
             }
             else
             {
-                created = Split(_triangles, triangle, edge, _vertices.Count, tris, NO_INDEX, out _);
+                created = Split(_triangles, triangle, edge, _vertices.Count, tris);
             }
 
             // do something before adding?
@@ -56,7 +46,7 @@ namespace TriSharp
             return Insert(t, e, vtx, eps, -1);
         }
 
-        public Triangle EntranceTriangle(Vertex start, Vertex end)
+        public Triangle OrientedEntranceTriangle(Vertex start, Vertex end)
         {
             Circler walker = new Circler(_triangles, start);
             do
@@ -107,7 +97,7 @@ namespace TriSharp
 
                 while (true)
                 {
-                    Triangle t = EntranceTriangle(s, e);
+                    Triangle t = OrientedEntranceTriangle(s, e);
                     Vertex a = _vertices[t.indxA];
                     Vertex b = _vertices[t.indxB];
                     Vertex c = _vertices[t.indxC];
@@ -132,20 +122,20 @@ namespace TriSharp
                         throw new Exception();
                     }
 
+                    Vertex op = _vertices[t.Opposite(_triangles, 1)];
+                    SetConstraint(triangle, 1, constraint); // need to block legalization
+
                     if (CanFlip(t, 1) && !alwaysSplit)
                     {
-                        created = Flip(_triangles, t.index, 1, tris, constraint, out int opposite);
-
-                        Vertex op = _vertices[opposite];
+                        created = Flip(_triangles, t.index, 1, tris);
                         toInsert.Enqueue((s, op));
                         toInsert.Enqueue((op, e));
                     }
                     else
                     {
-                        created = Split(_triangles, triangle, 1, _vertices.Count, tris, constraint, out int opposite);
                         inter = AddVertex(inter);
+                        created = Split(_triangles, triangle, 1, inter.Index, tris);
 
-                        Vertex op = _vertices[opposite];
                         toInsert.Enqueue((s, inter));
                         toInsert.Enqueue((inter, op));
                         toInsert.Enqueue((op, e));

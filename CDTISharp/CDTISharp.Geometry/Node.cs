@@ -15,6 +15,11 @@
             Z = z;
         }
 
+        public void Deconstruct(out double x, out double y)
+        {
+            x = X; y = Y;
+        }
+
         public int Index { get; set; } = -1;
         public int Triangle { get; set; } = -1;
 

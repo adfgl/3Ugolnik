@@ -29,6 +29,33 @@ namespace CDTISharp.Meshing
             return t0.circle.Contains(d.X, d.Y);
         }
 
+        public static bool ShouldFlipAngles(List<Triangle> triangles, List<Node> nodes, int triangle, int edge)
+        {
+            Triangle t0 = triangles[triangle];
+            Node a = nodes[t0.indices[edge]];
+            Node b = nodes[t0.indices[Mesh.NEXT[edge]]];
+            Node c = nodes[t0.indices[Mesh.PREV[edge]]];
+
+            Triangle t1 = triangles[t0.adjacent[edge]];
+            int ba = t1.IndexOf(b.Index, a.Index);
+
+            Node d = nodes[t1.indices[Mesh.PREV[ba]]];
+
+            double adx = a.X - d.X, ady = a.Y - d.Y;
+            double bdx = b.X - d.X, bdy = b.Y - d.Y;
+            double cdx = c.X - d.X, cdy = c.Y - d.Y;
+
+            double abdet = adx * bdy - bdx * ady;
+            double bcdet = bdx * cdy - cdx * bdy;
+            double cadet = cdx * ady - adx * cdy;
+
+            double alift = adx * adx + ady * ady;
+            double blift = bdx * bdx + bdy * bdy;
+            double clift = cdx * cdx + cdy * cdy;
+
+            return (alift * bcdet + blift * cadet + clift * abdet) > 0;
+        }
+
         public static bool CanFlip(List<Triangle> triangles, List<Node> nodes, int triangle, int edge)
         {
             /*

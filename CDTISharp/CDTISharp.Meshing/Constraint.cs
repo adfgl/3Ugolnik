@@ -8,14 +8,14 @@ namespace CDTISharp.Meshing
         public readonly Node start, center, end;
         public readonly int type;
         public readonly Circle circle;
-        public readonly Rectangle rectangle;
+        public readonly Rect rectangle;
 
         public Constraint(Node a, Node b, int type)
         {
             this.circle = new Circle(a.X, a.Y, b.X, b.Y);
             this.type = type;
             this.center = new Node() { X = circle.x, Y = circle.y, Z = (a.Z + b.Z) * 0.5 };
-            this.rectangle = new Rectangle(a, b);
+            this.rectangle = new Rect(a, b);
 
             if (a.Index < b.Index)
             {
@@ -34,7 +34,7 @@ namespace CDTISharp.Meshing
 
         public bool VisibleFromInterior(IEnumerable<Constraint> segments, Node pt)
         {
-            Rectangle rect = new Rectangle(pt, center);
+            Rect rect = new Rect(pt, center);
             foreach (Constraint s in segments)
             {
                 if (this.Equals(s) || !s.rectangle.Intersects(rect))
@@ -67,7 +67,7 @@ namespace CDTISharp.Meshing
 
         public bool Enchrouched(QuadTree qt, double eps = 1e-6)
         {
-            Rectangle bound = new Rectangle(circle);
+            Rect bound = new Rect(circle);
             List<Node> points = qt.Query(bound);
             return Enchrouched(points, eps);
         }

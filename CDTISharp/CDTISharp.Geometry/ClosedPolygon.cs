@@ -27,12 +27,12 @@
             {
                 Points.Add(first);
             }
-            Bounds = new Rectangle(minX, minY, maxX, maxY);
+            Bounds = new Rect(minX, minY, maxX, maxY);
             Holes = holes is null ? new List<ClosedPolygon>() : holes;
         }
 
         public List<Node> Points { get; set; }
-        public Rectangle Bounds { get; set; }
+        public Rect Bounds { get; set; }
         public List<ClosedPolygon> Holes { get; set; }
 
         public bool Contains(double x, double y, double tolernace = 0)

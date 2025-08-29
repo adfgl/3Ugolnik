@@ -12,12 +12,6 @@ namespace CDTISharpConsole
             var c = new CDTNode(+100, +100);
             var d = new CDTNode(-100, +100);
 
-            var e = new CDTNode(-350, -50);
-            var f = new CDTNode(+50, +50);
-
-            var g = new CDTNode(-50, +50);
-            var h = new CDTNode(+50, -50);
-
 
             var ab = new CDTLineSegment(a, b);
             var bc = new CDTLineSegment(b, c);
@@ -32,7 +26,7 @@ namespace CDTISharpConsole
 
                 Quality = new CDTQuality()
                 {
-                    MaxArea = 350
+                    MaxArea = 300
                 }
             };
 

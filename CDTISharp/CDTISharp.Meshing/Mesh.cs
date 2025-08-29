@@ -12,11 +12,11 @@ namespace CDTISharp.Meshing
         readonly List<Triangle> _triangles;
         readonly QuadTree _qt;
         readonly List<Node> _nodes;
-        readonly Rectangle _bounds;
+        readonly Rect _bounds;
 
         public List<Triangle> Triangles => _triangles;
         public List<Node> Nodes => _nodes;
-        public Rectangle Bounds => _bounds;
+        public Rect Bounds => _bounds;
 
         public double Eps
         {
@@ -24,7 +24,7 @@ namespace CDTISharp.Meshing
             set => _eps = value;
         }
 
-        public Mesh(Rectangle rectangle)
+        public Mesh(Rect rectangle)
         {
             _triangles = new List<Triangle>();
             _bounds = rectangle;
@@ -34,7 +34,7 @@ namespace CDTISharp.Meshing
 
         public Mesh(List<Triangle> tris, List<Node> nodes)
         {
-            _bounds = Rectangle.FromPoints(nodes, o => o.X, o => o.Y);
+            _bounds = Rect.FromPoints(nodes, o => o.X, o => o.Y);
             _triangles = tris;
             _qt = new QuadTree(_bounds);
             _nodes = new List<Node>();
@@ -78,7 +78,7 @@ namespace CDTISharp.Meshing
                 process(node);
             }
 
-            _bounds = new Rectangle(minX, minY, maxX, maxY);
+            _bounds = new Rect(minX, minY, maxX, maxY);
             _qt = new QuadTree(_bounds);
             _nodes = new List<Node>();
             _triangles = new List<Triangle>();
@@ -146,7 +146,7 @@ namespace CDTISharp.Meshing
                 }
             }
 
-            _bounds = new Rectangle(minX, minY, maxX, maxY);
+            _bounds = new Rect(minX, minY, maxX, maxY);
             _qt = new QuadTree(_bounds);
             _nodes = new List<Node>();
             _triangles = new List<Triangle>();
@@ -345,7 +345,7 @@ namespace CDTISharp.Meshing
             return this;
         }
 
-        public Mesh AddSuperStructure(Rectangle bounds, double scale)
+        public Mesh AddSuperStructure(Rect bounds, double scale)
         {
             double dmax = Math.Max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
             double midx = (bounds.maxX + bounds.minX) * 0.5;
@@ -419,6 +419,7 @@ namespace CDTISharp.Meshing
                     AddNode(node);
                     Add(tris);
                     Legalize(affected, tris);
+
                     foreach (var item in affected)
                     {
                         triangleQueue.Enqueue(item);
@@ -499,6 +500,7 @@ namespace CDTISharp.Meshing
             {
                 return true;
             }
+            return false;
 
             double ab = GeometryHelper.SquareLength(a, b);
             double bc = GeometryHelper.SquareLength(b, c);
@@ -767,12 +769,12 @@ namespace CDTISharp.Meshing
                 {
                     _triangles.Add(t);
                 }
-                SetConnectivity(tris[i], true);
 
             }
 
             for (int i = 0; i < n; i++)
             {
+                SetConnectivity(tris[i], true);
             }
         }
 

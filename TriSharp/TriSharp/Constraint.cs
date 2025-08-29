@@ -5,13 +5,13 @@
         public readonly Vertex start, center, end;
         public readonly int type;
         public readonly Circle circle;
-        public readonly Rectangle rectangle;
+        public readonly Rect rectangle;
 
         public Constraint(Vertex a, Vertex b, int type)
         {
             this.type = type;
             this.circle = new Circle(a.X, a.Y, b.X, b.Y);
-            this.rectangle = new Rectangle(a, b);
+            this.rectangle = new Rect(a, b);
             this.center = new Vertex() 
             {
                 X = circle.x, 
@@ -34,7 +34,7 @@
 
         public bool VisibleFromInterior(IEnumerable<Constraint> segments, Vertex pt)
         {
-            Rectangle rect = new Rectangle(pt, center);
+            Rect rect = new Rect(pt, center);
             foreach (Constraint s in segments)
             {
                 if (this.Equals(s) || !s.rectangle.Intersects(rect))
@@ -67,7 +67,7 @@
 
         public bool Enchrouched(QuadTree qt, double eps)
         {
-            Rectangle bound = new Rectangle(circle);
+            Rect bound = new Rect(circle);
             List<Vertex> points = qt.Query(bound);
             return Enchrouched(points, eps);
         }

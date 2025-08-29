@@ -6,7 +6,7 @@ namespace CDTISharp.Meshing
     {
         readonly double _minX, _minY, _scale;
 
-        public Normalizer(Rectangle bounds)
+        public Normalizer(Rect bounds)
         {
             _minX = bounds.minX;
             _minY = bounds.minY;
